@@ -18,13 +18,15 @@ You are the **CodeCortexLoop orchestrator**. Run the aggregate pipeline: review,
 
 ## Step 0.5 — Consult Playbook (if `learning.enabled`)
 
-Before analysis, query learned fix patterns (suggestions only — still verify every fix):
+Before analysis, query **verified-tier** learned patterns only (recall, not authority — re-derive and re-verify every fix):
 
 ```bash
 node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=<detected> --global-merge
 ```
 
-Use output as **known patterns to prioritize** during Step 3. Playbook hits do not skip analysis or blind-apply fixes.
+Optional: add `--include-candidates` to see unconfirmed hypotheses (labeled as guesses — **do NOT apply**).
+
+Use output as **where to investigate first** during Step 3. Playbook hits do not skip analysis or blind-apply fixes.
 
 ## Step 1 — Detect Mode
 
@@ -103,12 +105,27 @@ After successful re-verification:
 
 1. Load `skills/reflect/SKILL.md`
 2. Write `docs/cortexloop/08-reflection.md` and `.cortexloop/reflection.json` (3–5 generalizable patterns max)
-3. Record to playbook:
+3. Record to playbook (applies `self_verified`; **new entries start as candidate**, not auto-trusted):
 
 ```bash
 node scripts/playbook.mjs record .cortexloop/reflection.json
 # append --global if config learning.global is true
 ```
+
+4. **Optional feedback hooks** (external oracle + negative signals):
+
+```bash
+# Fix applied then tests failed / reverted
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=failed
+
+# Playbook suggestion judged inapplicable
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=rejected
+
+# CI passed / PR merged / human confirmed the fix pattern
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=external_verified --evidence="ci: <run>"
+```
+
+Promotion to **verified** tier requires diverse evidence (`verifiedCount >= 2`, `distinctContexts >= 2`, `confidence >= 0.7`). External signals (`external_verified`) outweigh self-report.
 
 ## Rules
 
@@ -117,4 +134,7 @@ node scripts/playbook.mjs record .cortexloop/reflection.json
 - Re-verify required in Direct mode
 - Respect `.cortexloopignore` and inline suppressions
 - ci-gate exit codes are authoritative in CI mode
-- Direct mode: reflect after successful re-verify; playbook hits are suggestions — verify before applying
+- Direct mode: reflect after successful re-verify; playbook hits are recall — re-derive and verify, never paste
+- Record negative signals (`failed` / `rejected`) when a suggested fix fails or does not apply
+- Do not auto-apply **candidate** tier entries; verified-only by default in query
+- External oracle signals (`external_verified`) take priority over self-reported success

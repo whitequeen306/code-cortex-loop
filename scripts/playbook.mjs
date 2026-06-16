@@ -1,11 +1,24 @@
 #!/usr/bin/env node
 /**
- * CodeCortexLoop playbook — query / record / prune learned fix patterns
+ * CodeCortexLoop playbook — learned fix patterns with an anti-hallucination
+ * trust model. Memory is RECALL (where to look), not AUTHORITY (what to
+ * conclude): every hit is still re-derived and re-verified.
+ *
+ * Trust model:
+ *   - Two tiers: `candidate` (unconfirmed hypothesis) and `verified` (trusted).
+ *   - Confidence moves only on verified OUTCOMES, including negative signals.
+ *   - External oracles (CI / human) outweigh self-reported success.
+ *   - Promotion needs diverse + verified evidence (>=N successes in >=M contexts).
+ *   - Trust decays over time until re-validated.
  *
  * Usage:
- *   node scripts/playbook.mjs query [--category=performance,simplicity] [--lang=js] [--global-merge] [--limit=8]
- *   node scripts/playbook.mjs record [.cortexloop/reflection.json] [--global]
- *   node scripts/playbook.mjs prune [--min-confidence=0.3] [--max-age-days=180] [--max-entries=200] [--global]
+ *   node scripts/playbook.mjs query   [--category=a,b] [--lang=js] [--global-merge]
+ *                                     [--limit=8] [--include-candidates] [--format=md|json]
+ *   node scripts/playbook.mjs record  [.cortexloop/reflection.json] [--global]
+ *   node scripts/playbook.mjs feedback --signature=<sig> --outcome=external_verified|self_verified|rejected|failed
+ *                                     [--context=<key>] [--evidence=<note>] [--global]
+ *   node scripts/playbook.mjs prune   [--min-confidence=0.3] [--max-age-days=180]
+ *                                     [--max-entries=200] [--drop-quarantined] [--global]
  */
 
 import { existsSync } from 'node:fs';
@@ -13,6 +26,10 @@ import {
   DEFAULT_PLAYBOOK,
   DEFAULT_REFLECTION,
   GLOBAL_PLAYBOOK,
+  OUTCOME_DELTAS,
+  PLAYBOOK_DEFAULTS,
+  applyOutcome,
+  decayedConfidence,
   loadPlaybook,
   mergePlaybooks,
   nextPlaybookId,
@@ -38,6 +55,23 @@ function filterEntries(entries, categories, lang) {
   });
 }
 
+function fileOf(example) {
+  if (!example) return null;
+  return String(example).replace(/:\d+(:\d+)?$/, '');
+}
+
+function printEntry(e) {
+  const conf = decayedConfidence(e).toFixed(2);
+  console.log(`## ${e.signature} (${e.id}) — ${e.tier || 'candidate'}`);
+  console.log(`- **Category:** ${e.category}`);
+  console.log(`- **Problem to investigate:** ${e.problemPattern}`);
+  console.log(`- **Fix method (re-derive & verify, do not paste):** ${e.fixMethod}`);
+  console.log(`- **Confidence:** ${conf} | **Verified:** ${e.verifiedCount ?? 0}x in ${(e.distinctContexts || []).length} context(s)` +
+    (e.failedCount ? ` | **Failures:** ${e.failedCount}` : ''));
+  if (e.examples?.length) console.log(`- **Examples:** ${e.examples.join(', ')}`);
+  console.log('');
+}
+
 function cmdQuery() {
   const categories = parseCategories(getFlagValue('--category', null));
   const lang = getFlagValue('--lang', null);
@@ -45,55 +79,66 @@ function cmdQuery() {
   const format = getFlagValue('--format', 'md');
   const playbookPath = getFlagValue('--playbook', DEFAULT_PLAYBOOK);
   const globalMerge = flags.has('--global-merge');
+  const includeCandidates = flags.has('--include-candidates');
 
   let entries = loadPlaybook(playbookPath).entries;
   if (globalMerge && existsSync(GLOBAL_PLAYBOOK)) {
     entries = mergePlaybooks(loadPlaybook(playbookPath), loadPlaybook(GLOBAL_PLAYBOOK));
   }
 
-  entries = filterEntries(entries, categories, lang);
+  entries = filterEntries(entries, categories, lang)
+    .filter((e) => (e.tier || 'candidate') !== 'quarantined');
   entries.sort((a, b) => playbookScore(b) - playbookScore(a));
-  entries = entries.slice(0, limit);
 
-  if (!entries.length) {
-    console.log('[cortexloop] Playbook: no matching entries (analysis proceeds normally).');
-    return;
-  }
+  const verified = entries.filter((e) => e.tier === 'verified').slice(0, limit);
+  const candidates = entries.filter((e) => e.tier !== 'verified').slice(0, limit);
 
   if (format === 'json') {
-    console.log(JSON.stringify(entries, null, 2));
+    console.log(JSON.stringify(includeCandidates ? [...verified, ...candidates] : verified, null, 2));
     return;
   }
 
-  console.log('# CodeCortexLoop Playbook — known patterns (suggestions, not mandatory)\n');
-  for (const e of entries) {
-    console.log(`## ${e.signature} (${e.id})`);
-    console.log(`- **Category:** ${e.category}`);
-    console.log(`- **Problem:** ${e.problemPattern}`);
-    console.log(`- **Fix method:** ${e.fixMethod}`);
-    console.log(`- **Confidence:** ${(e.confidence ?? 0.5).toFixed(2)} | **Applied:** ${e.appliedCount ?? 1}x`);
-    if (e.examples?.length) console.log(`- **Examples:** ${e.examples.join(', ')}`);
-    console.log('');
+  if (!verified.length && !(includeCandidates && candidates.length)) {
+    console.log('[cortexloop] Playbook: no trusted entries match (analysis proceeds normally).');
+    if (candidates.length) {
+      console.log(`  (${candidates.length} unconfirmed candidate(s) available via --include-candidates)`);
+    }
+    return;
   }
-  console.log('_Apply only after verification — see rules/learning-loop.mdc_');
+
+  console.log('# CodeCortexLoop Playbook — recall, not authority\n');
+  console.log('_These are leads on WHERE to look. Re-derive and re-verify every fix; never paste from memory._\n');
+
+  if (verified.length) {
+    console.log('## ✅ Verified patterns (trusted recall)\n');
+    for (const e of verified) printEntry(e);
+  }
+
+  if (includeCandidates && candidates.length) {
+    console.log('## ⚠️ Candidate patterns (UNCONFIRMED hypotheses — do NOT apply, treat as guesses)\n');
+    for (const e of candidates) printEntry(e);
+  }
+
+  console.log('_Hits must pass refactor-safety + tests. See rules/learning-loop.mdc_');
 }
 
-function upsertReflectionIntoPlaybook(playbook, reflectionEntries, source = 'direct-fix') {
+// record = positive self_verified signal from a Direct re-verify pass.
+function recordSelfVerified(playbook, reflectionEntries) {
   let added = 0;
   let updated = 0;
   const now = new Date().toISOString();
 
   for (const raw of reflectionEntries) {
     const signature = playbookSignature(raw);
+    const context = raw.context || fileOf(raw.example) || 'local';
     let entry = playbook.entries.find((e) => e.signature === signature);
 
     if (entry) {
       entry.appliedCount = (entry.appliedCount || 0) + 1;
-      entry.confidence = Math.min(0.95, (entry.confidence || 0.5) + 0.1);
-      entry.lastUsed = now;
       if (raw.example && !(entry.examples || []).includes(raw.example)) {
         entry.examples = [...(entry.examples || []), raw.example];
       }
+      applyOutcome(entry, 'self_verified', { context, now });
       updated++;
     } else {
       entry = {
@@ -103,18 +148,23 @@ function upsertReflectionIntoPlaybook(playbook, reflectionEntries, source = 'dir
         language: raw.language || 'any',
         problemPattern: raw.problemPattern,
         fixMethod: raw.fixMethod,
+        tier: 'candidate',
+        confidence: PLAYBOOK_DEFAULTS.newConfidence,
         appliedCount: 1,
-        confidence: 0.5,
+        verifiedCount: 0,
+        rejectedCount: 0,
+        failedCount: 0,
+        distinctContexts: [],
         createdAt: now,
         lastUsed: now,
         examples: raw.example ? [raw.example] : [],
-        source,
+        source: 'direct-fix',
       };
+      applyOutcome(entry, 'self_verified', { context, now });
       playbook.entries.push(entry);
       added++;
     }
   }
-
   return { added, updated };
 }
 
@@ -136,37 +186,82 @@ function cmdRecord() {
   }
 
   const playbook = loadPlaybook(playbookPath);
-  const { added, updated } = upsertReflectionIntoPlaybook(
-    playbook,
-    entries,
-    reflection.mode || 'direct-fix',
-  );
+  const { added, updated } = recordSelfVerified(playbook, entries);
   savePlaybook(playbookPath, playbook);
   console.log(`[cortexloop] Playbook updated -> ${playbookPath}`);
-  console.log(`  added: ${added}, updated: ${updated}, total: ${playbook.entries.length}`);
+  console.log(`  added: ${added}, updated: ${updated}, total: ${playbook.entries.length} (new entries start as candidates)`);
 
   if (alsoGlobal) {
     const globalPb = loadPlaybook(GLOBAL_PLAYBOOK);
-    const g = upsertReflectionIntoPlaybook(globalPb, entries, reflection.mode || 'direct-fix');
+    const g = recordSelfVerified(globalPb, entries);
     savePlaybook(GLOBAL_PLAYBOOK, globalPb);
     console.log(`[cortexloop] Global playbook updated -> ${GLOBAL_PLAYBOOK}`);
     console.log(`  added: ${g.added}, updated: ${g.updated}, total: ${globalPb.entries.length}`);
   }
 }
 
+// feedback = outcome signal from an external oracle (CI / human) or a
+// negative result (rejected suggestion / failed-and-reverted fix).
+function cmdFeedback() {
+  const outcome = getFlagValue('--outcome', null);
+  if (!outcome || !(outcome in OUTCOME_DELTAS)) {
+    console.error(`[cortexloop] --outcome must be one of: ${Object.keys(OUTCOME_DELTAS).join(', ')}`);
+    process.exit(1);
+  }
+
+  let signature = getFlagValue('--signature', null);
+  if (!signature) {
+    const category = getFlagValue('--category', null);
+    const problemPattern = getFlagValue('--problem', null);
+    const language = getFlagValue('--lang', null);
+    if (category && problemPattern) {
+      signature = playbookSignature({ category, problemPattern, language });
+    }
+  }
+  if (!signature) {
+    console.error('[cortexloop] Provide --signature, or --category and --problem (with optional --lang).');
+    process.exit(1);
+  }
+
+  const context = getFlagValue('--context', null);
+  const evidence = getFlagValue('--evidence', null);
+  const playbookPath = flags.has('--global') ? GLOBAL_PLAYBOOK : getFlagValue('--playbook', DEFAULT_PLAYBOOK);
+
+  const playbook = loadPlaybook(playbookPath);
+  const entry = playbook.entries.find((e) => e.signature === signature);
+  if (!entry) {
+    console.error(`[cortexloop] No entry with signature: ${signature}`);
+    process.exit(1);
+  }
+
+  const beforeTier = entry.tier || 'candidate';
+  const beforeConf = (entry.confidence ?? PLAYBOOK_DEFAULTS.newConfidence).toFixed(2);
+  applyOutcome(entry, outcome, { context, evidence });
+  savePlaybook(playbookPath, playbook);
+
+  console.log(`[cortexloop] Feedback '${outcome}' applied -> ${signature}`);
+  console.log(`  confidence: ${beforeConf} -> ${entry.confidence.toFixed(2)} | tier: ${beforeTier} -> ${entry.tier}`);
+  console.log(`  verified: ${entry.verifiedCount ?? 0} in ${(entry.distinctContexts || []).length} context(s)` +
+    (entry.failedCount ? `, failures: ${entry.failedCount}` : ''));
+}
+
 function cmdPrune() {
   const minConf = Number(getFlagValue('--min-confidence', '0.3'));
   const maxAgeDays = Number(getFlagValue('--max-age-days', '180'));
   const maxEntries = Number(getFlagValue('--max-entries', '200'));
+  const dropQuarantined = flags.has('--drop-quarantined');
   const playbookPath = flags.has('--global') ? GLOBAL_PLAYBOOK : getFlagValue('--playbook', DEFAULT_PLAYBOOK);
 
   const playbook = loadPlaybook(playbookPath);
   const before = playbook.entries.length;
-  const cutoff = Date.now() - maxAgeDays * 86400000;
+  const now = Date.now();
+  const cutoff = now - maxAgeDays * 86400000;
 
   playbook.entries = playbook.entries.filter((e) => {
-    if ((e.confidence ?? 0.5) < minConf) return false;
+    // Prune on decayed (effective) confidence so stale trust is dropped.
+    if (decayedConfidence(e, now) < minConf) return false;
     if (e.lastUsed && Date.parse(e.lastUsed) < cutoff) return false;
+    if (dropQuarantined && (e.tier || 'candidate') === 'quarantined') return false;
     return true;
   });
 
@@ -182,11 +277,13 @@ function cmdPrune() {
 }
 
 const command = positional[0];
-if (!command || !['query', 'record', 'prune'].includes(command)) {
-  console.error('Usage: node scripts/playbook.mjs <query|record|prune> [...]');
+const COMMANDS = ['query', 'record', 'feedback', 'prune'];
+if (!command || !COMMANDS.includes(command)) {
+  console.error(`Usage: node scripts/playbook.mjs <${COMMANDS.join('|')}> [...]`);
   process.exit(1);
 }
 
 if (command === 'query') cmdQuery();
 else if (command === 'record') cmdRecord();
+else if (command === 'feedback') cmdFeedback();
 else if (command === 'prune') cmdPrune();

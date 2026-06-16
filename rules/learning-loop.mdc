@@ -1,5 +1,5 @@
 ---
-description: CodeCortexLoop learning loop — playbook memory, reflect after Direct, suggestions not mandatory
+description: CodeCortexLoop learning loop — playbook memory with anti-hallucination trust model
 alwaysApply: false
 ---
 
@@ -7,13 +7,23 @@ alwaysApply: false
 
 ## Purpose
 
-CodeCortexLoop learns from successful Direct fixes via a **playbook** (`.cortexloop/playbook.json`). Before analysis, query relevant entries; after Direct fixes, reflect and record new patterns.
+CodeCortexLoop learns from Direct fixes via a **playbook** (`.cortexloop/playbook.json`). Before analysis, query relevant entries; after Direct fixes, reflect and record new patterns.
+
+**Anti-hallucination goal:** memory is **recall** (where to look), not **authority** (what to conclude). Self-reinforcing echo chambers are blocked by verified-outcome confidence, two tiers, external oracles, diversity requirements, and time decay.
 
 ## Core principles
 
+### Recall, not authority
+
+Playbook hits tell the agent **where to investigate first**, not what the answer is:
+
+- Re-derive every fix from current code context
+- Re-verify with tests and refactor-safety rules
+- **Never paste** a stored fix method as a diff or blind patch
+
 ### Suggestions, not mandatory
 
-Playbook hits are **prioritized hints** for analysis and recommended fix methods. They do **not**:
+Playbook hits do **not**:
 
 - Skip any analysis pass
 - Override suppressions or scope rules
@@ -27,7 +37,42 @@ When applying a playbook-suggested fix:
 2. Run tests after the change group
 3. Re-verify with analysis if in Direct mode
 
-Bad or stale memory must **never** cause silent breakage. If a pattern does not fit, ignore it and proceed normally.
+Bad or stale memory must **never** cause silent breakage. If a pattern does not fit, ignore it and record `--outcome=rejected`.
+
+### Negative signals must be recorded
+
+If a suggested fix fails tests, is reverted, or is judged inapplicable, run `playbook.mjs feedback` with `--outcome=failed` or `--outcome=rejected`. **Do not** leave failed memories at high confidence.
+
+## Two tiers
+
+| Tier | Meaning | Query behavior |
+|------|---------|----------------|
+| **candidate** | Unconfirmed hypothesis | Hidden by default; shown only with `--include-candidates`, labeled as guesses — **do NOT apply** |
+| **verified** | Trusted recall | Shown by default in Step 0.5 |
+| **quarantined** | Failed / too low confidence | Never shown in query; pruned with `--drop-quarantined` |
+
+**Promotion to verified** requires ALL of:
+
+- `confidence >= 0.7`
+- `verifiedCount >= 2`
+- `distinctContexts >= 2` (diverse evidence, not one file repeated)
+
+**Demotion:** verified entry with `confidence <= 0.4` → candidate.
+
+**Quarantine:** `confidence < 0.2` → quarantined (hidden from query).
+
+## Outcome signals (confidence moves only here)
+
+Scripts use built-in defaults (scripts do **not** read `cortexloop.config.json`):
+
+| Outcome | Delta | When to use |
+|---------|-------|-------------|
+| `external_verified` | +0.2 | CI passed, PR merged, human accepted |
+| `self_verified` | +0.1 | Direct re-verify + local tests passed (`record`) |
+| `rejected` | -0.1 | Suggested but judged not applicable |
+| `failed` | -0.4 | Applied then tests failed / reverted |
+
+External oracle (`external_verified`) outweighs self-report. Negatives are stronger than positives.
 
 ## When to query
 
@@ -37,14 +82,47 @@ Bad or stale memory must **never** cause silent breakage. If a pattern does not 
 node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=<detected> --global-merge
 ```
 
-Use output as "known patterns to check first" during Step 3 analysis. Mention playbook hits in findings when relevant.
+Default: **verified tier only**. To see unconfirmed hypotheses:
+
+```bash
+node scripts/playbook.mjs query ... --include-candidates
+```
+
+Candidates are labeled **UNCONFIRMED — do NOT apply, treat as guesses**.
+
+Use output as "patterns to check first" during Step 3. Mention playbook hits in findings when relevant.
 
 ## When to record
 
-- **Automatic:** after successful Direct mode re-verification (Step 6 — Reflect)
+- **Automatic:** after successful Direct re-verification (Step 6 — Reflect)
 - **Manual:** `/cortexloop-reflect`
 
-Only record **generalizable** patterns (3–5 max per run). Do not record one-off project details.
+```bash
+node scripts/playbook.mjs record .cortexloop/reflection.json
+```
+
+`record` applies `self_verified` (+0.1). **New entries start as candidate** (confidence 0.3 → 0.4 after first self_verified). They are NOT auto-trusted until promoted via diverse verified evidence.
+
+Only record **generalizable** patterns (3–5 max per run).
+
+## When to feedback
+
+Use `feedback` for external oracles and negative signals:
+
+```bash
+# CI passed / PR merged / human accepted
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=external_verified --evidence="ci: run 123"
+
+# Recommended fix judged inapplicable
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=rejected
+
+# Fix applied then tests failed / reverted
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=failed
+```
+
+Alternative: `--category=... --problem=... --lang=...` instead of `--signature`.
+
+**Do not** wire `feedback` into `action.yml` automatically — CI cannot know which signatures were applied.
 
 ## Data model
 
@@ -54,27 +132,34 @@ Only record **generalizable** patterns (3–5 max per run). Do not record one-of
 category:slug(problemPattern):language
 ```
 
-Slug = lowercase, non-alphanumeric → `-`, max 48 chars.
+**Entry fields:**
 
-**Confidence:**
+```
+id, signature, category, language, problemPattern, fixMethod,
+tier, confidence, appliedCount, verifiedCount, rejectedCount, failedCount,
+distinctContexts[], createdAt, lastUsed, lastValidated, evidence[], examples[], source
+```
 
-| Event | Effect |
-|-------|--------|
-| New entry | `confidence = 0.5`, `appliedCount = 1` |
-| Reused / recorded again | `appliedCount++`, `confidence = min(0.95, confidence + 0.1)` |
-| Prune below threshold | entry removed |
+`distinctContexts`: deduplicated context keys (default: filename from example, without `:line`).
 
-**Query ranking:** `confidence × log(appliedCount + 1)` descending.
+**Query ranking:**
+
+```
+decayedConfidence × log(verifiedCount+1) × tierWeight × failPenalty
+```
+
+- `decayedConfidence`: linear decay since `lastValidated` (0.01/day default)
+- `tierWeight`: verified 1.5, quarantined 0.1, candidate 1.0
+- `failPenalty`: 1 / (1 + failedCount)
 
 ## Pruning
 
-Prevent playbook bloat:
-
 ```bash
 node scripts/playbook.mjs prune --min-confidence=0.3 --max-age-days=180 --max-entries=200
+node scripts/playbook.mjs prune --drop-quarantined
 ```
 
-Defaults match `learning.prune` in config. Run periodically or in maintenance workflows.
+Uses **decayed** confidence for threshold. Defaults match `learning.prune` in config (documentation only).
 
 ## Project vs global
 
@@ -83,7 +168,7 @@ Defaults match `learning.prune` in config. Run periodically or in maintenance wo
 | **Project** (default) | `.cortexloop/playbook.json` | Commit to repo — team-shared memory |
 | **Global** (optional) | `~/.cortexloop/playbook.json` | Personal cross-project patterns |
 
-- `record` writes project playbook by default; `--global` also upserts global
+- `record` / `feedback` write project playbook by default; `--global` also upserts global
 - `query --global-merge` merges global into project view (project entries win on conflict)
 
 ## Artifacts
@@ -94,7 +179,7 @@ Defaults match `learning.prune` in config. Run periodically or in maintenance wo
 | `.cortexloop/reflection.json` | Latest reflect output (input to `record`) |
 | `docs/cortexloop/08-reflection.md` | Human-readable retrospective |
 
-## Config
+## Config (documentation + orchestrator flags)
 
 See `cortexloop.config.json` → `learning`:
 
@@ -102,4 +187,10 @@ See `cortexloop.config.json` → `learning`:
 - `playbookPath` — default `.cortexloop/playbook.json`
 - `global` — also record to `~/.cortexloop/playbook.json`
 - `reflectOn` — `"direct"` (default)
-- `prune` — thresholds for `playbook.mjs prune`
+- `queryVerifiedOnly` — Step 0.5 verified-only (default true)
+- `tiers` — promotion/demotion/quarantine thresholds
+- `decay.perDay` — trust decay rate
+- `outcomeWeights` — signed deltas (must match script defaults)
+- `prune` — thresholds including `dropQuarantined`
+
+Scripts use CLI flags and built-in defaults; they do **not** read config files.

@@ -133,17 +133,19 @@ Write to `docs/cortexloop/`:
 
 Run post-processing after every `report.json` write. See `commands/cortexloop.md` Step 5b.
 
-## Learning Loop (v2.2)
+## Learning Loop (v2.2 — anti-hallucination trust model)
 
-Before analysis (Step 0.5):
+Before analysis (Step 0.5) — **verified tier only** by default:
 
 ```bash
 node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=<detected> --global-merge
 ```
 
-After Direct re-verify: reflect skill → `reflection.json` → `playbook.mjs record`.
+After Direct re-verify: reflect skill → `reflection.json` → `playbook.mjs record` (self_verified; new entries start as **candidate**).
 
-See `rules/learning-loop.mdc` — playbook hits are **suggestions**, not mandatory; always verify fixes.
+Feedback for external oracle / negative signals: `playbook.mjs feedback --outcome=external_verified|failed|rejected`.
+
+See `rules/learning-loop.mdc` — memory is **recall, not authority**; re-derive and verify every fix; record failures.
 
 **STOP** after reports. Ask user what to apply.
 

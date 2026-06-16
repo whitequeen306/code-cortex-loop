@@ -202,18 +202,114 @@ export function mergePlaybooks(projectPb, globalPb) {
     map.set(entry.signature, {
       ...entry,
       appliedCount: Math.max(entry.appliedCount || 0, existing.appliedCount || 0),
+      verifiedCount: Math.max(entry.verifiedCount || 0, existing.verifiedCount || 0),
       confidence: Math.max(entry.confidence || 0, existing.confidence || 0),
+      tier: entry.tier === 'verified' || existing.tier === 'verified' ? 'verified' : (entry.tier || existing.tier || 'candidate'),
       examples: [...new Set([...(entry.examples || []), ...(existing.examples || [])])],
+      distinctContexts: [...new Set([...(entry.distinctContexts || []), ...(existing.distinctContexts || [])])],
     });
   }
 
   return [...map.values()];
 }
 
-export function playbookScore(entry) {
-  const c = entry.confidence ?? 0.5;
-  const n = entry.appliedCount ?? 1;
-  return c * Math.log(n + 1);
+// ── Anti-hallucination learning loop ──────────────────────────────
+// Memory is RECALL, not AUTHORITY. Confidence only moves on verified
+// outcomes (incl. negative signals); external oracles (CI / human)
+// outweigh self-reported success; promotion to the trusted tier needs
+// diverse, verified evidence; trust decays until re-validated.
+
+export const PLAYBOOK_DEFAULTS = {
+  newConfidence: 0.3,        // unconfirmed hypothesis starts low
+  maxConfidence: 0.95,
+  minConfidence: 0,
+  promoteConfidence: 0.7,    // tier candidate -> verified threshold
+  demoteConfidence: 0.4,     // verified -> candidate when it drops below
+  quarantineConfidence: 0.2, // hidden from query until pruned
+  minVerified: 2,            // verified successes needed to promote
+  minDistinctContexts: 2,    // diversity: must succeed in >=2 contexts
+  decayPerDay: 0.01,         // confidence lost per day since lastValidated
+};
+
+// Signed confidence deltas per outcome. External oracle > self-report.
+// Negatives are stronger than positives (asymmetric: a wrong memory is
+// far costlier than a missed recall).
+export const OUTCOME_DELTAS = {
+  external_verified: 0.2,   // CI passed / PR merged / human accepted
+  self_verified: 0.1,       // Direct re-verify + local tests passed
+  rejected: -0.1,           // suggested but judged not applicable
+  failed: -0.4,             // applied then tests failed / reverted
+};
+
+export function clampConfidence(c, cfg = PLAYBOOK_DEFAULTS) {
+  return Math.max(cfg.minConfidence, Math.min(cfg.maxConfidence, c));
+}
+
+// Time decay on trust: an entry not re-validated recently loses authority.
+// Returns a new confidence value (does not mutate). Verified outcomes
+// reset the clock via lastValidated.
+export function decayedConfidence(entry, now = Date.now(), cfg = PLAYBOOK_DEFAULTS) {
+  const base = entry.confidence ?? cfg.newConfidence;
+  const anchor = entry.lastValidated || entry.lastUsed || entry.createdAt;
+  if (!anchor) return base;
+  const days = Math.max(0, (now - Date.parse(anchor)) / 86400000);
+  return clampConfidence(base - days * (cfg.decayPerDay ?? 0), cfg);
+}
+
+// Decide tier from evidence. Promotion requires diverse + verified
+// successes; a single failure or low confidence demotes/quarantines.
+export function recomputeTier(entry, cfg = PLAYBOOK_DEFAULTS) {
+  const conf = entry.confidence ?? cfg.newConfidence;
+  const verified = entry.verifiedCount ?? 0;
+  const contexts = (entry.distinctContexts || []).length;
+
+  if (conf < cfg.quarantineConfidence) return 'quarantined';
+  if (
+    conf >= cfg.promoteConfidence &&
+    verified >= cfg.minVerified &&
+    contexts >= cfg.minDistinctContexts
+  ) {
+    return 'verified';
+  }
+  if (entry.tier === 'verified' && conf <= cfg.demoteConfidence) return 'candidate';
+  return entry.tier === 'verified' ? 'verified' : 'candidate';
+}
+
+// Apply one outcome signal to an entry in place. `external` outcomes
+// and `self_verified` count as validation (reset decay clock + bump
+// verifiedCount + record distinct context). Returns the entry.
+export function applyOutcome(entry, outcome, { context, evidence, now } = {}, cfg = PLAYBOOK_DEFAULTS) {
+  const ts = now || new Date().toISOString();
+  const delta = OUTCOME_DELTAS[outcome] ?? 0;
+  entry.confidence = clampConfidence((entry.confidence ?? cfg.newConfidence) + delta, cfg);
+  entry.lastUsed = ts;
+
+  const isPositive = outcome === 'external_verified' || outcome === 'self_verified';
+  if (isPositive) {
+    entry.verifiedCount = (entry.verifiedCount ?? 0) + 1;
+    entry.lastValidated = ts;
+    if (context) {
+      entry.distinctContexts = [...new Set([...(entry.distinctContexts || []), context])];
+    }
+  } else {
+    entry.rejectedCount = (entry.rejectedCount ?? 0) + (outcome === 'rejected' ? 1 : 0);
+    entry.failedCount = (entry.failedCount ?? 0) + (outcome === 'failed' ? 1 : 0);
+  }
+  if (evidence) {
+    entry.evidence = [...new Set([...(entry.evidence || []), evidence])].slice(-5);
+  }
+  entry.tier = recomputeTier(entry, cfg);
+  return entry;
+}
+
+// Ranking: trust × breadth, with verified tier strongly favored and
+// failures penalized. Uses decayed confidence so stale memory sinks.
+export function playbookScore(entry, now = Date.now(), cfg = PLAYBOOK_DEFAULTS) {
+  const c = decayedConfidence(entry, now, cfg);
+  const n = entry.verifiedCount ?? entry.appliedCount ?? 1;
+  const tierWeight = entry.tier === 'verified' ? 1.5 : entry.tier === 'quarantined' ? 0.1 : 1;
+  const failPenalty = 1 / (1 + (entry.failedCount ?? 0));
+  return c * Math.log(n + 1) * tierWeight * failPenalty;
 }
 
 export function nextPlaybookId(entries) {

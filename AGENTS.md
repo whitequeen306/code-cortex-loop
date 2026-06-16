@@ -64,15 +64,24 @@ Before analysis:
 
 ```bash
 node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=<detected> --global-merge
+# add --include-candidates to see unconfirmed hypotheses (do NOT apply)
 ```
 
-After Direct fixes (reflect):
+After Direct fixes (reflect — applies `self_verified`, new entries start as **candidate**):
 
 ```bash
 node scripts/playbook.mjs record .cortexloop/reflection.json
 ```
 
-Playbook hits are suggestions — always verify via refactor-safety + tests.
+Feedback (external oracle + negative signals — record failures and rejections):
+
+```bash
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=external_verified --evidence="ci: run"
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=failed
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=rejected
+```
+
+Playbook hits are **recall, not authority** — re-derive and verify every fix; record negative signals when suggestions fail.
 
 ## Output Locations
 

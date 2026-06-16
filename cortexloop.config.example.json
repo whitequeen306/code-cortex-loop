@@ -69,10 +69,29 @@
     "playbookPath": ".cortexloop/playbook.json",
     "global": false,
     "reflectOn": "direct",
+    "queryVerifiedOnly": true,
+    "tiers": {
+      "newConfidence": 0.3,
+      "promoteConfidence": 0.7,
+      "demoteConfidence": 0.4,
+      "quarantineConfidence": 0.2,
+      "minVerified": 2,
+      "minDistinctContexts": 2
+    },
+    "decay": {
+      "perDay": 0.01
+    },
+    "outcomeWeights": {
+      "external_verified": 0.2,
+      "self_verified": 0.1,
+      "rejected": -0.1,
+      "failed": -0.4
+    },
     "prune": {
       "minConfidence": 0.3,
       "maxAgeDays": 180,
-      "maxEntries": 200
+      "maxEntries": 200,
+      "dropQuarantined": false
     }
   }
 }

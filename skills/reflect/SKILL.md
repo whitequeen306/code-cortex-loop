@@ -11,7 +11,7 @@ description: After Direct-mode fixes, summarize what changed and record reusable
 
 After a Direct-mode run (or manual reflect), produce a **human retrospective** and a **structured reflection** that `playbook.mjs record` can upsert into `.cortexloop/playbook.json`.
 
-Playbook entries are **suggestions only** — never skip analysis or blindly apply stored fixes.
+Playbook entries are **recall, not authority** — new entries start as **candidate** until diverse verified evidence promotes them. Never skip analysis or blindly apply stored fixes.
 
 ## When to Use
 
@@ -109,4 +109,4 @@ Confirm output shows added/updated counts.
 - [ ] fixMethod is actionable without reading the original diff
 - [ ] No duplicate of an existing playbook signature unless the fix genuinely evolved
 - [ ] Retrospective mentions verification (tests passed)
-- [ ] User knows playbook hits still require refactor-safety + tests on next run
+- [ ] User knows playbook hits are recall — re-derive and verify; use `feedback --outcome=failed` if a recorded pattern fails later

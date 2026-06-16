@@ -14,14 +14,14 @@
 |------|------|
 | **一键 7 路体检** | `/cortexloop` 并行跑审查 / 安全 / 测试 / 性能 / 精简 / 错误处理 / 清理，只读分析、互不干扰 |
 | **健康分（0–100）** | 按类别打分 + 总分，Direct 修复后给出 **修复前 → 修复后** 对比 |
-| **可自我进化** ⭐ | 内置 **Playbook 记忆库**：分析前查"已验证修法"，Direct 修复后自动反思并沉淀经验，**越用越快、越用越准** |
+| **可自我进化** ⭐ | 内置 **Playbook 记忆库**（**防幻觉信任模型**：两层候选/已验证、验证驱动置信度、负信号、外部预言机优先）；分析前查已验证线索，Direct 后反思沉淀 |
 | **可视化看板** | 自包含的 `report.html`，浏览器直接打开，无需起服务 |
 | **趋势 + 徽章** | `history.json` 记录历次得分趋势，`health-badge.svg` 可嵌入仓库 README |
 | **基线棘轮** | 老项目历史欠债一次性接受，CI 只对**新增**问题报错 |
 | **CI / GitHub Action** | 内置复合 Action，一步完成门禁 + 徽章 + 看板 + PR 评论 |
 | **零依赖** | 所有后处理脚本均为零 npm 依赖的纯 Node 脚本 |
 
-> ⭐ **可自我进化**是 v2.2 的核心：CodeCortexLoop 把每次成功的修复抽象成"问题 → 修法"写入 Playbook；下次遇到同类问题，分析前先调出历史修法作为优先排查项。详见下文 [自我进化（Learning Loop）](#自我进化learning-loop)。
+> ⭐ **可自我进化**是 v2.2 的核心：记忆是**召回（去哪看）**而非**权威（该信什么）**——命中只提示优先排查区，修法每次重新推导验证。带两层信任模型（候选/已验证）、验证驱动置信度（含负信号）、外部预言机优先、多样性晋升与时间衰减，防止"越记越幻觉"。详见 [自我进化（Learning Loop）](#自我进化learning-loop)。
 
 ```mermaid
 flowchart LR
@@ -122,47 +122,84 @@ chmod +x scripts/install.sh
 
 ## 自我进化（Learning Loop）
 
-v2.2 引入 **Playbook 记忆库** —— 沉淀已验证的"问题 → 修法"，让 agent 在重复问题上越来越快、越来越准。
+v2.2 引入 **Playbook 记忆库**，在保留"省 token 召回"收益的同时，用**防幻觉信任模型**阻断回音壁（模型把自己的产物当成 ground truth 越记越自信）。
+
+**核心权衡**：记忆告诉你**去哪查**，不告诉你**该信什么**——每次命中仍重新推导、重新验证，绝不从记忆直接粘贴修法。
 
 ```mermaid
 flowchart LR
-  pre["Step 0.5：查 Playbook"] --> analyze["7 路分析"]
+  pre["Step 0.5：查 verified 层"] --> analyze["7 路分析"]
   analyze --> fix["Direct 修复 + 测试"]
   fix --> reflect["反思 skill"]
-  reflect --> record["playbook.mjs record"]
-  record -.下次更快.-> pre
+  reflect --> record["record: self_verified"]
+  record --> feedback["feedback: 外部/负信号"]
+  feedback -.晋升或降级.-> pre
 ```
 
-**架构原则**：AI 只产出结构化 JSON，确定性的活（去重 / 计数 / 置信度 / 剪枝 / 合并）全交给零依赖 Node 脚本；也不会把整本 Playbook 塞进上下文，而是用脚本预筛出相关切片。
+**架构原则**：AI 只产出结构化 JSON；确定性活（去重 / 两层 / 置信度 / 负信号 / 衰减 / 剪枝）全交给零依赖 Node 脚本；脚本**不读 config**，用 CLI flag + 内置默认值。
 
-### 分析前 —— 查询（query）
+### 两层信任
+
+| 层级 | 含义 | query 行为 |
+|------|------|------------|
+| **verified** | 多样且已验证的可信召回 | 默认展示 |
+| **candidate** | 未确认假设 | 仅 `--include-candidates` 展示，标注为**猜测，禁止套用** |
+| **quarantined** | 失败/过低置信 | 不展示，可 `--drop-quarantined` 剪枝 |
+
+晋升条件：`confidence >= 0.7` 且 `verifiedCount >= 2` 且 `distinctContexts >= 2`（跨场景验证，非同一文件反复命中）。
+
+### 分析前 —— 查询（query，默认 verified-only）
 
 ```bash
 node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=js --global-merge
+# 查看未确认候选（标注为猜测，禁止套用）：
+node scripts/playbook.mjs query ... --include-candidates
 ```
 
-输出相关修法（签名、问题、修法、置信度、命中次数）。**命中只是建议**，不跳过分析、不盲目套用，套用后仍走 refactor-safety + 测试验证。
+输出是**优先排查线索**，不是可直接套用的修法。套用后仍走 refactor-safety + 测试。
 
 ### Direct 修复后 —— 反思并记录（record）
 
-Direct 模式会**自动**运行反思 skill，产出 `docs/cortexloop/08-reflection.md`（人类可读复盘）与 `.cortexloop/reflection.json`（结构化条目），随后：
+Direct 模式自动运行反思 skill，产出 `08-reflection.md` 与 `reflection.json`，随后：
 
 ```bash
 node scripts/playbook.mjs record .cortexloop/reflection.json
 # 可选：--global 同时写入 ~/.cortexloop/playbook.json
 ```
 
+`record` 应用 `self_verified`（+0.1）。**新条目从 candidate 起步**（confidence 0.3→0.4），不会自动进入 verified。
+
 手动触发：`/cortexloop-reflect`
 
-### 置信度与排序
+### 反馈信号（feedback）—— 外部预言机 + 负信号
 
-| 事件 | 效果 |
-|------|------|
-| 新建条目 | `confidence = 0.5`，`appliedCount = 1` |
-| 再次命中 / 记录 | `appliedCount++`，`confidence = min(0.95, +0.1)` |
-| 低于阈值 | 被 prune 剪除 |
+置信度**只在已验证结果上移动**，负信号强于正信号：
 
-查询排序：`confidence × log(appliedCount + 1)` 降序。
+| 结果 | 置信度变化 | 何时使用 |
+|------|------------|----------|
+| `external_verified` | +0.2 | CI 通过 / PR 合并 / 人工确认 |
+| `self_verified` | +0.1 | Direct 复验 + 本地测试通过（record） |
+| `rejected` | -0.1 | 推荐但判定不适用 |
+| `failed` | -0.4 | 应用后测试挂 / 被回滚 |
+
+```bash
+# CI / 人工确认
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=external_verified --evidence="ci: run 123"
+
+# 推荐不适用
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=rejected
+
+# 修复失败 / 回滚
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=failed
+```
+
+外部信号（CI/人工）权重 > 自报成功。**不在 action.yml 中自动调用**（CI 无法知道具体 signature）。
+
+### 信任衰减
+
+未再次验证的记忆按 `0.01/天` 衰减有效置信度；`lastValidated` 在 verified 结果时重置。
+
+查询排序：`decayedConfidence × log(verifiedCount+1) × tierWeight × failPenalty`。
 
 ### 存储：项目级 vs 全局
 
@@ -171,15 +208,18 @@ node scripts/playbook.mjs record .cortexloop/reflection.json
 | **项目级**（默认） | `.cortexloop/playbook.json` | 提交进 repo —— 团队共享记忆 |
 | **全局**（可选） | `~/.cortexloop/playbook.json` | 个人跨项目记忆 |
 
-`query --global-merge` 会把全局合并进项目视图（同签名以项目条目为准）。示例记忆库见 [examples/demo-app/.cortexloop/playbook.json](examples/demo-app/.cortexloop/playbook.json)。
+示例见 [examples/demo-app/.cortexloop/playbook.json](examples/demo-app/.cortexloop/playbook.json)（含 verified + candidate 混合样例）。
 
 ### 策展 —— 剪枝（prune）
 
 ```bash
 node scripts/playbook.mjs prune --min-confidence=0.3 --max-age-days=180 --max-entries=200
+node scripts/playbook.mjs prune --drop-quarantined
 ```
 
-> **重要**：Playbook 命中是**建议而非强制**。每条被采纳的修法仍要经过 refactor-safety 规则与测试验证。详见 `rules/learning-loop.mdc`。
+按**衰减后**置信度剪枝。
+
+> **重要**：Playbook 是**召回而非权威**。候选层禁止自动套用；负信号必须如实回写。详见 `rules/learning-loop.mdc`。
 
 ---
 
@@ -271,7 +311,8 @@ node scripts/make-dashboard.mjs docs/cortexloop/report.json
 node scripts/pr-comment.mjs docs/cortexloop/report.json
 node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=js
 node scripts/playbook.mjs record .cortexloop/reflection.json
-node scripts/playbook.mjs prune
+node scripts/playbook.mjs feedback --signature=<sig> --outcome=external_verified
+node scripts/playbook.mjs prune --drop-quarantined
 ```
 
 配置开启后（默认开启），`/cortexloop` 会自动执行这些。
