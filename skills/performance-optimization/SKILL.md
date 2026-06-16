@@ -14,7 +14,7 @@ Optimize code by measuring first, analyzing bottlenecks, applying targeted fixes
 ## When to Use
 
 - Code review flags slow paths, N+1 queries, or unbounded operations
-- `/supercode` performance pass
+- `/cortexloop` performance pass
 - User reports latency, jank, or high memory usage
 - Before/after a refactor that touches hot paths
 - React/Next.js apps with unnecessary re-renders
@@ -126,7 +126,7 @@ In Report mode (no changes applied), use this table with projected improvements 
 - [ ] Avoid repeated regex compilation in loops
 ```
 
-## Severity Classification (for /supercode aggregation)
+## Severity Classification (for /cortexloop aggregation)
 
 | Severity | Criteria |
 |----------|----------|
@@ -159,6 +159,6 @@ In Report mode (no changes applied), use this table with projected improvements 
 
 ## Composition
 
-- **Invoke via:** `/supercode` (performance pass), or directly when user asks to optimize slow code
+- **Invoke via:** `/cortexloop` (performance pass), or directly when user asks to optimize slow code
 - **Pairs with:** `code-reviewer` (performance axis), `simplify` skill (don't sacrifice clarity for speed)
-- **Do not invoke from other personas** — orchestration belongs to `/supercode`
+- **Do not invoke from other personas** — orchestration belongs to `/cortexloop`

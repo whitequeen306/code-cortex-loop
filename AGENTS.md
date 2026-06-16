@@ -1,14 +1,15 @@
-# Supercode — Agent Rules
+# CodeCortexLoop — Agent Rules
 
-These rules apply when running any `/supercode*` command. Tool-specific installs copy this to the appropriate rules directory or merge into project `AGENTS.md`.
+These rules apply when running any `/cortexloop*` command. Tool-specific installs copy this to the appropriate rules directory or merge into project `AGENTS.md`.
 
-## When Supercode Runs
+## When CodeCortexLoop Runs
 
-1. Load `supercode.config.json` from project root (optional)
-2. Load `.supercodeignore` (optional)
-3. Follow `supercode-workflow` for severity, scoring, CI, re-verify, and post-processing
+1. Load `cortexloop.config.json` from project root (optional)
+2. Load `.cortexloopignore` (optional)
+3. Follow `cortexloop-workflow` for severity, scoring, CI, re-verify, and post-processing
 4. Follow `refactor-safety` for all code modifications
-5. Follow `baseline-policy` when using `/supercode-baseline` or `ci.baseline`
+5. Follow `baseline-policy` when using `/cortexloop-baseline` or `ci.baseline`
+6. Follow `learning-loop` when querying or recording playbook entries
 
 ## Security Baseline (always during security pass)
 
@@ -31,8 +32,8 @@ Every code change must satisfy:
 
 ## Suppression
 
-- Project: `.supercodeignore` (gitignore syntax)
-- Inline: `// supercode-ignore SC-001` or `# supercode-ignore SC-001`
+- Project: `.cortexloopignore` (gitignore syntax)
+- Inline: `// cortexloop-ignore CL-001` or `# cortexloop-ignore CL-001`
 - Never suppress Critical without explicit user approval
 
 ## CI Gate
@@ -40,10 +41,10 @@ Every code change must satisfy:
 After CI report generation:
 
 ```bash
-node scripts/ci-gate.mjs docs/supercode/report.json
+node scripts/ci-gate.mjs docs/cortexloop/report.json
 # Baseline ratchet (new findings only):
-node scripts/baseline.mjs diff docs/supercode/report.json
-node scripts/ci-gate.mjs docs/supercode/report.json --baseline
+node scripts/baseline.mjs diff docs/cortexloop/report.json
+node scripts/ci-gate.mjs docs/cortexloop/report.json --baseline
 ```
 
 Exit codes: `0` pass, `1` Critical, `2` High over threshold, `3` report error.
@@ -51,26 +52,45 @@ Exit codes: `0` pass, `1` Critical, `2` High over threshold, `3` report error.
 ## Post-Processing (after report.json)
 
 ```bash
-node scripts/record-history.mjs docs/supercode/report.json
-node scripts/make-badge.mjs docs/supercode/report.json
-node scripts/make-dashboard.mjs docs/supercode/report.json
-node scripts/pr-comment.mjs docs/supercode/report.json
+node scripts/record-history.mjs docs/cortexloop/report.json
+node scripts/make-badge.mjs docs/cortexloop/report.json
+node scripts/make-dashboard.mjs docs/cortexloop/report.json
+node scripts/pr-comment.mjs docs/cortexloop/report.json
 ```
+
+## Learning Loop (v2.2)
+
+Before analysis:
+
+```bash
+node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=<detected> --global-merge
+```
+
+After Direct fixes (reflect):
+
+```bash
+node scripts/playbook.mjs record .cortexloop/reflection.json
+```
+
+Playbook hits are suggestions — always verify via refactor-safety + tests.
 
 ## Output Locations
 
 | Artifact | Path |
 |----------|------|
-| Summary | `docs/supercode/00-summary.md` |
-| Category reports | `docs/supercode/01-*.md` … `07-*.md` |
-| Machine report | `docs/supercode/report.json` |
-| Visual dashboard | `docs/supercode/report.html` |
-| SARIF (optional) | `docs/supercode/report.sarif` |
-| Score history | `.supercode/history.json` |
-| Health badge | `.supercode/health-badge.svg` |
-| Baseline | `.supercode/baseline.json` |
-| Baseline diff | `.supercode/baseline-diff.json` |
-| PR comment body | `.supercode/pr-comment.md` |
+| Summary | `docs/cortexloop/00-summary.md` |
+| Category reports | `docs/cortexloop/01-*.md` … `07-*.md` |
+| Machine report | `docs/cortexloop/report.json` |
+| Visual dashboard | `docs/cortexloop/report.html` |
+| SARIF (optional) | `docs/cortexloop/report.sarif` |
+| Score history | `.cortexloop/history.json` |
+| Health badge | `.cortexloop/health-badge.svg` |
+| Baseline | `.cortexloop/baseline.json` |
+| Baseline diff | `.cortexloop/baseline-diff.json` |
+| PR comment body | `.cortexloop/pr-comment.md` |
+| Playbook | `.cortexloop/playbook.json` |
+| Reflection (structured) | `.cortexloop/reflection.json` |
+| Reflection (human) | `docs/cortexloop/08-reflection.md` |
 
 ## Agents (subagent types)
 
@@ -82,15 +102,16 @@ node scripts/pr-comment.mjs docs/supercode/report.json
 | `code-simplifier` | Clarity without behavior change |
 | `silent-failure-hunter` | Error handling audit |
 
-Orchestration belongs to `/supercode` — agents do not invoke each other.
+Orchestration belongs to `/cortexloop` — agents do not invoke each other.
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `/supercode` | Full pipeline |
-| `/supercode-quick` | Fast pass |
-| `/supercode-deep` | Whole project deep scan |
-| `/supercode-security` | Security focus |
-| `/supercode-pre-pr` | Pre-PR gate |
-| `/supercode-baseline` | Accept or diff technical debt baseline |
+| `/cortexloop` | Full pipeline |
+| `/cortexloop-quick` | Fast pass |
+| `/cortexloop-deep` | Whole project deep scan |
+| `/cortexloop-security` | Security focus |
+| `/cortexloop-pre-pr` | Pre-PR gate |
+| `/cortexloop-baseline` | Accept or diff technical debt baseline |
+| `/cortexloop-reflect` | Manually reflect and record playbook learnings |

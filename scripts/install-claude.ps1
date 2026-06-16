@@ -9,9 +9,10 @@ $map = @{
   "commands" = Join-Path $Target "commands"
   "agents"   = Join-Path $Target "agents"
   "skills"   = Join-Path $Target "skills"
+  "scripts"  = Join-Path $Target "scripts"
 }
 
-Write-Host "[supercode] Installing to Claude Code: $Target"
+Write-Host "[cortexloop] Installing to Claude Code: $Target"
 
 foreach ($key in $map.Keys) {
   $src = Join-Path $Root $key
@@ -23,8 +24,8 @@ foreach ($key in $map.Keys) {
 }
 
 # AGENTS.md goes to user home as reference (Claude reads project AGENTS.md too)
-Copy-Item (Join-Path $Root "AGENTS.md") (Join-Path $Target "AGENTS.supercode.md") -Force
-Write-Host "  copied AGENTS.md -> $Target\AGENTS.supercode.md (merge into your AGENTS.md as needed)"
+Copy-Item (Join-Path $Root "AGENTS.md") (Join-Path $Target "AGENTS.cortexloop.md") -Force
+Write-Host "  copied AGENTS.md -> $Target\AGENTS.cortexloop.md (merge into your AGENTS.md as needed)"
 
-Write-Host "[supercode] Claude Code install complete."
-Write-Host "  Or use plugin: claude plugin install ./supercode"
+Write-Host "[cortexloop] Claude Code install complete."
+Write-Host "  Or use plugin: claude plugin install ./cortexloop"

@@ -1,4 +1,4 @@
-# Supercode ignore patterns (gitignore syntax)
+# CodeCortexLoop ignore patterns (gitignore syntax)
 # Files matching these patterns are excluded from analysis.
 
 dist/
@@ -10,4 +10,4 @@ pnpm-lock.yaml
 package-lock.json
 
 # Generated reports (don't analyze previous reports)
-docs/supercode/
+docs/cortexloop/

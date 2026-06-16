@@ -1,11 +1,11 @@
 ---
-description: Accept or diff Supercode baseline — ratchet mode for legacy codebases
+description: Accept or diff CodeCortexLoop baseline — ratchet mode for legacy codebases
 disable-model-invocation: true
 ---
 
-# /supercode-baseline
+# /cortexloop-baseline
 
-Manage **technical debt baseline** so Supercode only fails on **new** findings in CI.
+Manage **technical debt baseline** so CodeCortexLoop only fails on **new** findings in CI.
 
 ## When to use
 
@@ -16,7 +16,7 @@ Manage **technical debt baseline** so Supercode only fails on **new** findings i
 
 ### 1. Run analysis first
 
-Run `/supercode` or `/supercode-pre-pr` in **Report** or **CI** mode to produce `docs/supercode/report.json`.
+Run `/cortexloop` or `/cortexloop-pre-pr` in **Report** or **CI** mode to produce `docs/cortexloop/report.json`.
 
 ### 2. Choose action
 
@@ -31,23 +31,23 @@ From project root:
 
 **Accept (first time):**
 ```bash
-node scripts/baseline.mjs accept docs/supercode/report.json
+node scripts/baseline.mjs accept docs/cortexloop/report.json
 ```
 
 **Diff (subsequent runs):**
 ```bash
-node scripts/baseline.mjs diff docs/supercode/report.json
+node scripts/baseline.mjs diff docs/cortexloop/report.json
 ```
 
 Outputs:
-- `.supercode/baseline.json` — accepted fingerprints
-- `.supercode/baseline-diff.json` — new / fixed / remaining
+- `.cortexloop/baseline.json` — accepted fingerprints
+- `.cortexloop/baseline-diff.json` — new / fixed / remaining
 
 ### 4. CI with baseline
 
 ```bash
-node scripts/baseline.mjs diff docs/supercode/report.json
-node scripts/ci-gate.mjs docs/supercode/report.json --baseline
+node scripts/baseline.mjs diff docs/cortexloop/report.json
+node scripts/ci-gate.mjs docs/cortexloop/report.json --baseline
 ```
 
 Only **new** Critical/High findings fail the gate. Remaining baseline debt is ignored.

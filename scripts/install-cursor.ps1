@@ -10,9 +10,10 @@ $map = @{
   "agents"   = Join-Path $Target "agents"
   "skills"   = Join-Path $Target "skills"
   "rules"    = Join-Path $Target "rules"
+  "scripts"  = Join-Path $Target "scripts"
 }
 
-Write-Host "[supercode] Installing to Cursor: $Target"
+Write-Host "[cortexloop] Installing to Cursor: $Target"
 
 foreach ($key in $map.Keys) {
   $src = Join-Path $Root $key
@@ -23,5 +24,5 @@ foreach ($key in $map.Keys) {
   Write-Host "  copied $key -> $dst"
 }
 
-Write-Host "[supercode] Cursor install complete."
-Write-Host "  Restart Cursor, then type /supercode in chat."
+Write-Host "[cortexloop] Cursor install complete."
+Write-Host "  Restart Cursor, then type /cortexloop in chat."

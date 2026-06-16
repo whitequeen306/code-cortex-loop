@@ -1,11 +1,11 @@
 ---
-description: Refactor safety rails for Supercode — preserve behavior, Chesterton's Fence, ask-before-delete, separate refactors from features. Apply when /supercode applies fixes.
+description: Refactor safety rails for CodeCortexLoop — preserve behavior, Chesterton's Fence, ask-before-delete, separate refactors from features. Apply when /cortexloop applies fixes.
 alwaysApply: false
 ---
 
 # Refactor Safety
 
-Apply these constraints whenever `/supercode` modifies code (Direct mode or post-Report confirmation).
+Apply these constraints whenever `/cortexloop` modifies code (Direct mode or post-Report confirmation).
 
 ## Core Principles
 

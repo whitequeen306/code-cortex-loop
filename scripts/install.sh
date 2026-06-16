@@ -6,44 +6,48 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 install_cursor() {
   local target="${HOME}/.cursor"
-  echo "[supercode] Installing to Cursor: $target"
-  mkdir -p "$target"/{commands,agents,skills,rules}
+  echo "[cortexloop] Installing to Cursor: $target"
+  mkdir -p "$target"/{commands,agents,skills,rules,scripts}
   cp -r "$ROOT/commands/"* "$target/commands/" 2>/dev/null || true
   cp -r "$ROOT/agents/"* "$target/agents/" 2>/dev/null || true
   cp -r "$ROOT/skills/"* "$target/skills/" 2>/dev/null || true
   cp -r "$ROOT/rules/"* "$target/rules/" 2>/dev/null || true
+  cp -r "$ROOT/scripts/"* "$target/scripts/" 2>/dev/null || true
 }
 
 install_claude() {
   local target="${HOME}/.claude"
-  echo "[supercode] Installing to Claude Code: $target"
-  mkdir -p "$target"/{commands,agents,skills}
+  echo "[cortexloop] Installing to Claude Code: $target"
+  mkdir -p "$target"/{commands,agents,skills,scripts}
   cp -r "$ROOT/commands/"* "$target/commands/" 2>/dev/null || true
   cp -r "$ROOT/agents/"* "$target/agents/" 2>/dev/null || true
   cp -r "$ROOT/skills/"* "$target/skills/" 2>/dev/null || true
-  cp "$ROOT/AGENTS.md" "$target/AGENTS.supercode.md"
+  cp -r "$ROOT/scripts/"* "$target/scripts/" 2>/dev/null || true
+  cp "$ROOT/AGENTS.md" "$target/AGENTS.cortexloop.md"
 }
 
 install_qoder() {
   local target="${HOME}/.qoder"
-  echo "[supercode] Installing to Qoder: $target"
-  mkdir -p "$target"/{commands,agents,skills,rules}
+  echo "[cortexloop] Installing to Qoder: $target"
+  mkdir -p "$target"/{commands,agents,skills,rules,scripts}
   cp -r "$ROOT/commands/"* "$target/commands/" 2>/dev/null || true
   cp -r "$ROOT/agents/"* "$target/agents/" 2>/dev/null || true
   cp -r "$ROOT/skills/"* "$target/skills/" 2>/dev/null || true
   cp -r "$ROOT/rules/"* "$target/rules/" 2>/dev/null || true
-  cp "$ROOT/AGENTS.md" "$target/AGENTS.supercode.md"
+  cp -r "$ROOT/scripts/"* "$target/scripts/" 2>/dev/null || true
+  cp "$ROOT/AGENTS.md" "$target/AGENTS.cortexloop.md"
 }
 
 install_trae() {
   local target="${HOME}/.trae"
-  echo "[supercode] Installing to Trae (user): $target"
-  mkdir -p "$target"/{commands,agents,skills,rules}
+  echo "[cortexloop] Installing to Trae (user): $target"
+  mkdir -p "$target"/{commands,agents,skills,rules,scripts}
   cp -r "$ROOT/commands/"* "$target/commands/" 2>/dev/null || true
   cp -r "$ROOT/agents/"* "$target/agents/" 2>/dev/null || true
   cp -r "$ROOT/skills/"* "$target/skills/" 2>/dev/null || true
   cp -r "$ROOT/rules/"* "$target/rules/" 2>/dev/null || true
-  cp "$ROOT/AGENTS.md" "$target/AGENTS.supercode.md"
+  cp -r "$ROOT/scripts/"* "$target/scripts/" 2>/dev/null || true
+  cp "$ROOT/AGENTS.md" "$target/AGENTS.cortexloop.md"
 }
 
 case "$TOOL" in
@@ -63,4 +67,4 @@ case "$TOOL" in
     ;;
 esac
 
-echo "[supercode] Done."
+echo "[cortexloop] Done."

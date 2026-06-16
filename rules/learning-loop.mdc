@@ -1,0 +1,105 @@
+---
+description: CodeCortexLoop learning loop — playbook memory, reflect after Direct, suggestions not mandatory
+alwaysApply: false
+---
+
+# Learning Loop (CodeCortexLoop v2.2)
+
+## Purpose
+
+CodeCortexLoop learns from successful Direct fixes via a **playbook** (`.cortexloop/playbook.json`). Before analysis, query relevant entries; after Direct fixes, reflect and record new patterns.
+
+## Core principles
+
+### Suggestions, not mandatory
+
+Playbook hits are **prioritized hints** for analysis and recommended fix methods. They do **not**:
+
+- Skip any analysis pass
+- Override suppressions or scope rules
+- Force a fix without understanding context
+
+### Hits must be verified
+
+When applying a playbook-suggested fix:
+
+1. Follow `rules/refactor-safety.mdc`
+2. Run tests after the change group
+3. Re-verify with analysis if in Direct mode
+
+Bad or stale memory must **never** cause silent breakage. If a pattern does not fit, ignore it and proceed normally.
+
+## When to query
+
+**Step 0.5** (before parallel analysis):
+
+```bash
+node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=<detected> --global-merge
+```
+
+Use output as "known patterns to check first" during Step 3 analysis. Mention playbook hits in findings when relevant.
+
+## When to record
+
+- **Automatic:** after successful Direct mode re-verification (Step 6 — Reflect)
+- **Manual:** `/cortexloop-reflect`
+
+Only record **generalizable** patterns (3–5 max per run). Do not record one-off project details.
+
+## Data model
+
+**Signature (dedup key):**
+
+```
+category:slug(problemPattern):language
+```
+
+Slug = lowercase, non-alphanumeric → `-`, max 48 chars.
+
+**Confidence:**
+
+| Event | Effect |
+|-------|--------|
+| New entry | `confidence = 0.5`, `appliedCount = 1` |
+| Reused / recorded again | `appliedCount++`, `confidence = min(0.95, confidence + 0.1)` |
+| Prune below threshold | entry removed |
+
+**Query ranking:** `confidence × log(appliedCount + 1)` descending.
+
+## Pruning
+
+Prevent playbook bloat:
+
+```bash
+node scripts/playbook.mjs prune --min-confidence=0.3 --max-age-days=180 --max-entries=200
+```
+
+Defaults match `learning.prune` in config. Run periodically or in maintenance workflows.
+
+## Project vs global
+
+| Store | Path | Use |
+|-------|------|-----|
+| **Project** (default) | `.cortexloop/playbook.json` | Commit to repo — team-shared memory |
+| **Global** (optional) | `~/.cortexloop/playbook.json` | Personal cross-project patterns |
+
+- `record` writes project playbook by default; `--global` also upserts global
+- `query --global-merge` merges global into project view (project entries win on conflict)
+
+## Artifacts
+
+| File | Role |
+|------|------|
+| `.cortexloop/playbook.json` | Persistent learned patterns |
+| `.cortexloop/reflection.json` | Latest reflect output (input to `record`) |
+| `docs/cortexloop/08-reflection.md` | Human-readable retrospective |
+
+## Config
+
+See `cortexloop.config.json` → `learning`:
+
+- `enabled` — toggle learning loop
+- `playbookPath` — default `.cortexloop/playbook.json`
+- `global` — also record to `~/.cortexloop/playbook.json`
+- `reflectOn` — `"direct"` (default)
+- `prune` — thresholds for `playbook.mjs prune`

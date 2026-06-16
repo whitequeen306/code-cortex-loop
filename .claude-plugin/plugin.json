@@ -1,12 +1,12 @@
 {
-  "name": "supercode",
-  "description": "One-command post-coding pipeline with health scores, trend dashboard, baseline ratchet, GitHub Action, and CI output",
-  "version": "2.1.0",
+  "name": "cortexloop",
+  "description": "One-command post-coding pipeline with health scores, trend dashboard, baseline ratchet, self-improving playbook learning loop, GitHub Action, and CI output",
+  "version": "2.2.0",
   "author": {
-    "name": "Supercode Contributors"
+    "name": "CodeCortexLoop Contributors"
   },
-  "homepage": "https://github.com/whitequeen306/supercode",
-  "repository": "https://github.com/whitequeen306/supercode",
+  "homepage": "https://github.com/whitequeen306/code-cortex-loop",
+  "repository": "https://github.com/whitequeen306/code-cortex-loop",
   "license": "MIT",
   "keywords": [
     "code-review",
@@ -14,6 +14,8 @@
     "performance",
     "refactoring",
     "testing",
-    "ci"
+    "ci",
+    "memory",
+    "learning"
   ]
 }

@@ -3,11 +3,11 @@ description: Baseline ratchet policy — fingerprinting, new vs remaining debt, 
 alwaysApply: false
 ---
 
-# Baseline Policy (Supercode v2.1)
+# Baseline Policy (CodeCortexLoop v2.1)
 
 ## Purpose
 
-Legacy codebases may have hundreds of pre-existing findings. **Baseline mode** lets teams adopt Supercode without blocking every PR on old debt.
+Legacy codebases may have hundreds of pre-existing findings. **Baseline mode** lets teams adopt CodeCortexLoop without blocking every PR on old debt.
 
 ## Fingerprint
 
@@ -35,25 +35,25 @@ Same issue at same place = same fingerprint across runs.
 Run once (or when intentionally accepting new debt):
 
 ```bash
-node scripts/baseline.mjs accept docs/supercode/report.json
+node scripts/baseline.mjs accept docs/cortexloop/report.json
 ```
 
-Stores `.supercode/baseline.json`. Commit this file to the repo so CI shares the same baseline.
+Stores `.cortexloop/baseline.json`. Commit this file to the repo so CI shares the same baseline.
 
 ## Diff
 
 Every PR / run after baseline exists:
 
 ```bash
-node scripts/baseline.mjs diff docs/supercode/report.json
+node scripts/baseline.mjs diff docs/cortexloop/report.json
 ```
 
-Produces `.supercode/baseline-diff.json`.
+Produces `.cortexloop/baseline-diff.json`.
 
 ## CI gate with `--baseline`
 
 ```bash
-node scripts/ci-gate.mjs docs/supercode/report.json --baseline
+node scripts/ci-gate.mjs docs/cortexloop/report.json --baseline
 ```
 
 Counts **only `new` findings** for Critical/High exit codes. Remaining baseline debt does not fail CI.

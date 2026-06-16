@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Append a Supercode run to .supercode/history.json
+ * Append a CodeCortexLoop run to .cortexloop/history.json
  *
  * Usage:
- *   node scripts/record-history.mjs [report.json] [--history=.supercode/history.json]
+ *   node scripts/record-history.mjs [report.json] [--history=.cortexloop/history.json]
  */
 
 import { existsSync } from 'node:fs';
@@ -25,7 +25,7 @@ const reportPath = positional[0] || DEFAULT_REPORT;
 const historyPath = getFlagValue('--history', DEFAULT_HISTORY);
 
 if (!existsSync(reportPath)) {
-  console.error(`[supercode] Report not found: ${reportPath}`);
+  console.error(`[cortexloop] Report not found: ${reportPath}`);
   process.exit(1);
 }
 
@@ -64,5 +64,5 @@ if (history.runs.length > 100) {
 }
 
 writeJson(historyPath, history);
-console.log(`[supercode] History recorded (${history.runs.length} runs) -> ${historyPath}`);
+console.log(`[cortexloop] History recorded (${history.runs.length} runs) -> ${historyPath}`);
 console.log(`  overall: ${entry.overall ?? 'n/a'} | findings: ${entry.findings.total}`);

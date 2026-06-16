@@ -6,8 +6,8 @@ Trae does **not** use a `plugin.json` manifest. It loads from `.trae/` (internat
 
 **Windows:**
 ```powershell
-git clone https://github.com/whitequeen306/supercode.git
-cd supercode
+git clone https://github.com/whitequeen306/code-cortex-loop.git
+cd cortexloop
 .\scripts\install-trae.ps1
 ```
 
@@ -35,5 +35,5 @@ For Trae CN edition, replace `.trae` with `.trae-cn`.
 ## Verify
 
 1. Restart Trae IDE
-2. Type `/supercode` in agent chat
+2. Type `/cortexloop` in agent chat
 3. Rules in `.trae/rules/` are auto-loaded

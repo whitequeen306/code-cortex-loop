@@ -1,14 +1,14 @@
-name: Supercode Gate
-description: Validate Supercode report, generate badge/dashboard, optional PR comment
+name: CodeCortexLoop Gate
+description: Validate CodeCortexLoop report, generate badge/dashboard, optional PR comment
 branding:
   icon: shield
   color: blue
 
 inputs:
   report-path:
-    description: Path to docs/supercode/report.json
+    description: Path to docs/cortexloop/report.json
     required: false
-    default: docs/supercode/report.json
+    default: docs/cortexloop/report.json
   max-high:
     description: Maximum allowed High-severity findings (or new High in baseline mode)
     required: false
@@ -67,7 +67,7 @@ runs:
       run: |
         DIFF_ARG=""
         if [ "${{ inputs.baseline }}" = "true" ]; then
-          DIFF_ARG="--baseline-diff=.supercode/baseline-diff.json"
+          DIFF_ARG="--baseline-diff=.cortexloop/baseline-diff.json"
         fi
         node "${{ github.action_path }}/scripts/pr-comment.mjs" "${{ inputs.report-path }}" $DIFF_ARG
 
@@ -78,13 +78,13 @@ runs:
         script: |
           const fs = require('fs');
           const path = require('path');
-          const commentPath = path.join(process.env.GITHUB_WORKSPACE, '.supercode/pr-comment.md');
+          const commentPath = path.join(process.env.GITHUB_WORKSPACE, '.cortexloop/pr-comment.md');
           if (!fs.existsSync(commentPath)) {
             core.info('No PR comment file found');
             return;
           }
           const body = fs.readFileSync(commentPath, 'utf8');
-          const marker = '<!-- supercode-report -->';
+          const marker = '<!-- cortexloop-report -->';
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -112,4 +112,4 @@ runs:
       uses: github/codeql-action/upload-sarif@v3
       continue-on-error: true
       with:
-        sarif_file: docs/supercode/report.sarif
+        sarif_file: docs/cortexloop/report.sarif

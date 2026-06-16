@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Generate Supercode health badge SVG + shields endpoint JSON
+ * Generate CodeCortexLoop health badge SVG + shields endpoint JSON
  *
  * Usage:
- *   node scripts/make-badge.mjs [report.json] [--out=.supercode/health-badge.svg]
+ *   node scripts/make-badge.mjs [report.json] [--out=.cortexloop/health-badge.svg]
  */
 
 import { existsSync } from 'node:fs';
@@ -26,19 +26,19 @@ const svgOut = getFlagValue('--out', DEFAULT_BADGE_SVG);
 const jsonOut = getFlagValue('--json', DEFAULT_BADGE_JSON);
 
 if (!existsSync(reportPath)) {
-  console.error(`[supercode] Report not found: ${reportPath}`);
+  console.error(`[cortexloop] Report not found: ${reportPath}`);
   process.exit(1);
 }
 
 const report = readJson(reportPath);
 const score = getOverallScore(report);
 if (score == null) {
-  console.error('[supercode] No overall score in report');
+  console.error('[cortexloop] No overall score in report');
   process.exit(1);
 }
 
 const color = scoreColor(score);
-const label = 'supercode health';
+const label = 'cortexloop health';
 const value = String(Math.round(score));
 
 const labelWidth = label.length * 7 + 10;
@@ -70,7 +70,7 @@ writeFileSync(svgOut, svg, 'utf8');
 
 const badgeJson = {
   schemaVersion: 1,
-  label: 'supercode health',
+  label: 'cortexloop health',
   message: value,
   color: color.replace('#', ''),
   score: Math.round(score),
@@ -78,5 +78,5 @@ const badgeJson = {
 };
 
 writeJson(jsonOut, badgeJson);
-console.log(`[supercode] Badge -> ${svgOut} (${value})`);
-console.log(`[supercode] Badge JSON -> ${jsonOut}`);
+console.log(`[cortexloop] Badge -> ${svgOut} (${value})`);
+console.log(`[cortexloop] Badge JSON -> ${jsonOut}`);

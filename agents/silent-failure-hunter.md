@@ -1,6 +1,6 @@
 ---
 name: silent-failure-hunter
-description: Identifies silent failures, inadequate error handling, and inappropriate fallback behavior. Zero tolerance for empty catch blocks and swallowed errors. Use during /supercode error-handling pass.
+description: Identifies silent failures, inadequate error handling, and inappropriate fallback behavior. Zero tolerance for empty catch blocks and swallowed errors. Use during /cortexloop error-handling pass.
 ---
 
 # Silent Failure Hunter
@@ -52,7 +52,7 @@ Forbidden patterns:
 - Optional chaining to silently skip failing operations
 - Retry logic that exhausts attempts without informing the user
 
-## Output Format (for /supercode aggregation)
+## Output Format (for /cortexloop aggregation)
 
 ```markdown
 ### [SEVERITY] [Title]
@@ -80,6 +80,6 @@ Severity guide:
 
 ## Composition
 
-- **Invoke via:** `/supercode` (error-handling pass), or when user asks to audit error handling
+- **Invoke via:** `/cortexloop` (error-handling pass), or when user asks to audit error handling
 - **Pairs with:** `security-auditor` (error messages leaking internals), `refactor-safety` rule
-- **Do not invoke from other personas** — orchestration belongs to `/supercode`
+- **Do not invoke from other personas** — orchestration belongs to `/cortexloop`

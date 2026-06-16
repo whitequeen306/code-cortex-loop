@@ -13,9 +13,9 @@ if ($Scope -eq "user") {
   $Target = Join-Path $ProjectPath ".trae"
 }
 
-Write-Host "[supercode] Installing to Trae ($Scope scope): $Target"
+Write-Host "[cortexloop] Installing to Trae ($Scope scope): $Target"
 
-$map = @("commands", "agents", "skills", "rules")
+$map = @("commands", "agents", "skills", "rules", "scripts")
 foreach ($key in $map) {
   $src = Join-Path $Root $key
   $dst = Join-Path $Target $key
@@ -25,6 +25,6 @@ foreach ($key in $map) {
   Write-Host "  copied $key -> $dst"
 }
 
-Copy-Item (Join-Path $Root "AGENTS.md") (Join-Path $Target "AGENTS.supercode.md") -Force
-Write-Host "[supercode] Trae install complete."
+Copy-Item (Join-Path $Root "AGENTS.md") (Join-Path $Target "AGENTS.cortexloop.md") -Force
+Write-Host "[cortexloop] Trae install complete."
 Write-Host "  CN edition: copy to .trae-cn instead if needed."

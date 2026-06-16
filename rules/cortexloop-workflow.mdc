@@ -1,24 +1,25 @@
 ---
-description: Supercode v2.1 workflow — presets, health scores, suppression, re-verify, CI output, baseline, dashboard. Apply when running /supercode.
+description: CodeCortexLoop v2.2 workflow — presets, health scores, suppression, re-verify, CI output, baseline, dashboard, learning loop. Apply when running /cortexloop.
 alwaysApply: false
 ---
 
-# Supercode Workflow (v2.1)
+# CodeCortexLoop Workflow (v2.2)
 
-Read at the start of every `/supercode` invocation. Load project config from `supercode.config.json` if present (merge with preset defaults).
+Read at the start of every `/cortexloop` invocation. Load project config from `cortexloop.config.json` if present (merge with preset defaults).
 
 ## Presets
 
 | Preset | Command | Passes enabled | Severity floor | Default scope |
 |--------|---------|----------------|----------------|---------------|
-| `default` | `/supercode` | all 7 | Medium | ask user |
-| `quick` | `/supercode-quick` | review, security, error-handling | High+ only | recent changes |
-| `deep` | `/supercode-deep` | all 7 + benchmarks required | Low+ | whole project |
-| `security` | `/supercode-security` | security, error-handling, cleanup(deps only) | Medium+ | recent changes |
-| `pre-pr` | `/supercode-pre-pr` | all 7 | High+ | recent changes |
-| `baseline` | `/supercode-baseline` | n/a (manage debt snapshot) | n/a | n/a |
+| `default` | `/cortexloop` | all 7 | Medium | ask user |
+| `quick` | `/cortexloop-quick` | review, security, error-handling | High+ only | recent changes |
+| `deep` | `/cortexloop-deep` | all 7 + benchmarks required | Low+ | whole project |
+| `security` | `/cortexloop-security` | security, error-handling, cleanup(deps only) | Medium+ | recent changes |
+| `pre-pr` | `/cortexloop-pre-pr` | all 7 | High+ | recent changes |
+| `baseline` | `/cortexloop-baseline` | n/a (manage debt snapshot) | n/a | n/a |
+| `reflect` | `/cortexloop-reflect` | n/a (record learnings) | n/a | n/a |
 
-Config file overrides preset defaults. See `supercode.config.example.json`.
+Config file overrides preset defaults. See `cortexloop.config.example.json`.
 
 ## Severity Taxonomy
 
@@ -36,8 +37,8 @@ Config file overrides preset defaults. See `supercode.config.example.json`.
 
 ## Suppression (apply before analysis)
 
-1. Read project `.supercodeignore` (gitignore-style patterns for paths)
-2. Read inline suppressions: `// supercode-ignore SC-001` or `# supercode-ignore SC-001`
+1. Read project `.cortexloopignore` (gitignore-style patterns for paths)
+2. Read inline suppressions: `// cortexloop-ignore CL-001` or `# cortexloop-ignore CL-001`
 3. Skip suppressed findings; list suppressed count in summary
 
 ## Scope Detection
@@ -60,7 +61,7 @@ Config file overrides preset defaults. See `supercode.config.example.json`.
 
 Each finding MUST include:
 ```
-- **ID:** SC-001
+- **ID:** CL-001
 - **Severity:** Critical | High | Medium | Low | Info
 - **Category:** ...
 - **Location:** path:line
@@ -106,7 +107,7 @@ Include in `00-summary.md` and machine-readable report:
 
 ## Report Mode Output
 
-Write to `docs/supercode/`:
+Write to `docs/cortexloop/`:
 
 | File | Contents |
 |------|----------|
@@ -120,14 +121,29 @@ Write to `docs/supercode/`:
 
 | File | Script | Purpose |
 |------|--------|---------|
-| `.supercode/history.json` | `record-history.mjs` | Score trend over runs |
-| `.supercode/health-badge.svg` | `make-badge.mjs` | README badge |
-| `docs/supercode/report.html` | `make-dashboard.mjs` | Visual dashboard |
-| `.supercode/baseline.json` | `baseline.mjs accept` | Accepted debt snapshot |
-| `.supercode/baseline-diff.json` | `baseline.mjs diff` | new / fixed / remaining |
-| `.supercode/pr-comment.md` | `pr-comment.mjs` | GitHub PR comment body |
+| `.cortexloop/history.json` | `record-history.mjs` | Score trend over runs |
+| `.cortexloop/health-badge.svg` | `make-badge.mjs` | README badge |
+| `docs/cortexloop/report.html` | `make-dashboard.mjs` | Visual dashboard |
+| `.cortexloop/baseline.json` | `baseline.mjs accept` | Accepted debt snapshot |
+| `.cortexloop/baseline-diff.json` | `baseline.mjs diff` | new / fixed / remaining |
+| `.cortexloop/pr-comment.md` | `pr-comment.mjs` | GitHub PR comment body |
+| `.cortexloop/playbook.json` | `playbook.mjs record` | Learned fix patterns |
+| `.cortexloop/reflection.json` | reflect skill | Latest reflection (record input) |
+| `docs/cortexloop/08-reflection.md` | reflect skill | Human retrospective |
 
-Run post-processing after every `report.json` write. See `commands/supercode.md` Step 5b.
+Run post-processing after every `report.json` write. See `commands/cortexloop.md` Step 5b.
+
+## Learning Loop (v2.2)
+
+Before analysis (Step 0.5):
+
+```bash
+node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=<detected> --global-merge
+```
+
+After Direct re-verify: reflect skill → `reflection.json` → `playbook.mjs record`.
+
+See `rules/learning-loop.mdc` — playbook hits are **suggestions**, not mandatory; always verify fixes.
 
 **STOP** after reports. Ask user what to apply.
 
@@ -166,7 +182,7 @@ Include in summary:
 When user passes `--ci` or config `ci.enabled: true`:
 
 1. Default to Report mode (no auto-apply unless `ci.autoFix: true`)
-2. Always write `docs/supercode/report.json`
+2. Always write `docs/cortexloop/report.json`
 3. Optionally write `report.sarif`
 4. Set exit code via `scripts/ci-gate.mjs`:
    - `0` — no Critical, High ≤ threshold
@@ -174,13 +190,13 @@ When user passes `--ci` or config `ci.enabled: true`:
    - `2` — High > threshold (default 0)
    - `3` — analysis error
 
-Run: `node scripts/ci-gate.mjs docs/supercode/report.json`
+Run: `node scripts/ci-gate.mjs docs/cortexloop/report.json`
 
 With baseline ratchet (`config.ci.baseline: true`):
 
 ```bash
-node scripts/baseline.mjs diff docs/supercode/report.json
-node scripts/ci-gate.mjs docs/supercode/report.json --baseline
+node scripts/baseline.mjs diff docs/cortexloop/report.json
+node scripts/ci-gate.mjs docs/cortexloop/report.json --baseline
 ```
 
 Only **new** Critical/High findings fail the gate.
@@ -188,7 +204,7 @@ Only **new** Critical/High findings fail the gate.
 ## Final Summary Template
 
 ```markdown
-## Supercode Summary
+## CodeCortexLoop Summary
 
 **Preset:** [default | quick | deep | security | pre-pr]
 **Scope:** [recent | whole]

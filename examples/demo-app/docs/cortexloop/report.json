@@ -18,7 +18,7 @@
   },
   "findings": [
     {
-      "id": "SC-001",
+      "id": "CL-001",
       "severity": "Critical",
       "category": "security",
       "location": "src/api.js:4",
@@ -28,7 +28,7 @@
       "status": "open"
     },
     {
-      "id": "SC-002",
+      "id": "CL-002",
       "severity": "Critical",
       "category": "security",
       "location": "src/api.js:14",
@@ -38,7 +38,7 @@
       "status": "open"
     },
     {
-      "id": "SC-003",
+      "id": "CL-003",
       "severity": "High",
       "category": "errorHandling",
       "location": "src/api.js:15",
@@ -48,7 +48,7 @@
       "status": "open"
     },
     {
-      "id": "SC-004",
+      "id": "CL-004",
       "severity": "High",
       "category": "performance",
       "location": "src/api.js:6",
@@ -58,7 +58,7 @@
       "status": "open"
     },
     {
-      "id": "SC-005",
+      "id": "CL-005",
       "severity": "High",
       "category": "correctness",
       "location": "src/utils.js:12",
@@ -68,7 +68,7 @@
       "status": "open"
     },
     {
-      "id": "SC-006",
+      "id": "CL-006",
       "severity": "Medium",
       "category": "simplicity",
       "location": "src/utils.js:9",
@@ -78,7 +78,7 @@
       "status": "open"
     },
     {
-      "id": "SC-007",
+      "id": "CL-007",
       "severity": "Medium",
       "category": "tests",
       "location": "tests/",
@@ -88,7 +88,7 @@
       "status": "open"
     },
     {
-      "id": "SC-008",
+      "id": "CL-008",
       "severity": "Medium",
       "category": "cleanup",
       "location": "src/utils.js:1",
@@ -98,7 +98,7 @@
       "status": "open"
     },
     {
-      "id": "SC-009",
+      "id": "CL-009",
       "severity": "High",
       "category": "cleanup",
       "location": "package.json",
@@ -108,7 +108,7 @@
       "status": "open"
     },
     {
-      "id": "SC-010",
+      "id": "CL-010",
       "severity": "Low",
       "category": "correctness",
       "location": "src/db.js:2",

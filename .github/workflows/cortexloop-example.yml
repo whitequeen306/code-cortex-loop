@@ -1,16 +1,16 @@
-# Example: gate a PR after your AI tool produces docs/supercode/report.json
+# Example: gate a PR after your AI tool produces docs/cortexloop/report.json
 #
-# Step 1 (not shown): invoke Cursor / Claude Code / etc. with /supercode-pre-pr --ci
+# Step 1 (not shown): invoke Cursor / Claude Code / etc. with /cortexloop-pre-pr --ci
 # Step 2: this workflow validates the report and posts a PR comment
 
-name: Supercode
+name: CodeCortexLoop
 
 on:
   pull_request:
     branches: [main, master]
 
 jobs:
-  supercode-gate:
+  cortexloop-gate:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,25 +20,25 @@ jobs:
       - uses: actions/checkout@v4
 
       # Replace this block with your AI CLI invocation that writes report.json
-      # - name: Run Supercode analysis
+      # - name: Run CodeCortexLoop analysis
       #   run: |
-      #     # cursor / claude / your-tool --command "/supercode-pre-pr --ci"
-      #     test -f docs/supercode/report.json
+      #     # cursor / claude / your-tool --command "/cortexloop-pre-pr --ci"
+      #     test -f docs/cortexloop/report.json
 
-      - name: Supercode gate (badge + dashboard + PR comment)
+      - name: CodeCortexLoop gate (badge + dashboard + PR comment)
         uses: ./
         with:
-          report-path: docs/supercode/report.json
+          report-path: docs/cortexloop/report.json
           max-high: '0'
           baseline: 'false'
           comment: 'true'
           upload-sarif: 'false'
 
-      - name: Upload Supercode artifacts
+      - name: Upload CodeCortexLoop artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: supercode-report
+          name: cortexloop-report
           path: |
-            docs/supercode/
-            .supercode/
+            docs/cortexloop/
+            .cortexloop/

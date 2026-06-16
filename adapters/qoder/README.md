@@ -6,15 +6,15 @@ Qoder does **not** use a `plugin.json` manifest. It loads assets from fixed dire
 
 **Windows (PowerShell):**
 ```powershell
-git clone https://github.com/whitequeen306/supercode.git
-cd supercode
+git clone https://github.com/whitequeen306/code-cortex-loop.git
+cd cortexloop
 .\scripts\install-qoder.ps1
 ```
 
 **macOS / Linux:**
 ```bash
-git clone https://github.com/whitequeen306/supercode.git
-cd supercode
+git clone https://github.com/whitequeen306/code-cortex-loop.git
+cd cortexloop
 ./scripts/install.sh qoder
 ```
 
@@ -41,4 +41,4 @@ Also copy `AGENTS.md` to project root — Qoder reads it alongside rules.
 ## Verify
 
 1. Restart Qoder IDE
-2. Type `/` in chat — you should see `/supercode`, `/supercode-quick`, etc.
+2. Type `/` in chat — you should see `/cortexloop`, `/cortexloop-quick`, etc.

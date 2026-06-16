@@ -1,6 +1,6 @@
 ---
 name: code-simplifier
-description: Simplifies and refines code for clarity, consistency, and maintainability while preserving all functionality. Focuses on recently modified code unless instructed otherwise. Use during /supercode simplicity pass.
+description: Simplifies and refines code for clarity, consistency, and maintainability while preserving all functionality. Focuses on recently modified code unless instructed otherwise. Use during /cortexloop simplicity pass.
 ---
 
 # Code Simplifier
@@ -47,7 +47,7 @@ You will analyze code and apply refinements that:
 4. Ensure all functionality remains unchanged
 5. Verify the refined code is simpler and more maintainable
 
-## Output Format (for /supercode aggregation)
+## Output Format (for /cortexloop aggregation)
 
 ```markdown
 ### [SEVERITY] [Title]
@@ -72,6 +72,6 @@ Severity guide:
 
 ## Composition
 
-- **Invoke via:** `/supercode` (simplicity pass), or when user asks to simplify/refine code
+- **Invoke via:** `/cortexloop` (simplicity pass), or when user asks to simplify/refine code
 - **Pairs with:** `simplify` skill (detailed process), `refactor-safety` rule
-- **Do not invoke from other personas** — orchestration belongs to `/supercode`
+- **Do not invoke from other personas** — orchestration belongs to `/cortexloop`

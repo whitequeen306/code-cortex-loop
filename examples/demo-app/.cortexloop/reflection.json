@@ -1,0 +1,13 @@
+{
+  "runTimestamp": "2026-06-15T10:00:00.000Z",
+  "mode": "direct",
+  "entries": [
+    {
+      "category": "performance",
+      "language": "js",
+      "problemPattern": "N+1 query — related rows fetched inside a loop",
+      "fixMethod": "Collect ids first, single WHERE id IN (...) or JOIN, map back to parent rows",
+      "example": "src/api.js:6"
+    }
+  ]
+}

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Supercode baseline management — accept technical debt or diff against it
+ * CodeCortexLoop baseline management — accept technical debt or diff against it
  *
  * Usage:
- *   node scripts/baseline.mjs accept [report.json] [--out=.supercode/baseline.json]
- *   node scripts/baseline.mjs diff [report.json] [--baseline=.supercode/baseline.json] [--out=.supercode/baseline-diff.json]
+ *   node scripts/baseline.mjs accept [report.json] [--out=.cortexloop/baseline.json]
+ *   node scripts/baseline.mjs diff [report.json] [--baseline=.cortexloop/baseline.json] [--out=.cortexloop/baseline-diff.json]
  */
 
 import { existsSync } from 'node:fs';
@@ -30,7 +30,7 @@ if (!command || !['accept', 'diff'].includes(command)) {
 }
 
 if (!existsSync(reportPath)) {
-  console.error(`[supercode] Report not found: ${reportPath}`);
+  console.error(`[cortexloop] Report not found: ${reportPath}`);
   process.exit(1);
 }
 
@@ -49,7 +49,7 @@ function buildBaseline(findings) {
     problem: f.problem,
   }));
   return {
-    version: '2.1',
+    version: '2.2',
     acceptedAt: new Date().toISOString(),
     sourceReport: reportPath,
     preset: report.preset,
@@ -62,13 +62,13 @@ function buildBaseline(findings) {
 if (command === 'accept') {
   const baseline = buildBaseline(openFindings);
   writeJson(baselinePath, baseline);
-  console.log(`[supercode] Baseline accepted: ${baseline.count} findings -> ${baselinePath}`);
+  console.log(`[cortexloop] Baseline accepted: ${baseline.count} findings -> ${baselinePath}`);
   process.exit(0);
 }
 
 // diff
 if (!existsSync(baselinePath)) {
-  console.error(`[supercode] Baseline not found: ${baselinePath}`);
+  console.error(`[cortexloop] Baseline not found: ${baselinePath}`);
   console.error('Run: node scripts/baseline.mjs accept');
   process.exit(1);
 }
@@ -100,7 +100,7 @@ for (const [fp, finding] of currentByFp) {
 }
 
 const diff = {
-  version: '2.1',
+  version: '2.2',
   generatedAt: new Date().toISOString(),
   reportPath,
   baselinePath,
@@ -119,7 +119,7 @@ const diff = {
 };
 
 writeJson(diffOut, diff);
-console.log('[supercode] Baseline diff');
+console.log('[cortexloop] Baseline diff');
 console.log(`  remaining: ${diff.summary.remaining}`);
 console.log(`  fixed:     ${diff.summary.fixed}`);
 console.log(`  new:       ${diff.summary.new} (Critical: ${diff.summary.newCritical}, High: ${diff.summary.newHigh})`);

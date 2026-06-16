@@ -1,16 +1,20 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 
-export const DEFAULT_REPORT = 'docs/supercode/report.json';
-export const DEFAULT_HISTORY = '.supercode/history.json';
-export const DEFAULT_BASELINE = '.supercode/baseline.json';
-export const DEFAULT_BASELINE_DIFF = '.supercode/baseline-diff.json';
-export const DEFAULT_BADGE_SVG = '.supercode/health-badge.svg';
-export const DEFAULT_BADGE_JSON = '.supercode/badge.json';
-export const DEFAULT_DASHBOARD = 'docs/supercode/report.html';
-export const DEFAULT_PR_COMMENT = '.supercode/pr-comment.md';
+export const DEFAULT_REPORT = 'docs/cortexloop/report.json';
+export const DEFAULT_HISTORY = '.cortexloop/history.json';
+export const DEFAULT_BASELINE = '.cortexloop/baseline.json';
+export const DEFAULT_BASELINE_DIFF = '.cortexloop/baseline-diff.json';
+export const DEFAULT_BADGE_SVG = '.cortexloop/health-badge.svg';
+export const DEFAULT_BADGE_JSON = '.cortexloop/badge.json';
+export const DEFAULT_DASHBOARD = 'docs/cortexloop/report.html';
+export const DEFAULT_PR_COMMENT = '.cortexloop/pr-comment.md';
+export const DEFAULT_PLAYBOOK = '.cortexloop/playbook.json';
+export const DEFAULT_REFLECTION = '.cortexloop/reflection.json';
+export const GLOBAL_PLAYBOOK = join(homedir(), '.cortexloop', 'playbook.json');
 
 export const CATEGORIES = [
   'correctness',
@@ -153,11 +157,70 @@ export function escapeHtml(text) {
     .replace(/"/g, '&quot;');
 }
 
-export function projectRootFrom(cwd = process.cwd()) {
-  return cwd;
+export function slugify(text) {
+  return String(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
 }
 
-export function resolveFromRoot(root, maybeRelative) {
-  if (!maybeRelative) return join(root, DEFAULT_REPORT);
-  return join(root, maybeRelative);
+export function playbookSignature({ category, problemPattern, language }) {
+  const slug = slugify(problemPattern || 'unknown');
+  const lang = language || 'any';
+  return `${category || 'unknown'}:${slug}:${lang}`;
+}
+
+export function loadPlaybook(path = DEFAULT_PLAYBOOK) {
+  if (!existsSync(path)) {
+    return { version: '2.2', updatedAt: null, entries: [] };
+  }
+  const data = readJson(path);
+  if (!Array.isArray(data.entries)) data.entries = [];
+  return data;
+}
+
+export function savePlaybook(path, data) {
+  data.version = '2.2';
+  data.updatedAt = new Date().toISOString();
+  writeJson(path, data);
+}
+
+export function mergePlaybooks(projectPb, globalPb) {
+  const map = new Map();
+
+  for (const entry of globalPb.entries || []) {
+    map.set(entry.signature, { ...entry, examples: [...(entry.examples || [])] });
+  }
+
+  for (const entry of projectPb.entries || []) {
+    const existing = map.get(entry.signature);
+    if (!existing) {
+      map.set(entry.signature, { ...entry, examples: [...(entry.examples || [])] });
+      continue;
+    }
+    map.set(entry.signature, {
+      ...entry,
+      appliedCount: Math.max(entry.appliedCount || 0, existing.appliedCount || 0),
+      confidence: Math.max(entry.confidence || 0, existing.confidence || 0),
+      examples: [...new Set([...(entry.examples || []), ...(existing.examples || [])])],
+    });
+  }
+
+  return [...map.values()];
+}
+
+export function playbookScore(entry) {
+  const c = entry.confidence ?? 0.5;
+  const n = entry.appliedCount ?? 1;
+  return c * Math.log(n + 1);
+}
+
+export function nextPlaybookId(entries) {
+  let max = 0;
+  for (const e of entries || []) {
+    const m = /^PB-(\d+)$/.exec(e.id || '');
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return `PB-${String(max + 1).padStart(3, '0')}`;
 }

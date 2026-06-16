@@ -1,5 +1,5 @@
 {
-  "$schema": "./schemas/supercode-config.schema.json",
+  "$schema": "./schemas/cortexloop-config.schema.json",
   "preset": "default",
   "scope": "recent",
   "passes": {
@@ -33,25 +33,25 @@
     "autoFix": false,
     "failOnCritical": true,
     "maxHigh": 0,
-    "outputDir": "docs/supercode",
+    "outputDir": "docs/cortexloop",
     "baseline": false
   },
   "baseline": {
     "enabled": false,
-    "path": ".supercode/baseline.json"
+    "path": ".cortexloop/baseline.json"
   },
   "history": {
     "enabled": true,
-    "path": ".supercode/history.json",
+    "path": ".cortexloop/history.json",
     "maxRuns": 100
   },
   "badge": {
     "enabled": true,
-    "svgPath": ".supercode/health-badge.svg"
+    "svgPath": ".cortexloop/health-badge.svg"
   },
   "dashboard": {
     "enabled": true,
-    "htmlPath": "docs/supercode/report.html"
+    "htmlPath": "docs/cortexloop/report.html"
   },
   "scores": {
     "weights": {
@@ -62,6 +62,17 @@
       "tests": 1.0,
       "errorHandling": 1.0,
       "cleanup": 1.0
+    }
+  },
+  "learning": {
+    "enabled": true,
+    "playbookPath": ".cortexloop/playbook.json",
+    "global": false,
+    "reflectOn": "direct",
+    "prune": {
+      "minConfidence": 0.3,
+      "maxAgeDays": 180,
+      "maxEntries": 200
     }
   }
 }

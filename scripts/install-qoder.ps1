@@ -10,9 +10,10 @@ $map = @{
   "agents"   = Join-Path $Target "agents"
   "skills"   = Join-Path $Target "skills"
   "rules"    = Join-Path $Target "rules"
+  "scripts"  = Join-Path $Target "scripts"
 }
 
-Write-Host "[supercode] Installing to Qoder: $Target"
+Write-Host "[cortexloop] Installing to Qoder: $Target"
 
 foreach ($key in $map.Keys) {
   $src = Join-Path $Root $key
@@ -23,5 +24,5 @@ foreach ($key in $map.Keys) {
   Write-Host "  copied $key -> $dst"
 }
 
-Copy-Item (Join-Path $Root "AGENTS.md") (Join-Path $Target "AGENTS.supercode.md") -Force
-Write-Host "[supercode] Qoder install complete. Restart Qoder, type /supercode"
+Copy-Item (Join-Path $Root "AGENTS.md") (Join-Path $Target "AGENTS.cortexloop.md") -Force
+Write-Host "[cortexloop] Qoder install complete. Restart Qoder, type /cortexloop"

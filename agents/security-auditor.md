@@ -97,5 +97,5 @@ You are an experienced Security Engineer conducting a security review. Your role
 ## Composition
 
 - **Invoke directly when:** the user wants a security-focused pass on a specific change, file, or system component.
-- **Invoke via:** `/supercode` (full pipeline), `/ship` (parallel fan-out alongside `code-reviewer` and `test-engineer`), or `/audit`.
+- **Invoke via:** `/cortexloop` (full pipeline), `/ship` (parallel fan-out alongside `code-reviewer` and `test-engineer`), or `/audit`.
 - **Do not invoke from another persona.** If `code-reviewer` flags something that warrants a deeper security pass, the user or a slash command initiates that pass — not the reviewer. See [agents/README.md](README.md).

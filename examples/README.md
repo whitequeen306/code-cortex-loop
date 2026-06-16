@@ -1,16 +1,16 @@
-# Supercode Demo Walkthrough
+# CodeCortexLoop Demo Walkthrough
 
-This folder contains a **deliberately flawed** mini app plus **pre-generated Supercode outputs** so you can see results without running an AI tool first.
+This folder contains a **deliberately flawed** mini app plus **pre-generated CodeCortexLoop outputs** so you can see results without running an AI tool first.
 
 ## What's inside
 
 ```
 examples/demo-app/
 ├── src/                    # Bug garden (7 pass types)
-├── docs/supercode/
+├── docs/cortexloop/
 │   ├── report.json           # Machine-readable findings
 │   └── report.html           # Visual dashboard (open in browser)
-└── .supercode/
+└── .cortexloop/
     ├── history.json          # Score trend (3 runs)
     ├── health-badge.svg      # README-ready badge
     └── baseline.json         # Accepted debt snapshot
@@ -36,15 +36,15 @@ examples/demo-app/
 
 ```bash
 # Windows
-start examples/demo-app/docs/supercode/report.html
+start examples/demo-app/docs/cortexloop/report.html
 
 # macOS
-open examples/demo-app/docs/supercode/report.html
+open examples/demo-app/docs/cortexloop/report.html
 ```
 
 **Screenshot (for README / docs):**
 
-![Supercode dashboard preview](demo-app/docs/supercode/report-dashboard.png)
+![CodeCortexLoop dashboard preview](demo-app/docs/cortexloop/report-dashboard.png)
 
 The dashboard shows:
 - Overall health score ring (58 in demo)
@@ -57,17 +57,17 @@ The dashboard shows:
 ```bash
 cd examples/demo-app
 
-node ../../scripts/make-badge.mjs docs/supercode/report.json
-node ../../scripts/make-dashboard.mjs docs/supercode/report.json --history=.supercode/history.json
-node ../../scripts/baseline.mjs accept docs/supercode/report.json
-node ../../scripts/pr-comment.mjs docs/supercode/report.json
+node ../../scripts/make-badge.mjs docs/cortexloop/report.json
+node ../../scripts/make-dashboard.mjs docs/cortexloop/report.json --history=.cortexloop/history.json
+node ../../scripts/baseline.mjs accept docs/cortexloop/report.json
+node ../../scripts/pr-comment.mjs docs/cortexloop/report.json
 ```
 
-### 3. Run Supercode on the demo (with your AI tool)
+### 3. Run CodeCortexLoop on the demo (with your AI tool)
 
 ```text
 cd examples/demo-app
-/supercode
+/cortexloop
 ```
 
 Choose **Report mode** first. Compare AI output to the bundled `report.json`.
@@ -75,31 +75,31 @@ Choose **Report mode** first. Compare AI output to the bundled `report.json`.
 ### 4. Direct mode — watch scores improve
 
 ```text
-/supercode
+/cortexloop
 → Direct mode
 ```
 
 After fixes, re-run post-processing:
 
 ```bash
-node ../../scripts/record-history.mjs docs/supercode/report.json
-node ../../scripts/make-dashboard.mjs docs/supercode/report.json
+node ../../scripts/record-history.mjs docs/cortexloop/report.json
+node ../../scripts/make-dashboard.mjs docs/cortexloop/report.json
 ```
 
-Health score should climb in `.supercode/history.json` and the dashboard trend chart.
+Health score should climb in `.cortexloop/history.json` and the dashboard trend chart.
 
 ## Baseline ratchet demo
 
 ```bash
 cd examples/demo-app
-node ../../scripts/baseline.mjs accept docs/supercode/report.json
-# fix SC-001 only, re-analyze, then:
-node ../../scripts/baseline.mjs diff docs/supercode/report.json
-node ../../scripts/ci-gate.mjs docs/supercode/report.json --baseline
+node ../../scripts/baseline.mjs accept docs/cortexloop/report.json
+# fix CL-001 only, re-analyze, then:
+node ../../scripts/baseline.mjs diff docs/cortexloop/report.json
+node ../../scripts/ci-gate.mjs docs/cortexloop/report.json --baseline
 ```
 
 CI passes if no **new** Critical/High — remaining baseline debt is ignored.
 
 ## CI / Action
 
-See [action.yml](../action.yml) and [.github/workflows/supercode-example.yml](../.github/workflows/supercode-example.yml) at repo root.
+See [action.yml](../action.yml) and [.github/workflows/cortexloop-example.yml](../.github/workflows/cortexloop-example.yml) at repo root.

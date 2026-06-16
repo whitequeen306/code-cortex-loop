@@ -1,0 +1,62 @@
+{
+  "version": "2.2",
+  "updatedAt": "2026-06-15T10:00:00.000Z",
+  "entries": [
+    {
+      "id": "PB-001",
+      "signature": "performance:n-1-query-related-rows-fetched-inside-a-loop:js",
+      "category": "performance",
+      "language": "js",
+      "problemPattern": "N+1 query — related rows fetched inside a loop",
+      "fixMethod": "Collect ids first, single WHERE id IN (...) or JOIN, map back to parent rows",
+      "appliedCount": 3,
+      "confidence": 0.8,
+      "createdAt": "2026-06-01T08:00:00.000Z",
+      "lastUsed": "2026-06-15T09:30:00.000Z",
+      "examples": ["src/api.js:6"],
+      "source": "direct-fix"
+    },
+    {
+      "id": "PB-002",
+      "signature": "simplicity:oversized-function-mixing-validation-i-o-and-for:js",
+      "category": "simplicity",
+      "language": "js",
+      "problemPattern": "Oversized function mixing validation, I/O, and formatting (80+ lines)",
+      "fixMethod": "Extract pure helpers for validation and formatting; keep orchestration in a thin top-level function",
+      "appliedCount": 2,
+      "confidence": 0.7,
+      "createdAt": "2026-06-03T12:00:00.000Z",
+      "lastUsed": "2026-06-14T16:00:00.000Z",
+      "examples": ["src/utils.js:12"],
+      "source": "direct-fix"
+    },
+    {
+      "id": "PB-003",
+      "signature": "errorHandling:empty-catch-block-swallows-errors-with-no-log-or:js",
+      "category": "errorHandling",
+      "language": "js",
+      "problemPattern": "Empty catch block swallows errors with no log or rethrow",
+      "fixMethod": "Log with context at minimum; rethrow or return typed error for callers when failure must propagate",
+      "appliedCount": 4,
+      "confidence": 0.85,
+      "createdAt": "2026-06-02T14:00:00.000Z",
+      "lastUsed": "2026-06-15T08:00:00.000Z",
+      "examples": ["src/api.js:15"],
+      "source": "direct-fix"
+    },
+    {
+      "id": "PB-004",
+      "signature": "security:sql-built-via-string-concatenation-with-user-inp:js",
+      "category": "security",
+      "language": "js",
+      "problemPattern": "SQL built via string concatenation with user input",
+      "fixMethod": "Use parameterized queries / prepared statements; never interpolate raw user values into SQL",
+      "appliedCount": 2,
+      "confidence": 0.75,
+      "createdAt": "2026-06-05T10:00:00.000Z",
+      "lastUsed": "2026-06-13T11:00:00.000Z",
+      "examples": ["src/api.js:4", "src/api.js:14"],
+      "source": "direct-fix"
+    }
+  ]
+}

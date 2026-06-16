@@ -1,10 +1,10 @@
 {
-  "name": "supercode",
-  "displayName": "Supercode",
-  "description": "One-command post-coding pipeline with health scores, trend dashboard, baseline ratchet, GitHub Action, and CI output",
-  "version": "2.1.0",
+  "name": "cortexloop",
+  "displayName": "CodeCortexLoop",
+  "description": "One-command post-coding pipeline with health scores, trend dashboard, baseline ratchet, self-improving playbook learning loop, GitHub Action, and CI output",
+  "version": "2.2.0",
   "author": {
-    "name": "Supercode Contributors"
+    "name": "CodeCortexLoop Contributors"
   },
   "license": "MIT",
   "keywords": [
@@ -15,7 +15,9 @@
     "testing",
     "ci",
     "baseline",
-    "dashboard"
+    "dashboard",
+    "memory",
+    "learning"
   ],
   "skills": "./skills/",
   "agents": "./agents/",

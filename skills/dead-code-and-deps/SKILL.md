@@ -11,7 +11,7 @@ Identify code and dependencies that no longer serve the project, then propose sa
 
 ## When to Use
 
-- `/supercode` cleanup pass
+- `/cortexloop` cleanup pass
 - After refactors that replace old implementations
 - Before release to reduce bundle size and audit surface
 - When `npm audit` / `pip audit` / `cargo audit` reports issues
@@ -93,7 +93,7 @@ ASK BEFORE REMOVING:
 - Alternative: [replacement if any]
 ```
 
-## Severity Classification (for /supercode aggregation)
+## Severity Classification (for /cortexloop aggregation)
 
 | Severity | Criteria |
 |----------|----------|
@@ -146,6 +146,6 @@ ASK BEFORE REMOVING:
 
 ## Composition
 
-- **Invoke via:** `/supercode` (cleanup pass), or when user asks to clean up dead code or audit dependencies
+- **Invoke via:** `/cortexloop` (cleanup pass), or when user asks to clean up dead code or audit dependencies
 - **Pairs with:** `simplify` skill (don't remove abstractions that simplify the codebase)
-- **Do not invoke from other personas** — orchestration belongs to `/supercode`
+- **Do not invoke from other personas** — orchestration belongs to `/cortexloop`

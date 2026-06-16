@@ -3,10 +3,10 @@ Thumbs.db
 *.log
 node_modules/
 
-# Generated Supercode outputs (project runs) — keep demo outputs tracked
-/docs/supercode/
-/.supercode/
+# Generated CodeCortexLoop outputs (project runs) — keep demo outputs tracked
+/docs/cortexloop/
+/.cortexloop/
 
 # Allow committed demo artifacts
-!examples/demo-app/docs/supercode/
-!examples/demo-app/.supercode/
+!examples/demo-app/docs/cortexloop/
+!examples/demo-app/.cortexloop/
