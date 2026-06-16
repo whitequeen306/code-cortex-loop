@@ -1,0 +1,49 @@
+{
+  "$schema": "./schemas/supercode-config.schema.json",
+  "preset": "default",
+  "scope": "recent",
+  "passes": {
+    "review": true,
+    "security": true,
+    "tests": true,
+    "performance": true,
+    "simplicity": true,
+    "errorHandling": true,
+    "cleanup": true
+  },
+  "severityFloor": "Medium",
+  "exclude": [
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+    ".venv/**",
+    "target/**",
+    "**/*.min.js"
+  ],
+  "performance": {
+    "requireBenchmark": false
+  },
+  "cleanup": {
+    "depsOnly": false,
+    "askBeforeDelete": true
+  },
+  "ci": {
+    "enabled": false,
+    "sarif": true,
+    "autoFix": false,
+    "failOnCritical": true,
+    "maxHigh": 0,
+    "outputDir": "docs/supercode"
+  },
+  "scores": {
+    "weights": {
+      "correctness": 1.5,
+      "security": 1.5,
+      "performance": 1.0,
+      "simplicity": 1.0,
+      "tests": 1.0,
+      "errorHandling": 1.0,
+      "cleanup": 1.0
+    }
+  }
+}

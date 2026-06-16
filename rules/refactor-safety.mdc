@@ -1,0 +1,107 @@
+---
+description: Refactor safety rails for Supercode — preserve behavior, Chesterton's Fence, ask-before-delete, separate refactors from features. Apply when /supercode applies fixes.
+alwaysApply: false
+---
+
+# Refactor Safety
+
+Apply these constraints whenever `/supercode` modifies code (Direct mode or post-Report confirmation).
+
+## Core Principles
+
+### 1. Preserve Behavior Exactly
+
+Simplification and performance changes must NOT alter:
+- Inputs, outputs, or return values
+- Error behavior and error messages (unless fixing a security leak)
+- Side effects and their ordering
+- Edge case handling
+
+**Test:** If existing tests need modification to pass after a "refactor", you likely changed behavior — revert and reconsider.
+
+### 2. Chesterton's Fence
+
+Before removing or simplifying anything, understand why it exists:
+
+```
+- What calls this code? What does it call?
+- What edge cases does it handle?
+- Why was it written this way? (git blame, comments, PR history)
+- Is this dead, or intentionally kept for backwards compatibility?
+```
+
+If you cannot answer these, **do not remove or simplify** — flag as UNCERTAIN in the report.
+
+### 3. Ask Before Deleting
+
+Never silently delete:
+- Functions, classes, files, or exports
+- Dependencies (npm/pip/cargo packages)
+- Feature flags or config keys
+- Error handling branches
+- Comments that explain "why" (only remove "what" comments)
+
+Use the ask-before-delete template from `dead-code-and-deps` skill.
+
+### 4. Separate Refactors from Features
+
+In Direct mode:
+- **Refactor commits/changes:** simplify, rename, extract, dead code removal
+- **Fix commits/changes:** bug fixes, security patches, test additions
+- Do not mix unrelated refactors with bug fixes in the same edit group
+- If a fix requires a refactor, do the fix first, verify tests, then refactor
+
+### 5. Incremental Changes
+
+- One simplification or optimization at a time
+- Run tests after each change
+- Revert immediately on failure — do not "fix forward" blindly
+- Keep diffs reviewable — avoid 500+ line drive-by refactors
+
+## Forbidden Actions
+
+- Empty catch blocks (even if "cleaner")
+- Removing error handling to simplify code
+- Disabling tests to make the pipeline pass
+- `@ts-ignore` / `# noqa` / `allow()` to silence real issues
+- Disabling security controls as a "fix"
+- Force-pushing or rewriting git history
+- Modifying lock files without running the package manager
+- Major dependency version bumps without explicit user approval
+
+## Performance-Specific Safety
+
+- Never optimize without baseline measurement (see `performance-optimization` skill)
+- If optimized code fails benchmark comparison, revert
+- Do not sacrifice readability for negligible gains (<5% improvement)
+- Document trade-offs when optimization adds complexity
+
+## Simplification-Specific Safety
+
+- Clarity over line count — nested ternaries are NOT simpler than if/else
+- Do not inline helpers that give concepts names
+- Do not remove abstractions that enable testing or extension
+- Match project conventions (read CLAUDE.md, AGENTS.md, existing patterns)
+- Scope to changed files unless Whole project scope was selected
+
+## When to Stop and Ask User
+
+Stop and ask before proceeding if:
+- Change touches authentication, authorization, or payment logic
+- Deletion confidence is LIKELY_DEAD or UNCERTAIN
+- Fix requires architectural change (not local refactor)
+- Tests don't exist for the area being changed
+- Multiple valid approaches with significant trade-offs
+- Security fix might break existing integrations
+
+## Verification Checklist (Before Claiming Done)
+
+```
+- [ ] All existing tests pass without modification (unless adding new tests)
+- [ ] Build succeeds
+- [ ] Linter passes
+- [ ] No secrets introduced
+- [ ] No behavior change in error paths
+- [ ] Deletions were confirmed or CONFIRMED_DEAD with 0 refs
+- [ ] Performance claims backed by numbers (or marked "unverified")
+```

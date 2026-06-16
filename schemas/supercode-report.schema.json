@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Supercode Report",
+  "type": "object",
+  "required": ["version", "timestamp", "preset", "scope", "mode", "scores", "findings", "summary"],
+  "properties": {
+    "version": { "type": "string", "const": "2.0" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "preset": { "type": "string" },
+    "scope": { "enum": ["recent", "whole"] },
+    "mode": { "enum": ["report", "direct", "ci"] },
+    "scores": {
+      "type": "object",
+      "properties": {
+        "before": { "$ref": "#/definitions/scoreBlock" },
+        "after": { "$ref": "#/definitions/scoreBlock" }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/finding" }
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "found": { "type": "object" },
+        "fixed": { "type": "object" },
+        "deferred": { "type": "object" },
+        "suppressed": { "type": "integer" }
+      }
+    }
+  },
+  "definitions": {
+    "scoreBlock": {
+      "type": "object",
+      "properties": {
+        "overall": { "type": "number", "minimum": 0, "maximum": 100 },
+        "correctness": { "type": "number" },
+        "security": { "type": "number" },
+        "performance": { "type": "number" },
+        "simplicity": { "type": "number" },
+        "tests": { "type": "number" },
+        "errorHandling": { "type": "number" },
+        "cleanup": { "type": "number" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": ["id", "severity", "category", "location", "problem", "recommendation"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^SC-[0-9]{3,}$" },
+        "severity": { "enum": ["Critical", "High", "Medium", "Low", "Info"] },
+        "category": { "type": "string" },
+        "location": { "type": "string" },
+        "problem": { "type": "string" },
+        "recommendation": { "type": "string" },
+        "autoFixable": { "enum": ["yes", "no", "needs-confirmation"] },
+        "status": { "enum": ["open", "fixed", "deferred", "suppressed"] }
+      }
+    }
+  }
+}

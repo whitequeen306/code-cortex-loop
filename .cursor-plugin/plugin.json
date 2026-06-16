@@ -1,0 +1,21 @@
+{
+  "name": "supercode",
+  "displayName": "Supercode",
+  "description": "One-command code review, security audit, simplify, performance, tests, and cleanup pipeline with health scores and CI output",
+  "version": "2.0.0",
+  "author": {
+    "name": "Supercode Contributors"
+  },
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "security",
+    "performance",
+    "refactoring",
+    "testing",
+    "ci"
+  ],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "commands": "./commands/"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "supercode-marketplace",
+  "description": "Supercode — aggregate post-coding pipeline for Claude Code",
+  "owner": {
+    "name": "Supercode Contributors"
+  },
+  "plugins": [
+    {
+      "name": "supercode",
+      "description": "One-command review, security, simplify, performance, tests, cleanup",
+      "version": "2.0.0",
+      "source": "./"
+    }
+  ]
+}

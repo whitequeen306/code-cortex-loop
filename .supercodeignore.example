@@ -1,0 +1,13 @@
+# Supercode ignore patterns (gitignore syntax)
+# Files matching these patterns are excluded from analysis.
+
+dist/
+build/
+coverage/
+*.min.js
+*.lock
+pnpm-lock.yaml
+package-lock.json
+
+# Generated reports (don't analyze previous reports)
+docs/supercode/
