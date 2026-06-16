@@ -1,0 +1,44 @@
+# Example: gate a PR after your AI tool produces docs/supercode/report.json
+#
+# Step 1 (not shown): invoke Cursor / Claude Code / etc. with /supercode-pre-pr --ci
+# Step 2: this workflow validates the report and posts a PR comment
+
+name: Supercode
+
+on:
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  supercode-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Replace this block with your AI CLI invocation that writes report.json
+      # - name: Run Supercode analysis
+      #   run: |
+      #     # cursor / claude / your-tool --command "/supercode-pre-pr --ci"
+      #     test -f docs/supercode/report.json
+
+      - name: Supercode gate (badge + dashboard + PR comment)
+        uses: ./
+        with:
+          report-path: docs/supercode/report.json
+          max-high: '0'
+          baseline: 'false'
+          comment: 'true'
+          upload-sarif: 'false'
+
+      - name: Upload Supercode artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supercode-report
+          path: |
+            docs/supercode/
+            .supercode/

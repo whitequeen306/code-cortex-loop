@@ -10,15 +10,19 @@
  *
  * Usage:
  *   node scripts/ci-gate.mjs docs/supercode/report.json
- *   node scripts/ci-gate.mjs docs/supercode/report.json --max-high 2
+ *   node scripts/ci-gate.mjs docs/supercode/report.json --max-high=2
+ *   node scripts/ci-gate.mjs docs/supercode/report.json --baseline
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { DEFAULT_BASELINE_DIFF } from './lib/shared.mjs';
 
 const args = process.argv.slice(2);
 const reportPath = args.find((a) => !a.startsWith('--')) || 'docs/supercode/report.json';
 const maxHighArg = args.find((a) => a.startsWith('--max-high='));
 const maxHigh = maxHighArg ? Number(maxHighArg.split('=')[1]) : 0;
+const useBaseline = args.includes('--baseline');
+const baselineDiffPath = args.find((a) => a.startsWith('--baseline-diff='))?.split('=')[1] || DEFAULT_BASELINE_DIFF;
 
 function countBySeverity(findings) {
   const counts = { Critical: 0, High: 0, Medium: 0, Low: 0, Info: 0 };
@@ -38,7 +42,20 @@ try {
   process.exit(3);
 }
 
-const findings = report.findings || [];
+let findings = report.findings || [];
+
+if (useBaseline) {
+  if (!existsSync(baselineDiffPath)) {
+    console.error(`[supercode] Baseline diff not found: ${baselineDiffPath}`);
+    console.error('Run: node scripts/baseline.mjs diff');
+    process.exit(3);
+  }
+  const diff = JSON.parse(readFileSync(baselineDiffPath, 'utf8'));
+  findings = diff.new || [];
+  console.log('[supercode] Baseline mode — gating on NEW findings only');
+  console.log(`  new: ${findings.length} (remaining baseline debt ignored)`);
+}
+
 const counts = countBySeverity(findings);
 
 console.log('[supercode] CI gate results');

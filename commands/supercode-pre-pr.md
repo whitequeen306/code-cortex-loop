@@ -20,4 +20,4 @@ ci:
 
 Ideal before opening a PR. In CI, use `/supercode-pre-pr --ci` or `supercode.config.json` with `"preset": "pre-pr"`.
 
-Follow all steps in `commands/supercode.md` and `rules/supercode-workflow.mdc`.
+Follow all steps in `commands/supercode.md` and `rules/supercode-workflow.mdc`. Run post-processing scripts (history, badge, dashboard) after `report.json` is written.

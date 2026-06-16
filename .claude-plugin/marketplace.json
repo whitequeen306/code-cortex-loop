@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "supercode",
-      "description": "One-command review, security, simplify, performance, tests, cleanup",
-      "version": "2.0.0",
+      "description": "One-command review, security, simplify, performance, tests, cleanup + dashboard & baseline",
+      "version": "2.1.0",
       "source": "./"
     }
   ]

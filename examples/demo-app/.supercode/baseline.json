@@ -1,0 +1,90 @@
+{
+  "version": "2.1",
+  "acceptedAt": "2026-06-16T12:25:27.548Z",
+  "sourceReport": "docs/supercode/report.json",
+  "preset": "default",
+  "scope": "whole",
+  "count": 10,
+  "items": [
+    {
+      "fingerprint": "325a2a12d5792b0e",
+      "id": "SC-001",
+      "severity": "Critical",
+      "category": "security",
+      "location": "src/api.js:4",
+      "problem": "SQL injection via string interpolation in getUserPosts userId parameter"
+    },
+    {
+      "fingerprint": "ef1b0c31b861f35a",
+      "id": "SC-002",
+      "severity": "Critical",
+      "category": "security",
+      "location": "src/api.js:14",
+      "problem": "SQL injection in createUser — body.name and body.email concatenated into query"
+    },
+    {
+      "fingerprint": "55e04ec21c7dd0cc",
+      "id": "SC-003",
+      "severity": "High",
+      "category": "errorHandling",
+      "location": "src/api.js:15",
+      "problem": "Empty catch block swallows database errors in createUser"
+    },
+    {
+      "fingerprint": "26b09dbb02debb1a",
+      "id": "SC-004",
+      "severity": "High",
+      "category": "performance",
+      "location": "src/api.js:6",
+      "problem": "N+1 query pattern — loads author per post in loop"
+    },
+    {
+      "fingerprint": "1db6d84820e9735d",
+      "id": "SC-005",
+      "severity": "High",
+      "category": "correctness",
+      "location": "src/utils.js:12",
+      "problem": "Off-by-one loop uses i <= order.items.length causing undefined access"
+    },
+    {
+      "fingerprint": "4516fa32f242e20d",
+      "id": "SC-006",
+      "severity": "Medium",
+      "category": "simplicity",
+      "location": "src/utils.js:9",
+      "problem": "processOrder is a 35-line nested conditional — hard to test and maintain"
+    },
+    {
+      "fingerprint": "f78c1d522f4e241a",
+      "id": "SC-007",
+      "severity": "Medium",
+      "category": "tests",
+      "location": "tests/",
+      "problem": "No tests for api.js or utils.js — only smoke test exists"
+    },
+    {
+      "fingerprint": "8482ed0361bb5726",
+      "id": "SC-008",
+      "severity": "Medium",
+      "category": "cleanup",
+      "location": "src/utils.js:1",
+      "problem": "legacyFormatter is exported but never imported — dead code"
+    },
+    {
+      "fingerprint": "f8124b9b047e93ba",
+      "id": "SC-009",
+      "severity": "High",
+      "category": "cleanup",
+      "location": "package.json",
+      "problem": "lodash@4.17.15 has known prototype pollution CVE — outdated dependency"
+    },
+    {
+      "fingerprint": "eddad53198f83a41",
+      "id": "SC-010",
+      "severity": "Low",
+      "category": "correctness",
+      "location": "src/db.js:2",
+      "problem": "Fake query returns raw SQL string in result — misleading stub for production"
+    }
+  ]
+}

@@ -6,8 +6,9 @@ These rules apply when running any `/supercode*` command. Tool-specific installs
 
 1. Load `supercode.config.json` from project root (optional)
 2. Load `.supercodeignore` (optional)
-3. Follow `supercode-workflow` for severity, scoring, CI, and re-verify
+3. Follow `supercode-workflow` for severity, scoring, CI, re-verify, and post-processing
 4. Follow `refactor-safety` for all code modifications
+5. Follow `baseline-policy` when using `/supercode-baseline` or `ci.baseline`
 
 ## Security Baseline (always during security pass)
 
@@ -36,13 +37,25 @@ Every code change must satisfy:
 
 ## CI Gate
 
-After CI report generation, run:
+After CI report generation:
 
 ```bash
 node scripts/ci-gate.mjs docs/supercode/report.json
+# Baseline ratchet (new findings only):
+node scripts/baseline.mjs diff docs/supercode/report.json
+node scripts/ci-gate.mjs docs/supercode/report.json --baseline
 ```
 
 Exit codes: `0` pass, `1` Critical, `2` High over threshold, `3` report error.
+
+## Post-Processing (after report.json)
+
+```bash
+node scripts/record-history.mjs docs/supercode/report.json
+node scripts/make-badge.mjs docs/supercode/report.json
+node scripts/make-dashboard.mjs docs/supercode/report.json
+node scripts/pr-comment.mjs docs/supercode/report.json
+```
 
 ## Output Locations
 
@@ -51,7 +64,13 @@ Exit codes: `0` pass, `1` Critical, `2` High over threshold, `3` report error.
 | Summary | `docs/supercode/00-summary.md` |
 | Category reports | `docs/supercode/01-*.md` … `07-*.md` |
 | Machine report | `docs/supercode/report.json` |
+| Visual dashboard | `docs/supercode/report.html` |
 | SARIF (optional) | `docs/supercode/report.sarif` |
+| Score history | `.supercode/history.json` |
+| Health badge | `.supercode/health-badge.svg` |
+| Baseline | `.supercode/baseline.json` |
+| Baseline diff | `.supercode/baseline-diff.json` |
+| PR comment body | `.supercode/pr-comment.md` |
 
 ## Agents (subagent types)
 
@@ -64,3 +83,14 @@ Exit codes: `0` pass, `1` Critical, `2` High over threshold, `3` report error.
 | `silent-failure-hunter` | Error handling audit |
 
 Orchestration belongs to `/supercode` — agents do not invoke each other.
+
+## Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/supercode` | Full pipeline |
+| `/supercode-quick` | Fast pass |
+| `/supercode-deep` | Whole project deep scan |
+| `/supercode-security` | Security focus |
+| `/supercode-pre-pr` | Pre-PR gate |
+| `/supercode-baseline` | Accept or diff technical debt baseline |

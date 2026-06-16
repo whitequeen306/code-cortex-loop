@@ -1,7 +1,7 @@
 {
   "name": "supercode",
-  "description": "One-command code review, security audit, simplify, performance, tests, and cleanup pipeline with health scores and CI output",
-  "version": "2.0.0",
+  "description": "One-command post-coding pipeline with health scores, trend dashboard, baseline ratchet, GitHub Action, and CI output",
+  "version": "2.1.0",
   "author": {
     "name": "Supercode Contributors"
   },

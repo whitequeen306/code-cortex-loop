@@ -17,4 +17,4 @@ scope: recent
 
 Skip preset selection. Still ask Report vs Direct unless `--ci`.
 
-Follow all steps in `commands/supercode.md` and `rules/supercode-workflow.mdc`.
+Follow all steps in `commands/supercode.md` and `rules/supercode-workflow.mdc`. Run post-processing scripts (history, badge, dashboard) after `report.json` is written.

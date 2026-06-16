@@ -1,0 +1,115 @@
+name: Supercode Gate
+description: Validate Supercode report, generate badge/dashboard, optional PR comment
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  report-path:
+    description: Path to docs/supercode/report.json
+    required: false
+    default: docs/supercode/report.json
+  max-high:
+    description: Maximum allowed High-severity findings (or new High in baseline mode)
+    required: false
+    default: '0'
+  baseline:
+    description: Gate only on NEW findings vs baseline
+    required: false
+    default: 'false'
+  comment:
+    description: Post PR comment from report (requires pull_request context)
+    required: false
+    default: 'true'
+  upload-sarif:
+    description: Upload report.sarif if present
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Validate Node.js
+      shell: bash
+      run: |
+        node --version
+
+    - name: Baseline diff (if enabled)
+      if: inputs.baseline == 'true'
+      shell: bash
+      run: |
+        node "${{ github.action_path }}/scripts/baseline.mjs" diff "${{ inputs.report-path }}"
+
+    - name: CI gate
+      shell: bash
+      run: |
+        ARGS="${{ inputs.report-path }} --max-high=${{ inputs.max-high }}"
+        if [ "${{ inputs.baseline }}" = "true" ]; then
+          ARGS="$ARGS --baseline"
+        fi
+        node "${{ github.action_path }}/scripts/ci-gate.mjs" $ARGS
+
+    - name: Record history
+      shell: bash
+      run: node "${{ github.action_path }}/scripts/record-history.mjs" "${{ inputs.report-path }}"
+
+    - name: Generate badge
+      shell: bash
+      run: node "${{ github.action_path }}/scripts/make-badge.mjs" "${{ inputs.report-path }}"
+
+    - name: Generate dashboard
+      shell: bash
+      run: |
+        node "${{ github.action_path }}/scripts/make-dashboard.mjs" "${{ inputs.report-path }}"
+
+    - name: Generate PR comment body
+      shell: bash
+      run: |
+        DIFF_ARG=""
+        if [ "${{ inputs.baseline }}" = "true" ]; then
+          DIFF_ARG="--baseline-diff=.supercode/baseline-diff.json"
+        fi
+        node "${{ github.action_path }}/scripts/pr-comment.mjs" "${{ inputs.report-path }}" $DIFF_ARG
+
+    - name: Comment on PR
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          const commentPath = path.join(process.env.GITHUB_WORKSPACE, '.supercode/pr-comment.md');
+          if (!fs.existsSync(commentPath)) {
+            core.info('No PR comment file found');
+            return;
+          }
+          const body = fs.readFileSync(commentPath, 'utf8');
+          const marker = '<!-- supercode-report -->';
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          const existing = comments.find((c) => c.body && c.body.includes(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }
+
+    - name: Upload SARIF (optional)
+      if: inputs.upload-sarif == 'true'
+      uses: github/codeql-action/upload-sarif@v3
+      continue-on-error: true
+      with:
+        sarif_file: docs/supercode/report.sarif

@@ -33,7 +33,25 @@
     "autoFix": false,
     "failOnCritical": true,
     "maxHigh": 0,
-    "outputDir": "docs/supercode"
+    "outputDir": "docs/supercode",
+    "baseline": false
+  },
+  "baseline": {
+    "enabled": false,
+    "path": ".supercode/baseline.json"
+  },
+  "history": {
+    "enabled": true,
+    "path": ".supercode/history.json",
+    "maxRuns": 100
+  },
+  "badge": {
+    "enabled": true,
+    "svgPath": ".supercode/health-badge.svg"
+  },
+  "dashboard": {
+    "enabled": true,
+    "htmlPath": "docs/supercode/report.html"
   },
   "scores": {
     "weights": {

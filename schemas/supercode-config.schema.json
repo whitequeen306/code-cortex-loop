@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Supercode Config",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "preset": {
+      "enum": ["default", "quick", "deep", "security", "pre-pr"]
+    },
+    "scope": { "enum": ["recent", "whole"] },
+    "passes": {
+      "type": "object",
+      "properties": {
+        "review": { "type": "boolean" },
+        "security": { "type": "boolean" },
+        "tests": { "type": "boolean" },
+        "performance": { "type": "boolean" },
+        "simplicity": { "type": "boolean" },
+        "errorHandling": { "type": "boolean" },
+        "cleanup": { "type": "boolean" }
+      }
+    },
+    "severityFloor": {
+      "enum": ["Critical", "High", "Medium", "Low", "Info"]
+    },
+    "exclude": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "performance": {
+      "type": "object",
+      "properties": {
+        "requireBenchmark": { "type": "boolean" }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "properties": {
+        "depsOnly": { "type": "boolean" },
+        "askBeforeDelete": { "type": "boolean" }
+      }
+    },
+    "ci": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "sarif": { "type": "boolean" },
+        "autoFix": { "type": "boolean" },
+        "failOnCritical": { "type": "boolean" },
+        "maxHigh": { "type": "integer", "minimum": 0 },
+        "outputDir": { "type": "string" },
+        "baseline": { "type": "boolean" }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "path": { "type": "string", "default": ".supercode/baseline.json" }
+      }
+    },
+    "history": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "path": { "type": "string", "default": ".supercode/history.json" },
+        "maxRuns": { "type": "integer", "minimum": 1, "default": 100 }
+      }
+    },
+    "badge": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "svgPath": { "type": "string", "default": ".supercode/health-badge.svg" }
+      }
+    },
+    "dashboard": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "htmlPath": { "type": "string", "default": "docs/supercode/report.html" }
+      }
+    },
+    "scores": {
+      "type": "object",
+      "properties": {
+        "weights": {
+          "type": "object",
+          "properties": {
+            "correctness": { "type": "number" },
+            "security": { "type": "number" },
+            "performance": { "type": "number" },
+            "simplicity": { "type": "number" },
+            "tests": { "type": "number" },
+            "errorHandling": { "type": "number" },
+            "cleanup": { "type": "number" }
+          }
+        }
+      }
+    }
+  }
+}

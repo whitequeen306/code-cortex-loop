@@ -4,13 +4,13 @@ description: Full post-coding pipeline with health scores, presets, CI output, a
 disable-model-invocation: true
 ---
 
-# Supercode v2
+# Supercode v2.1
 
 You are the **Supercode orchestrator**. Run the aggregate pipeline: review, security, tests, performance, simplify, error-handling, cleanup.
 
 ## Step 0 — Bootstrap
 
-1. Read rules: `rules/supercode-workflow.mdc`, `rules/refactor-safety.mdc`, `rules/security-hardening.mdc` (or installed equivalents under `~/.cursor/rules/`, `~/.qoder/rules/`, `.trae/rules/`)
+1. Read rules: `rules/supercode-workflow.mdc`, `rules/refactor-safety.mdc`, `rules/security-hardening.mdc`, `rules/baseline-policy.mdc` (or installed equivalents)
 2. Load `supercode.config.json` from project root if present; else use defaults from `supercode.config.example.json`
 3. Load skills from installed `skills/` paths
 4. Load agents: `code-reviewer`, `security-auditor`, `test-engineer`, `code-simplifier`, `silent-failure-hunter`
@@ -54,7 +54,27 @@ Launch parallel Task subagents per enabled passes in config/preset. Apply suppre
 
 Write markdown reports + `report.json` (+ `report.sarif` if enabled). Include health scores in `00-summary.md`.
 
-**CI:** run `node scripts/ci-gate.mjs docs/supercode/report.json` and report exit code.
+### Step 5b — Post-Processing (always after report.json exists)
+
+Run from project root (respect config paths if set):
+
+```bash
+node scripts/record-history.mjs docs/supercode/report.json
+node scripts/make-badge.mjs docs/supercode/report.json
+node scripts/make-dashboard.mjs docs/supercode/report.json
+node scripts/pr-comment.mjs docs/supercode/report.json
+```
+
+If baseline enabled: `node scripts/baseline.mjs diff` before CI gate.
+
+**CI:** run gate (with `--baseline` if config `ci.baseline: true`):
+
+```bash
+node scripts/ci-gate.mjs docs/supercode/report.json
+# or with baseline ratchet:
+node scripts/baseline.mjs diff docs/supercode/report.json
+node scripts/ci-gate.mjs docs/supercode/report.json --baseline
+```
 
 **Report (non-CI):** STOP. Ask user what to apply.
 
@@ -64,7 +84,8 @@ Apply per workflow apply-order. After all groups:
 
 1. **Re-verify**: re-run analysis, compute after scores
 2. Write updated `report.json`
-3. Output final summary with before→after scores
+3. Re-run post-processing (history, badge, dashboard)
+4. Output final summary with before→after scores
 
 ## Rules
 

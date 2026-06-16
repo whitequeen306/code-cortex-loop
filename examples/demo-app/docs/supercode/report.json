@@ -1,0 +1,127 @@
+{
+  "version": "2.0",
+  "timestamp": "2026-06-16T12:00:00.000Z",
+  "preset": "default",
+  "scope": "whole",
+  "mode": "report",
+  "scores": {
+    "before": {
+      "overall": 58,
+      "correctness": 62,
+      "security": 45,
+      "performance": 66,
+      "simplicity": 55,
+      "tests": 58,
+      "errorHandling": 48,
+      "cleanup": 52
+    }
+  },
+  "findings": [
+    {
+      "id": "SC-001",
+      "severity": "Critical",
+      "category": "security",
+      "location": "src/api.js:4",
+      "problem": "SQL injection via string interpolation in getUserPosts userId parameter",
+      "recommendation": "Use parameterized queries / prepared statements",
+      "autoFixable": "yes",
+      "status": "open"
+    },
+    {
+      "id": "SC-002",
+      "severity": "Critical",
+      "category": "security",
+      "location": "src/api.js:14",
+      "problem": "SQL injection in createUser — body.name and body.email concatenated into query",
+      "recommendation": "Use parameterized queries; validate and sanitize input",
+      "autoFixable": "yes",
+      "status": "open"
+    },
+    {
+      "id": "SC-003",
+      "severity": "High",
+      "category": "errorHandling",
+      "location": "src/api.js:15",
+      "problem": "Empty catch block swallows database errors in createUser",
+      "recommendation": "Log error and rethrow or return structured error to caller",
+      "autoFixable": "yes",
+      "status": "open"
+    },
+    {
+      "id": "SC-004",
+      "severity": "High",
+      "category": "performance",
+      "location": "src/api.js:6",
+      "problem": "N+1 query pattern — loads author per post in loop",
+      "recommendation": "Batch fetch authors with WHERE id IN (...) or JOIN",
+      "autoFixable": "needs-confirmation",
+      "status": "open"
+    },
+    {
+      "id": "SC-005",
+      "severity": "High",
+      "category": "correctness",
+      "location": "src/utils.js:12",
+      "problem": "Off-by-one loop uses i <= order.items.length causing undefined access",
+      "recommendation": "Use i < order.items.length",
+      "autoFixable": "yes",
+      "status": "open"
+    },
+    {
+      "id": "SC-006",
+      "severity": "Medium",
+      "category": "simplicity",
+      "location": "src/utils.js:9",
+      "problem": "processOrder is a 35-line nested conditional — hard to test and maintain",
+      "recommendation": "Extract pricing, tax, shipping, coupon into small pure functions",
+      "autoFixable": "needs-confirmation",
+      "status": "open"
+    },
+    {
+      "id": "SC-007",
+      "severity": "Medium",
+      "category": "tests",
+      "location": "tests/",
+      "problem": "No tests for api.js or utils.js — only smoke test exists",
+      "recommendation": "Add unit tests for SQL-safe queries, error paths, and processOrder edge cases",
+      "autoFixable": "no",
+      "status": "open"
+    },
+    {
+      "id": "SC-008",
+      "severity": "Medium",
+      "category": "cleanup",
+      "location": "src/utils.js:1",
+      "problem": "legacyFormatter is exported but never imported — dead code",
+      "recommendation": "Remove export or wire up usage after confirming no external deps",
+      "autoFixable": "needs-confirmation",
+      "status": "open"
+    },
+    {
+      "id": "SC-009",
+      "severity": "High",
+      "category": "cleanup",
+      "location": "package.json",
+      "problem": "lodash@4.17.15 has known prototype pollution CVE — outdated dependency",
+      "recommendation": "Upgrade lodash to latest 4.17.21+ or remove if unused",
+      "autoFixable": "yes",
+      "status": "open"
+    },
+    {
+      "id": "SC-010",
+      "severity": "Low",
+      "category": "correctness",
+      "location": "src/db.js:2",
+      "problem": "Fake query returns raw SQL string in result — misleading stub for production",
+      "recommendation": "Use in-memory fixture or mark module as test-only",
+      "autoFixable": "no",
+      "status": "open"
+    }
+  ],
+  "summary": {
+    "found": { "Critical": 2, "High": 4, "Medium": 3, "Low": 1 },
+    "fixed": {},
+    "deferred": {},
+    "suppressed": 0
+  }
+}

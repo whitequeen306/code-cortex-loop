@@ -2,4 +2,11 @@
 Thumbs.db
 *.log
 node_modules/
-docs/supercode/
+
+# Generated Supercode outputs (project runs) — keep demo outputs tracked
+/docs/supercode/
+/.supercode/
+
+# Allow committed demo artifacts
+!examples/demo-app/docs/supercode/
+!examples/demo-app/.supercode/
