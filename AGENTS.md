@@ -106,7 +106,8 @@ Playbook hits are **recall, not authority** — re-derive and verify every fix; 
 | Baseline | `.cortexloop/baseline.json` |
 | Baseline diff | `.cortexloop/baseline-diff.json` |
 | PR comment body | `.cortexloop/pr-comment.md` |
-| Playbook | `.cortexloop/playbook.json` |
+| Playbook (model) | `.cortexloop/playbook.json` |
+| Playbook (中文阅读) | `.cortexloop/playbook-zh.md` |
 | Reflection (structured) | `.cortexloop/reflection.json` |
 | Reflection (human) | `docs/cortexloop/08-reflection.md` |
 

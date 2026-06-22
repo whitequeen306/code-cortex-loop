@@ -112,12 +112,15 @@ After successful re-verification:
 
 1. Load `skills/reflect/SKILL.md`
 2. Write `docs/cortexloop/08-reflection.md` and `.cortexloop/reflection.json` (3–5 generalizable patterns max)
-3. Record to playbook (applies `self_verified`; **new entries start as candidate**, not auto-trusted):
+3. Record to playbook (applies `self_verified`; **new entries start as candidate**, not auto-trusted). This also writes `.cortexloop/playbook-zh.md` for Chinese readers (model still uses English `playbook.json` only):
 
 ```bash
 node scripts/playbook.mjs record .cortexloop/reflection.json
 # append --global if config learning.global is true
+# re-export Chinese markdown only: node scripts/playbook.mjs export-zh
 ```
+
+Reflection entries must include **English** (`problemPattern`, `fixMethod`) for model recall and **Chinese** (`problemPatternZh`, `fixMethodZh`) for the human zh export.
 
 4. **Optional feedback hooks** (external oracle + negative signals):
 

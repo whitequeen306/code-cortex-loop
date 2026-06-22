@@ -12,8 +12,26 @@ export const DEFAULT_BADGE_JSON = '.cortexloop/badge.json';
 export const DEFAULT_DASHBOARD = 'docs/cortexloop/report.html';
 export const DEFAULT_PR_COMMENT = '.cortexloop/pr-comment.md';
 export const DEFAULT_PLAYBOOK = '.cortexloop/playbook.json';
+export const DEFAULT_PLAYBOOK_ZH = '.cortexloop/playbook-zh.md';
 export const DEFAULT_REFLECTION = '.cortexloop/reflection.json';
 export const GLOBAL_PLAYBOOK = join(homedir(), '.cortexloop', 'playbook.json');
+export const GLOBAL_PLAYBOOK_ZH = join(homedir(), '.cortexloop', 'playbook-zh.md');
+
+export const PLAYBOOK_CATEGORY_ZH = {
+  correctness: '正确性',
+  security: '安全',
+  performance: '性能',
+  simplicity: '简洁性',
+  tests: '测试',
+  errorHandling: '错误处理',
+  cleanup: '清理',
+};
+
+export const PLAYBOOK_TIER_ZH = {
+  verified: '已验证（模型默认可召回）',
+  candidate: '候选中（未确认，模型默认不可见）',
+  quarantined: '已隔离（模型不可见）',
+};
 
 export const CATEGORIES = [
   'correctness',
@@ -264,6 +282,88 @@ export function savePlaybook(path, data) {
   data.version = '2.2';
   data.updatedAt = new Date().toISOString();
   writeJson(path, data);
+}
+
+/** Human-readable Chinese export path paired with playbook.json (not used by query). */
+export function playbookZhPathFrom(playbookPath = DEFAULT_PLAYBOOK) {
+  if (playbookPath.endsWith('playbook.json')) {
+    return playbookPath.replace(/playbook\.json$/, 'playbook-zh.md');
+  }
+  return join(dirname(playbookPath), 'playbook-zh.md');
+}
+
+function formatPlaybookZhEntry(entry, now = Date.now()) {
+  const conf = decayedConfidence(entry, now).toFixed(2);
+  const tier = entry.tier || 'candidate';
+  const category = PLAYBOOK_CATEGORY_ZH[entry.category] || entry.category || '未知';
+  const tierLabel = PLAYBOOK_TIER_ZH[tier] || tier;
+  const problemZh = entry.problemPatternZh || entry.problemPattern || '—';
+  const fixZh = entry.fixMethodZh || entry.fixMethod || '—';
+  const problemEn = entry.problemPatternZh ? entry.problemPattern : null;
+  const fixEn = entry.fixMethodZh ? entry.fixMethod : null;
+  const lines = [
+    `### ${entry.id} · ${category} · ${tierLabel}`,
+    '',
+    `- **问题：** ${problemZh}`,
+    `- **修法：** ${fixZh}`,
+  ];
+  if (problemEn) lines.push(`- **问题（英文，供模型）：** ${problemEn}`);
+  if (fixEn) lines.push(`- **修法（英文，供模型）：** ${fixEn}`);
+  lines.push(
+    `- **置信度：** ${conf} | **验证：** ${entry.verifiedCount ?? 0} 次 | **场景数：** ${(entry.distinctContexts || []).length}`,
+  );
+  if (entry.failedCount) lines.push(`- **失败次数：** ${entry.failedCount}`);
+  if (entry.examples?.length) lines.push(`- **示例位置：** ${entry.examples.join(', ')}`);
+  if (entry.evidence?.length) lines.push(`- **外部证据：** ${entry.evidence.join('; ')}`);
+  lines.push('');
+  return lines.join('\n');
+}
+
+/** Render Chinese markdown for humans. Model query still uses playbook.json (English). */
+export function renderPlaybookZhMarkdown(playbook, now = Date.now()) {
+  const entries = [...(playbook.entries || [])];
+  entries.sort((a, b) => playbookScore(b, now) - playbookScore(a, now));
+
+  const verified = entries.filter((e) => e.tier === 'verified');
+  const candidates = entries.filter((e) => e.tier !== 'verified' && e.tier !== 'quarantined');
+  const quarantined = entries.filter((e) => e.tier === 'quarantined');
+
+  const lines = [
+    '# CodeCortexLoop Playbook（中文版 · 仅供阅读）',
+    '',
+    '> 本文件给**中文用户/团队**阅读与复盘，**不会**被 `playbook.mjs query` 喂给模型。',
+    '> 模型在 Step 0.5 读取的是 `.cortexloop/playbook.json`（英文 recall，不是权威结论）。',
+    '',
+    `**更新时间：** ${playbook.updatedAt || new Date(now).toISOString()}`,
+    `**条目总数：** ${entries.length}`,
+    '',
+  ];
+
+  if (verified.length) {
+    lines.push('## ✅ 已验证模式', '');
+    for (const e of verified) lines.push(formatPlaybookZhEntry(e, now));
+  }
+  if (candidates.length) {
+    lines.push('## ⚠️ 候选模式（未确认，请勿直接套用）', '');
+    for (const e of candidates) lines.push(formatPlaybookZhEntry(e, now));
+  }
+  if (quarantined.length) {
+    lines.push('## 🚫 已隔离（低置信 / 失败过多）', '');
+    for (const e of quarantined) lines.push(formatPlaybookZhEntry(e, now));
+  }
+  if (!entries.length) {
+    lines.push('_暂无 Playbook 条目。Direct 模式复验成功后运行 reflect + record 即可生成。_', '');
+  }
+
+  lines.push('---', '', '_由 `playbook.mjs` 在 record / feedback / prune 后自动更新。_');
+  return `${lines.join('\n')}\n`;
+}
+
+export function savePlaybookZh(playbookPath, playbook) {
+  const zhPath = playbookZhPathFrom(playbookPath);
+  ensureDirFor(zhPath);
+  writeFileSync(zhPath, renderPlaybookZhMarkdown(playbook), 'utf8');
+  return zhPath;
 }
 
 export const TIER_WEIGHTS = {

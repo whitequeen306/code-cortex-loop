@@ -70,6 +70,8 @@ Keep it concise (1–2 screens). Focus on **patterns**, not line-by-line diffs.
       "language": "js",
       "problemPattern": "N+1 query — related rows fetched inside a loop",
       "fixMethod": "Collect ids first, single WHERE id IN (...) or JOIN, map back",
+      "problemPatternZh": "N+1 查询 — 在循环内逐条拉取关联数据",
+      "fixMethodZh": "先收集 id，再用 WHERE id IN (...) 或 JOIN 一次查回并映射",
       "example": "src/api.js:6"
     }
   ]
@@ -79,8 +81,10 @@ Keep it concise (1–2 screens). Focus on **patterns**, not line-by-line diffs.
 **Curation rules:**
 
 - Record **3–5 most valuable** generalizable patterns only
-- `problemPattern` — describe the **class** of problem (not a specific variable name)
-- `fixMethod` — describe the **technique** (not a literal diff)
+- `problemPattern` — describe the **class** of problem in **English** (model recall via `playbook.json`)
+- `fixMethod` — describe the **technique** in **English** (model recall; not a literal diff)
+- `problemPatternZh` — same pattern class in **Chinese** (for humans reading `playbook-zh.md`)
+- `fixMethodZh` — same fix technique in **Chinese** (for humans; not fed to `query`)
 - `category` — one of: correctness, security, performance, simplicity, tests, errorHandling, cleanup
 - `language` — e.g. `js`, `ts`, `py`, or omit for `any`
 - `example` — optional `file:line` pointer
@@ -101,7 +105,15 @@ node scripts/playbook.mjs record .cortexloop/reflection.json
 
 If `learning.global` is true in config, append `--global` to also upsert into `~/.cortexloop/playbook.json`.
 
-Confirm output shows added/updated counts.
+Confirm output shows added/updated counts and the path to `.cortexloop/playbook-zh.md` (Chinese human-readable export; **not** used by `query`).
+
+## Chinese playbook (human-only)
+
+- **Model:** `.cortexloop/playbook.json` — English entries; `playbook.mjs query` reads this only.
+- **Humans:** `.cortexloop/playbook-zh.md` — auto-generated after `record` / `feedback` / `prune`; team-facing Chinese summary with tier sections.
+- Re-export anytime: `node scripts/playbook.mjs export-zh`
+
+Always fill **both** English and Chinese fields in `reflection.json` so the zh export is useful without machine translation.
 
 ## Quality Checklist
 

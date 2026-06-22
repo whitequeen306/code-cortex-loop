@@ -209,9 +209,13 @@ Direct 模式自动运行反思 skill，产出 `08-reflection.md` 与 `reflectio
 ```bash
 node scripts/playbook.mjs record .cortexloop/reflection.json
 # 可选：--global 同时写入 ~/.cortexloop/playbook.json
+# 同时自动生成 .cortexloop/playbook-zh.md（中文阅读，模型不读）
+# 仅重新导出中文：node scripts/playbook.mjs export-zh
 ```
 
 `record` 应用 `self_verified`（+0.1）。**新条目从 candidate 起步**（confidence 0.3→0.4），不会自动进入 verified。
+
+`reflection.json` 每条需含 **英文**（`problemPattern` / `fixMethod`，供模型 query）与 **中文**（`problemPatternZh` / `fixMethodZh`，供 `playbook-zh.md`）。
 
 手动触发：`/cortexloop-reflect`
 
@@ -249,8 +253,9 @@ node scripts/playbook.mjs feedback --signature=<sig> --outcome=failed
 
 | 位置 | 路径 | 用途 |
 |------|------|------|
-| **项目级**（默认） | `.cortexloop/playbook.json` | 提交进 repo —— 团队共享记忆 |
-| **全局**（可选） | `~/.cortexloop/playbook.json` | 个人跨项目记忆 |
+| **项目级**（默认） | `.cortexloop/playbook.json` | 提交进 repo —— 团队共享记忆（**英文，仅模型 query**） |
+| **全局**（可选） | `~/.cortexloop/playbook.json` | 个人跨项目记忆（英文，模型 query） |
+| **中文阅读** | `.cortexloop/playbook-zh.md` | `record` / `feedback` / `prune` 后自动生成，**不**参与 query |
 
 示例见 [examples/demo-app/.cortexloop/playbook.json](examples/demo-app/.cortexloop/playbook.json)（含 verified + candidate 混合样例）。
 
@@ -499,8 +504,9 @@ node scripts/ci-gate.mjs docs/cortexloop/report.json --baseline   # 棘轮模式
 | `.cortexloop/health-badge.svg` | README 徽章 |
 | `.cortexloop/baseline.json` | 已接受的欠债快照 |
 | `.cortexloop/pr-comment.md` | GitHub PR 评论正文 |
-| `.cortexloop/playbook.json` | **自我进化的修复记忆库** |
-| `.cortexloop/reflection.json` | 最近一次反思（record 的输入） |
+| `.cortexloop/playbook.json` | **自我进化的修复记忆库**（英文，模型 query） |
+| `.cortexloop/playbook-zh.md` | Playbook 中文版（团队阅读，模型不读） |
+| `.cortexloop/reflection.json` | 最近一次反思（record 的输入，含中英文字段） |
 
 每条问题包含：`CL-001`、严重度、类别、位置、问题、**证据**、**置信度**、建议、是否可自动修复。低置信度猜测不进入计分 findings，只进入 Open Questions 或建议区。
 

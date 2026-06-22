@@ -141,7 +141,8 @@ Write to `docs/cortexloop/`:
 | `.cortexloop/baseline.json` | `baseline.mjs accept` | Accepted debt snapshot |
 | `.cortexloop/baseline-diff.json` | `baseline.mjs diff` | new / fixed / remaining |
 | `.cortexloop/pr-comment.md` | `pr-comment.mjs` | GitHub PR comment body |
-| `.cortexloop/playbook.json` | `playbook.mjs record` | Learned fix patterns |
+| `.cortexloop/playbook.json` | `playbook.mjs record` | Learned fix patterns (English; model query) |
+| `.cortexloop/playbook-zh.md` | auto on record/feedback/prune | Chinese human-readable playbook (not fed to model) |
 | `.cortexloop/reflection.json` | reflect skill | Latest reflection (record input) |
 | `docs/cortexloop/08-reflection.md` | reflect skill | Human retrospective |
 

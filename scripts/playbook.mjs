@@ -19,6 +19,7 @@
  *                                     [--context=<key>] [--evidence=<note>] [--global]
  *   node scripts/playbook.mjs prune   [--min-confidence=0.3] [--max-age-days=180]
  *                                     [--max-entries=200] [--drop-quarantined] [--global]
+ *   node scripts/playbook.mjs export-zh [--playbook=.cortexloop/playbook.json]
  */
 
 import { existsSync } from 'node:fs';
@@ -37,6 +38,8 @@ import {
   playbookSignature,
   readJson,
   savePlaybook,
+  savePlaybookZh,
+  playbookZhPathFrom,
 } from './lib/shared.mjs';
 
 const { positional, flags, getFlagValue } = parseArgs();
@@ -127,6 +130,12 @@ function cmdQuery() {
   console.log('_Hits must pass refactor-safety + tests. See rules/learning-loop.mdc_');
 }
 
+function persistPlaybook(playbookPath, playbook) {
+  savePlaybook(playbookPath, playbook);
+  const zhPath = savePlaybookZh(playbookPath, playbook);
+  return zhPath;
+}
+
 // record = positive self_verified signal from a Direct re-verify pass.
 function recordSelfVerified(playbook, reflectionEntries) {
   let added = 0;
@@ -148,6 +157,8 @@ function recordSelfVerified(playbook, reflectionEntries) {
       if (raw.example && !(entry.examples || []).includes(raw.example)) {
         entry.examples = [...(entry.examples || []), raw.example];
       }
+      if (raw.problemPatternZh) entry.problemPatternZh = raw.problemPatternZh;
+      if (raw.fixMethodZh) entry.fixMethodZh = raw.fixMethodZh;
       applyOutcome(entry, 'self_verified', { context, now });
       updated++;
     } else {
@@ -159,6 +170,8 @@ function recordSelfVerified(playbook, reflectionEntries) {
         language: raw.language || 'any',
         problemPattern: raw.problemPattern,
         fixMethod: raw.fixMethod,
+        problemPatternZh: raw.problemPatternZh || null,
+        fixMethodZh: raw.fixMethodZh || null,
         tier: 'candidate',
         confidence: PLAYBOOK_DEFAULTS.newConfidence,
         appliedCount: 1,
@@ -206,12 +219,13 @@ function cmdRecord() {
     recordSelfVerified(globalPb, entries);
     try {
       savePlaybook(GLOBAL_PLAYBOOK, globalPb);
+      savePlaybookZh(GLOBAL_PLAYBOOK, globalPb);
     } catch (err) {
       console.error(`[cortexloop] Failed to save global playbook: ${err.message}`);
       process.exit(1);
     }
     try {
-      savePlaybook(playbookPath, playbook);
+      persistPlaybook(playbookPath, playbook);
     } catch (err) {
       try {
         savePlaybook(GLOBAL_PLAYBOOK, globalBackup);
@@ -224,13 +238,16 @@ function cmdRecord() {
     }
     console.log(`[cortexloop] Playbook updated -> ${playbookPath}`);
     console.log(`  added: ${added}, updated: ${updated}, total: ${playbook.entries.length} (new entries start as candidates)`);
+    console.log(`[cortexloop] Playbook (中文) -> ${playbookZhPathFrom(playbookPath)}`);
     console.log(`[cortexloop] Global playbook updated -> ${GLOBAL_PLAYBOOK}`);
+    console.log(`[cortexloop] Global playbook (中文) -> ${playbookZhPathFrom(GLOBAL_PLAYBOOK)}`);
     console.log(`  total: ${globalPb.entries.length}`);
     return;
   }
 
-  savePlaybook(playbookPath, playbook);
+  const zhPath = persistPlaybook(playbookPath, playbook);
   console.log(`[cortexloop] Playbook updated -> ${playbookPath}`);
+  console.log(`[cortexloop] Playbook (中文) -> ${zhPath}`);
   console.log(`  added: ${added}, updated: ${updated}, total: ${playbook.entries.length} (new entries start as candidates)`);
 }
 
@@ -271,12 +288,13 @@ function cmdFeedback() {
   const beforeTier = entry.tier || 'candidate';
   const beforeConf = (entry.confidence ?? PLAYBOOK_DEFAULTS.newConfidence).toFixed(2);
   applyOutcome(entry, outcome, { context, evidence });
-  savePlaybook(playbookPath, playbook);
+  const zhPath = persistPlaybook(playbookPath, playbook);
 
   console.log(`[cortexloop] Feedback '${outcome}' applied -> ${signature}`);
   console.log(`  confidence: ${beforeConf} -> ${entry.confidence.toFixed(2)} | tier: ${beforeTier} -> ${entry.tier}`);
   console.log(`  verified: ${entry.verifiedCount ?? 0} in ${(entry.distinctContexts || []).length} context(s)` +
     (entry.failedCount ? `, failures: ${entry.failedCount}` : ''));
+  console.log(`[cortexloop] Playbook (中文) -> ${zhPath}`);
 }
 
 function cmdPrune() {
@@ -304,14 +322,23 @@ function cmdPrune() {
     playbook.entries = playbook.entries.slice(0, maxEntries);
   }
 
-  savePlaybook(playbookPath, playbook);
+  const zhPath = persistPlaybook(playbookPath, playbook);
   const removed = before - playbook.entries.length;
   console.log(`[cortexloop] Playbook pruned -> ${playbookPath}`);
+  console.log(`[cortexloop] Playbook (中文) -> ${zhPath}`);
   console.log(`  removed: ${removed}, remaining: ${playbook.entries.length}`);
 }
 
+function cmdExportZh() {
+  const playbookPath = getFlagValue('--playbook', DEFAULT_PLAYBOOK);
+  const playbook = loadPlaybook(playbookPath);
+  const zhPath = savePlaybookZh(playbookPath, playbook);
+  console.log(`[cortexloop] Playbook (中文) exported -> ${zhPath}`);
+  console.log(`  entries: ${playbook.entries.length}`);
+}
+
 const command = positional[0];
-const COMMANDS = ['query', 'record', 'feedback', 'prune'];
+const COMMANDS = ['query', 'record', 'feedback', 'prune', 'export-zh'];
 if (!command || !COMMANDS.includes(command)) {
   console.error(`Usage: node scripts/playbook.mjs <${COMMANDS.join('|')}> [...]`);
   process.exit(1);
@@ -321,3 +348,4 @@ if (command === 'query') cmdQuery();
 else if (command === 'record') cmdRecord();
 else if (command === 'feedback') cmdFeedback();
 else if (command === 'prune') cmdPrune();
+else if (command === 'export-zh') cmdExportZh();

@@ -165,18 +165,26 @@ Uses **decayed** confidence for threshold. Defaults match `learning.prune` in co
 
 | Store | Path | Use |
 |-------|------|-----|
-| **Project** (default) | `.cortexloop/playbook.json` | Commit to repo — team-shared memory |
-| **Global** (optional) | `~/.cortexloop/playbook.json` | Personal cross-project patterns |
+| **Project** (default) | `.cortexloop/playbook.json` | Commit to repo — team-shared memory (English; model query) |
+| **Global** (optional) | `~/.cortexloop/playbook.json` | Personal cross-project patterns (English; model query) |
 
-- `record` / `feedback` write project playbook by default; `--global` also upserts global
+Human-readable Chinese export (not used by `query`):
+
+| Store | Path | Use |
+|-------|------|-----|
+| **Project** | `.cortexloop/playbook-zh.md` | Auto-updated after `record` / `feedback` / `prune` |
+| **Global** | `~/.cortexloop/playbook-zh.md` | Paired with global playbook when `--global` |
+
+- `record` / `feedback` write project playbook by default; `--global` also upserts global (both JSON + zh markdown)
 - `query --global-merge` merges global into project view (project entries win on conflict)
 
 ## Artifacts
 
 | File | Role |
 |------|------|
-| `.cortexloop/playbook.json` | Persistent learned patterns |
-| `.cortexloop/reflection.json` | Latest reflect output (input to `record`) |
+| `.cortexloop/playbook.json` | Persistent learned patterns (English — model `query` only) |
+| `.cortexloop/playbook-zh.md` | Chinese human-readable playbook (auto-generated; not fed to model) |
+| `.cortexloop/reflection.json` | Latest reflect output (input to `record`; include EN + ZH fields) |
 | `docs/cortexloop/08-reflection.md` | Human-readable retrospective |
 
 ## Config (documentation + orchestrator flags)
