@@ -4,7 +4,18 @@
 
 **一条命令，跑完 7 路代码体检并自我进化。** 面向 AI 编码工具的"写完代码后"流水线：**审查、安全、测试、性能、精简、错误处理、清理** —— 配套健康分、趋势看板、基线棘轮、CI 集成，以及**可自我进化的修复记忆库（Playbook）**。
 
-适配 **Cursor**、**Claude Code**、**Qoder**、**Trae**。
+适配 **Cursor**、**Claude Code**、**Qoder**、**Trae**、**OpenCode**、**Codex**。
+
+| 工具 | 安装参数 | 配置目录 | 调用方式 |
+|------|----------|----------|----------|
+| **Cursor** | `cursor` | `~/.cursor/` | `/cortexloop` |
+| **Claude Code** | `claude` | `~/.claude/` | `/cortexloop` |
+| **Qoder** | `qoder` | `~/.qoder/` | `/cortexloop` |
+| **Trae** | `trae` | `~/.trae/` 或项目 `.trae/` | `/cortexloop` |
+| **OpenCode** | `opencode` | `~/.config/opencode/` | TUI 输入 `/cortexloop` |
+| **Codex** | `codex` | `~/.codex/` 或 `$CODEX_HOME` | skills / AGENTS（见下文） |
+
+> Codex 目前不保证原生顶层 `/cortexloop`；推荐用 skills 或自然语言触发。OpenCode 与 Cursor 一样支持 slash command。
 
 ---
 
@@ -51,28 +62,46 @@ flowchart LR
 
 ### 一键安装（按工具选择）
 
-**Windows（PowerShell）：**
 ```powershell
+# Windows — 把 cursor 换成：claude | qoder | trae | opencode | codex | all
 git clone https://github.com/whitequeen306/code-cortex-loop.git
 cd code-cortex-loop
-.\scripts\install.ps1 -Tool cursor    # 或：claude | qoder | trae | opencode | codex | all
+.\scripts\install.ps1 -Tool cursor
 ```
 
-**macOS / Linux：**
 ```bash
+# macOS / Linux — 把 cursor 换成：claude | qoder | trae | opencode | codex | all
 git clone https://github.com/whitequeen306/code-cortex-loop.git
 cd code-cortex-loop
 chmod +x scripts/install.sh
-./scripts/install.sh cursor    # 或：claude | qoder | trae | opencode | codex | all
+./scripts/install.sh cursor
 ```
 
-安装脚本会把 `commands/`、`agents/`、`skills/`、`rules/`、`scripts/` 一并拷贝到对应工具的配置目录。装完**重启 IDE**，在聊天里输入 `/cortexloop` 即可。
+安装脚本会把 `commands/`、`agents/`、`skills/`、`rules/`、`scripts/` 拷贝到对应工具的配置目录（Codex 仅拷贝 skills/scripts/prompts，见 [adapters/codex](adapters/codex/README.md)）。
+
+装完后 **重启对应工具**，在 Cursor / Claude / Qoder / Trae / OpenCode 中输入 `/cortexloop`；Codex 见下方专门说明。
+
+### 支持的 AI 编码工具
+
+| 工具 | 一键安装 | 用户级配置目录 | 怎么用 |
+|------|----------|----------------|--------|
+| Cursor | `install.ps1 -Tool cursor` | `~/.cursor/` | Chat 里 `/cortexloop` |
+| Claude Code | `-Tool claude` | `~/.claude/` | 会话里 `/cortexloop` |
+| Qoder | `-Tool qoder` | `~/.qoder/` | 聊天里 `/cortexloop` |
+| Trae | `-Tool trae` | `~/.trae/` | 聊天里 `/cortexloop` |
+| OpenCode | `-Tool opencode` | `~/.config/opencode/` | TUI 里 `/cortexloop` |
+| Codex | `-Tool codex` | `~/.codex/` | `/skills` 或 “Use CodeCortexLoop…” |
+| 全部 | `-Tool all` | 以上全部 | 按各工具分别重启后使用 |
+
+各工具详细路径与差异见 [adapters/](adapters/)。
 
 ---
 
 ## 不同智能体如何使用
 
-多数工具的命令名都一样（`/cortexloop` 系列），区别在于**安装目录**和**调用入口**。Codex 例外：优先通过 skills/AGENTS 使用，可选旧式 `/prompts:cortexloop`。
+**Slash command 工具**（Cursor / Claude / Qoder / Trae / OpenCode）：命令名一致，都是 `/cortexloop` 系列。
+
+**Codex**：走 skills + `AGENTS.md`；可选 deprecated 的 `/prompts:cortexloop`。
 
 ### Cursor
 
@@ -501,7 +530,7 @@ cortexloop/
 ├── schemas/            # report + config JSON schema
 ├── examples/           # demo 应用 + 演示
 ├── action.yml          # GitHub 复合 Action
-├── adapters/           # Qoder / Trae / OpenCode / Codex 安装说明
+├── adapters/           # 六工具适配说明（Qoder / Trae / OpenCode / Codex / …）
 ├── .cursor-plugin/     # Cursor 清单
 ├── .claude-plugin/     # Claude Code 清单
 ├── AGENTS.md           # 跨工具规则
