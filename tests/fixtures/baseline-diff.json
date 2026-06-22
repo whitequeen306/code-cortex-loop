@@ -1,0 +1,25 @@
+{
+  "version": "2.2",
+  "generatedAt": "2026-01-01T00:00:00.000Z",
+  "summary": {
+    "baselineCount": 1,
+    "currentOpen": 2,
+    "remaining": 1,
+    "fixed": 0,
+    "new": 1,
+    "newCritical": 0,
+    "newHigh": 1
+  },
+  "new": [
+    {
+      "id": "CL-902",
+      "severity": "High",
+      "category": "correctness",
+      "location": "src/c.js:3",
+      "problem": "new baseline finding",
+      "status": "open"
+    }
+  ],
+  "fixed": [],
+  "remaining": []
+}

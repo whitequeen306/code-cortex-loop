@@ -55,7 +55,7 @@ flowchart LR
 ```powershell
 git clone https://github.com/whitequeen306/code-cortex-loop.git
 cd code-cortex-loop
-.\scripts\install.ps1 -Tool cursor    # 或：claude | qoder | trae | all
+.\scripts\install.ps1 -Tool cursor    # 或：claude | qoder | trae | opencode | codex | all
 ```
 
 **macOS / Linux：**
@@ -63,7 +63,7 @@ cd code-cortex-loop
 git clone https://github.com/whitequeen306/code-cortex-loop.git
 cd code-cortex-loop
 chmod +x scripts/install.sh
-./scripts/install.sh cursor    # 或：claude | qoder | trae | all
+./scripts/install.sh cursor    # 或：claude | qoder | trae | opencode | codex | all
 ```
 
 安装脚本会把 `commands/`、`agents/`、`skills/`、`rules/`、`scripts/` 一并拷贝到对应工具的配置目录。装完**重启 IDE**，在聊天里输入 `/cortexloop` 即可。
@@ -72,7 +72,7 @@ chmod +x scripts/install.sh
 
 ## 不同智能体如何使用
 
-各工具的命令名都一样（`/cortexloop` 系列），区别在于**安装目录**和**调用入口**。
+多数工具的命令名都一样（`/cortexloop` 系列），区别在于**安装目录**和**调用入口**。Codex 例外：优先通过 skills/AGENTS 使用，可选旧式 `/prompts:cortexloop`。
 
 ### Cursor
 
@@ -99,6 +99,21 @@ chmod +x scripts/install.sh
 1. 运行 `install.ps1 -Tool trae`（默认 user 作用域，装到 `~/.trae/`）；项目级可用 `install-trae.ps1 -Scope project`，装到当前项目的 `.trae/`。
 2. 重启 Trae，输入 `/cortexloop`。
 3. 细节见 [adapters/trae](adapters/trae/README.md)。
+
+### OpenCode
+
+1. 运行 `install.ps1 -Tool opencode`（或 `install.sh opencode`），文件装到 `~/.config/opencode/{commands,agents,skills,rules,scripts}/`。
+2. 重启 OpenCode。
+3. 在 OpenCode TUI 里输入 `/cortexloop`。
+4. 细节见 [adapters/opencode](adapters/opencode/README.md)。
+
+### Codex
+
+1. 运行 `install.ps1 -Tool codex`（或 `install.sh codex`），文件装到 `~/.codex/`；如果设置了 `CODEX_HOME`，则安装到 `$CODEX_HOME`。
+2. 重启 Codex。
+3. 推荐使用 skills/AGENTS 方式：输入“Use CodeCortexLoop to review this project”或在 `/skills` 中选择相关 skill。
+4. 可选旧式 prompt 快捷方式：`/prompts:cortexloop`（Codex custom prompts 已被官方标为 deprecated）。
+5. 细节见 [adapters/codex](adapters/codex/README.md)。
 
 > **关于脚本路径**：`/cortexloop` 流程会调用 `node scripts/*.mjs` 做后处理（看板 / 徽章 / Playbook 等）。从 **clone 的仓库根目录**运行最稳妥；在你自己的项目里运行时，请确保 `scripts/` 可访问（已随安装拷贝到工具配置目录），或直接用本仓库根目录执行脚本。CI 场景由 `action.yml` 自动定位脚本，无需关心路径。
 
@@ -458,7 +473,7 @@ node scripts/ci-gate.mjs docs/cortexloop/report.json --baseline   # 棘轮模式
 | `.cortexloop/playbook.json` | **自我进化的修复记忆库** |
 | `.cortexloop/reflection.json` | 最近一次反思（record 的输入） |
 
-每条问题包含：`CL-001`、严重度、类别、位置、问题、建议、是否可自动修复。
+每条问题包含：`CL-001`、严重度、类别、位置、问题、**证据**、**置信度**、建议、是否可自动修复。低置信度猜测不进入计分 findings，只进入 Open Questions 或建议区。
 
 ---
 
@@ -479,14 +494,14 @@ cd examples/demo-app
 ```
 cortexloop/
 ├── commands/           # /cortexloop, /cortexloop-quick, /cortexloop-reflect, ...
-├── agents/             # code-reviewer, security-auditor, ...
-├── skills/             # performance, simplify, reflect, ...
+├── agents/             # code-reviewer, security-auditor, performance-analyst, cleanup-curator, ...
+├── skills/             # performance, test-strategy, error-handling, edge-case/state, reflect, ...
 ├── rules/              # workflow, refactor-safety, learning-loop, ...
 ├── scripts/            # install.*, ci-gate, baseline, playbook, make-dashboard, ...
 ├── schemas/            # report + config JSON schema
 ├── examples/           # demo 应用 + 演示
 ├── action.yml          # GitHub 复合 Action
-├── adapters/           # Qoder & Trae 安装说明
+├── adapters/           # Qoder / Trae / OpenCode / Codex 安装说明
 ├── .cursor-plugin/     # Cursor 清单
 ├── .claude-plugin/     # Claude Code 清单
 ├── AGENTS.md           # 跨工具规则

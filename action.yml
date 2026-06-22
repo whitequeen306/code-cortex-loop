@@ -25,29 +25,35 @@ inputs:
     description: Upload report.sarif if present
     required: false
     default: 'false'
+  sarif-path:
+    description: SARIF file path (empty = derive from report-path by replacing .json with .sarif)
+    required: false
+    default: ''
 
 runs:
   using: composite
   steps:
     - name: Validate Node.js
       shell: bash
-      run: |
-        node --version
+      run: node --version
 
     - name: Baseline diff (if enabled)
       if: inputs.baseline == 'true'
       shell: bash
-      run: |
-        node "${{ github.action_path }}/scripts/baseline.mjs" diff "${{ inputs.report-path }}"
+      run: node "${{ github.action_path }}/scripts/baseline.mjs" diff "${{ inputs.report-path }}"
 
     - name: CI gate
       shell: bash
       run: |
-        ARGS="${{ inputs.report-path }} --max-high=${{ inputs.max-high }}"
+        GATE=(
+          "${{ github.action_path }}/scripts/ci-gate.mjs"
+          "${{ inputs.report-path }}"
+          "--max-high=${{ inputs.max-high }}"
+        )
         if [ "${{ inputs.baseline }}" = "true" ]; then
-          ARGS="$ARGS --baseline"
+          GATE+=("--baseline")
         fi
-        node "${{ github.action_path }}/scripts/ci-gate.mjs" $ARGS
+        node "${GATE[@]}"
 
     - name: Record history
       shell: bash
@@ -59,17 +65,20 @@ runs:
 
     - name: Generate dashboard
       shell: bash
-      run: |
-        node "${{ github.action_path }}/scripts/make-dashboard.mjs" "${{ inputs.report-path }}"
+      run: node "${{ github.action_path }}/scripts/make-dashboard.mjs" "${{ inputs.report-path }}"
 
     - name: Generate PR comment body
       shell: bash
       run: |
-        DIFF_ARG=""
         if [ "${{ inputs.baseline }}" = "true" ]; then
-          DIFF_ARG="--baseline-diff=.cortexloop/baseline-diff.json"
+          node "${{ github.action_path }}/scripts/pr-comment.mjs" \
+            "${{ inputs.report-path }}" \
+            --include-baseline-diff \
+            --baseline-diff=.cortexloop/baseline-diff.json
+        else
+          node "${{ github.action_path }}/scripts/pr-comment.mjs" \
+            "${{ inputs.report-path }}"
         fi
-        node "${{ github.action_path }}/scripts/pr-comment.mjs" "${{ inputs.report-path }}" $DIFF_ARG
 
     - name: Comment on PR
       if: inputs.comment == 'true' && github.event_name == 'pull_request'
@@ -107,9 +116,20 @@ runs:
             });
           }
 
+    - name: Resolve SARIF path
+      if: inputs.upload-sarif == 'true'
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.sarif-path }}" ]; then
+          echo "CORTEXLOOP_SARIF=${{ inputs.sarif-path }}" >> "$GITHUB_ENV"
+        else
+          REPORT="${{ inputs.report-path }}"
+          echo "CORTEXLOOP_SARIF=${REPORT%.json}.sarif" >> "$GITHUB_ENV"
+        fi
+
     - name: Upload SARIF (optional)
       if: inputs.upload-sarif == 'true'
       uses: github/codeql-action/upload-sarif@v3
       continue-on-error: true
       with:
-        sarif_file: docs/cortexloop/report.sarif
+        sarif_file: ${{ env.CORTEXLOOP_SARIF }}

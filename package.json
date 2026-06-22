@@ -1,0 +1,8 @@
+{
+  "name": "code-cortex-loop",
+  "private": true,
+  "description": "CodeCortexLoop harness — zero-dep scripts and tests",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  }
+}

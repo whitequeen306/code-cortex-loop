@@ -14,11 +14,11 @@ Legacy codebases may have hundreds of pre-existing findings. **Baseline mode** l
 Each finding gets a stable fingerprint:
 
 ```
-hash(category + normalized_location + normalized_problem)
+hash(category + location_with_line + full_normalized_problem)
 ```
 
-- **Location** normalized: forward slashes, line numbers stripped
-- **Problem** normalized: lowercase, whitespace collapsed, first 120 chars
+- **Location** includes line numbers (file paths normalized to forward slashes)
+- **Problem** normalized: lowercase, whitespace collapsed, full text (not truncated)
 
 Same issue at same place = same fingerprint across runs.
 

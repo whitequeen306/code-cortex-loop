@@ -5,6 +5,12 @@ param(
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
+$ResolvedTarget = [IO.Path]::GetFullPath($Target)
+$AllowedTarget = [IO.Path]::GetFullPath((Join-Path $env:USERPROFILE ".claude"))
+if ($ResolvedTarget -ne $AllowedTarget) {
+  throw "[cortexloop] Refusing install: Target must be $AllowedTarget (got $ResolvedTarget)"
+}
+
 $map = @{
   "commands" = Join-Path $Target "commands"
   "agents"   = Join-Path $Target "agents"

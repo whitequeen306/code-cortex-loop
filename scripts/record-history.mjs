@@ -52,10 +52,19 @@ const entry = {
   },
 };
 
-let history = { version: '2.1', runs: [] };
+let history = { version: '2.2', runs: [] };
 if (existsSync(historyPath)) {
-  history = readJson(historyPath);
-  if (!Array.isArray(history.runs)) history.runs = [];
+  try {
+    history = readJson(historyPath);
+  } catch (err) {
+    console.error(`[cortexloop] Failed to read history: ${historyPath}`);
+    console.error(err.message);
+    process.exit(1);
+  }
+  if (!Array.isArray(history.runs)) {
+    console.warn(`[cortexloop] Warning: history.runs invalid in ${historyPath}, resetting runs array`);
+    history.runs = [];
+  }
 }
 
 history.runs.push(entry);

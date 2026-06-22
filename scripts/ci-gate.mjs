@@ -21,32 +21,67 @@ import {
   countFindings,
   parseArgs,
   readJson,
+  resolveWithinWorkspace,
+  validateReport,
 } from './lib/shared.mjs';
 
 const { positional, flags, getFlagValue } = parseArgs();
-const reportPath = positional[0] || DEFAULT_REPORT;
-const maxHigh = Number(getFlagValue('--max-high', '0'));
+const reportArg = positional[0] || DEFAULT_REPORT;
+const maxHighRaw = getFlagValue('--max-high', '0');
+const maxHigh = Number(maxHighRaw);
 const useBaseline = flags.has('--baseline');
+const skipValidation = flags.has('--skip-report-validation');
 const baselineDiffPath = getFlagValue('--baseline-diff', DEFAULT_BASELINE_DIFF);
+const workspaceRoot = process.env.GITHUB_WORKSPACE || process.cwd();
 
+if (!Number.isInteger(maxHigh) || maxHigh < 0) {
+  console.error(`[cortexloop] Invalid --max-high: ${maxHighRaw}`);
+  process.exit(3);
+}
+
+let reportPath = reportArg;
 let report;
 try {
+  reportPath = resolveWithinWorkspace(reportArg, workspaceRoot);
   report = readJson(reportPath);
 } catch (err) {
-  console.error(`[cortexloop] Failed to read report: ${reportPath}`);
+  console.error(`[cortexloop] Failed to read report: ${reportArg}`);
   console.error(err.message);
   process.exit(3);
+}
+
+if (!skipValidation) {
+  const validationError = validateReport(report);
+  if (validationError) {
+    console.error(`[cortexloop] Invalid report: ${validationError}`);
+    process.exit(3);
+  }
 }
 
 let findings = report.findings || [];
 
 if (useBaseline) {
-  if (!existsSync(baselineDiffPath)) {
+  let diffPath;
+  try {
+    diffPath = resolveWithinWorkspace(baselineDiffPath, workspaceRoot);
+  } catch (err) {
+    console.error(`[cortexloop] Invalid baseline diff path: ${baselineDiffPath}`);
+    console.error(err.message);
+    process.exit(3);
+  }
+  if (!existsSync(diffPath)) {
     console.error(`[cortexloop] Baseline diff not found: ${baselineDiffPath}`);
     console.error('Run: node scripts/baseline.mjs diff');
     process.exit(3);
   }
-  const diff = readJson(baselineDiffPath);
+  let diff;
+  try {
+    diff = readJson(diffPath);
+  } catch (err) {
+    console.error(`[cortexloop] Failed to read baseline diff: ${baselineDiffPath}`);
+    console.error(err.message);
+    process.exit(3);
+  }
   findings = diff.new || [];
   console.log('[cortexloop] Baseline mode — gating on NEW findings only');
   console.log(`  new: ${findings.length} (remaining baseline debt ignored)`);
@@ -61,6 +96,11 @@ console.log(`  Scores: overall ${report.scores?.before?.overall ?? 'n/a'}`);
 console.log(`  Critical: ${counts.Critical}`);
 console.log(`  High:     ${counts.High}`);
 console.log(`  Medium:   ${counts.Medium}`);
+
+if (counts.unknown > 0) {
+  console.error(`[cortexloop] FAIL — ${counts.unknown} finding(s) with invalid severity`);
+  process.exit(3);
+}
 
 if (counts.Critical > 0) {
   console.error('[cortexloop] FAIL — Critical findings present');

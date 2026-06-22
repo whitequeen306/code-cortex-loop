@@ -11,6 +11,15 @@ These rules apply when running any `/cortexloop*` command. Tool-specific install
 5. Follow `baseline-policy` when using `/cortexloop-baseline` or `ci.baseline`
 6. Follow `learning-loop` when querying or recording playbook entries
 
+## Finding Quality Gate
+
+Every scored finding must include:
+
+- **Evidence:** trigger path, measurement, test gap, static proof, or audit output
+- **Confidence:** `high` or `medium`
+
+Low-confidence speculation must not become a scored finding. Put it in Open Questions or drop it.
+
 ## Security Baseline (always during security pass)
 
 Every code change must satisfy:
@@ -108,8 +117,10 @@ Playbook hits are **recall, not authority** — re-derive and verify every fix; 
 | `code-reviewer` | 5-axis review |
 | `security-auditor` | OWASP, secrets, auth |
 | `test-engineer` | Coverage gaps |
+| `performance-analyst` | Broad performance risk discovery |
 | `code-simplifier` | Clarity without behavior change |
 | `silent-failure-hunter` | Error handling audit |
+| `cleanup-curator` | Dead code and dependency curation |
 
 Orchestration belongs to `/cortexloop` — agents do not invoke each other.
 

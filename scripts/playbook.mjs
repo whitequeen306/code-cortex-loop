@@ -32,7 +32,6 @@ import {
   decayedConfidence,
   loadPlaybook,
   mergePlaybooks,
-  nextPlaybookId,
   parseArgs,
   playbookScore,
   playbookSignature,
@@ -41,6 +40,11 @@ import {
 } from './lib/shared.mjs';
 
 const { positional, flags, getFlagValue } = parseArgs();
+
+function resolvePlaybookPath() {
+  if (flags.has('--global')) return GLOBAL_PLAYBOOK;
+  return getFlagValue('--playbook', DEFAULT_PLAYBOOK);
+}
 
 function parseCategories(raw) {
   if (!raw) return null;
@@ -81,9 +85,10 @@ function cmdQuery() {
   const globalMerge = flags.has('--global-merge');
   const includeCandidates = flags.has('--include-candidates');
 
-  let entries = loadPlaybook(playbookPath).entries;
+  const projectPb = loadPlaybook(playbookPath);
+  let entries = projectPb.entries;
   if (globalMerge && existsSync(GLOBAL_PLAYBOOK)) {
-    entries = mergePlaybooks(loadPlaybook(playbookPath), loadPlaybook(GLOBAL_PLAYBOOK));
+    entries = mergePlaybooks(projectPb, loadPlaybook(GLOBAL_PLAYBOOK));
   }
 
   entries = filterEntries(entries, categories, lang)
@@ -127,11 +132,16 @@ function recordSelfVerified(playbook, reflectionEntries) {
   let added = 0;
   let updated = 0;
   const now = new Date().toISOString();
+  const bySig = new Map((playbook.entries || []).map((e) => [e.signature, e]));
+  let nextNum = (playbook.entries || []).reduce((max, e) => {
+    const m = /^PB-(\d+)$/.exec(e.id || '');
+    return m ? Math.max(max, Number(m[1])) : max;
+  }, 0);
 
   for (const raw of reflectionEntries) {
     const signature = playbookSignature(raw);
     const context = raw.context || fileOf(raw.example) || 'local';
-    let entry = playbook.entries.find((e) => e.signature === signature);
+    let entry = bySig.get(signature);
 
     if (entry) {
       entry.appliedCount = (entry.appliedCount || 0) + 1;
@@ -141,8 +151,9 @@ function recordSelfVerified(playbook, reflectionEntries) {
       applyOutcome(entry, 'self_verified', { context, now });
       updated++;
     } else {
+      nextNum += 1;
       entry = {
-        id: nextPlaybookId(playbook.entries),
+        id: `PB-${String(nextNum).padStart(3, '0')}`,
         signature,
         category: raw.category || 'unknown',
         language: raw.language || 'any',
@@ -162,6 +173,7 @@ function recordSelfVerified(playbook, reflectionEntries) {
       };
       applyOutcome(entry, 'self_verified', { context, now });
       playbook.entries.push(entry);
+      bySig.set(signature, entry);
       added++;
     }
   }
@@ -187,17 +199,39 @@ function cmdRecord() {
 
   const playbook = loadPlaybook(playbookPath);
   const { added, updated } = recordSelfVerified(playbook, entries);
-  savePlaybook(playbookPath, playbook);
-  console.log(`[cortexloop] Playbook updated -> ${playbookPath}`);
-  console.log(`  added: ${added}, updated: ${updated}, total: ${playbook.entries.length} (new entries start as candidates)`);
 
   if (alsoGlobal) {
     const globalPb = loadPlaybook(GLOBAL_PLAYBOOK);
-    const g = recordSelfVerified(globalPb, entries);
-    savePlaybook(GLOBAL_PLAYBOOK, globalPb);
+    const globalBackup = structuredClone(globalPb);
+    recordSelfVerified(globalPb, entries);
+    try {
+      savePlaybook(GLOBAL_PLAYBOOK, globalPb);
+    } catch (err) {
+      console.error(`[cortexloop] Failed to save global playbook: ${err.message}`);
+      process.exit(1);
+    }
+    try {
+      savePlaybook(playbookPath, playbook);
+    } catch (err) {
+      try {
+        savePlaybook(GLOBAL_PLAYBOOK, globalBackup);
+        console.error('[cortexloop] Project playbook save failed — global playbook rolled back');
+      } catch (rollbackErr) {
+        console.error(`[cortexloop] Project save failed AND rollback failed: ${rollbackErr.message}`);
+      }
+      console.error(`[cortexloop] Failed to save project playbook: ${err.message}`);
+      process.exit(1);
+    }
+    console.log(`[cortexloop] Playbook updated -> ${playbookPath}`);
+    console.log(`  added: ${added}, updated: ${updated}, total: ${playbook.entries.length} (new entries start as candidates)`);
     console.log(`[cortexloop] Global playbook updated -> ${GLOBAL_PLAYBOOK}`);
-    console.log(`  added: ${g.added}, updated: ${g.updated}, total: ${globalPb.entries.length}`);
+    console.log(`  total: ${globalPb.entries.length}`);
+    return;
   }
+
+  savePlaybook(playbookPath, playbook);
+  console.log(`[cortexloop] Playbook updated -> ${playbookPath}`);
+  console.log(`  added: ${added}, updated: ${updated}, total: ${playbook.entries.length} (new entries start as candidates)`);
 }
 
 // feedback = outcome signal from an external oracle (CI / human) or a
@@ -225,7 +259,7 @@ function cmdFeedback() {
 
   const context = getFlagValue('--context', null);
   const evidence = getFlagValue('--evidence', null);
-  const playbookPath = flags.has('--global') ? GLOBAL_PLAYBOOK : getFlagValue('--playbook', DEFAULT_PLAYBOOK);
+  const playbookPath = resolvePlaybookPath();
 
   const playbook = loadPlaybook(playbookPath);
   const entry = playbook.entries.find((e) => e.signature === signature);
@@ -250,7 +284,7 @@ function cmdPrune() {
   const maxAgeDays = Number(getFlagValue('--max-age-days', '180'));
   const maxEntries = Number(getFlagValue('--max-entries', '200'));
   const dropQuarantined = flags.has('--drop-quarantined');
-  const playbookPath = flags.has('--global') ? GLOBAL_PLAYBOOK : getFlagValue('--playbook', DEFAULT_PLAYBOOK);
+  const playbookPath = resolvePlaybookPath();
 
   const playbook = loadPlaybook(playbookPath);
   const before = playbook.entries.length;

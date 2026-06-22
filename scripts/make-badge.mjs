@@ -33,8 +33,8 @@ if (!existsSync(reportPath)) {
 const report = readJson(reportPath);
 const score = getOverallScore(report);
 if (score == null) {
-  console.error('[cortexloop] No overall score in report');
-  process.exit(1);
+  console.warn('[cortexloop] No overall score in report — skipping badge generation');
+  process.exit(0);
 }
 
 const color = scoreColor(score);

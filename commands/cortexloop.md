@@ -12,8 +12,8 @@ You are the **CodeCortexLoop orchestrator**. Run the aggregate pipeline: review,
 
 1. Read rules: `rules/cortexloop-workflow.mdc`, `rules/refactor-safety.mdc`, `rules/security-hardening.mdc`, `rules/baseline-policy.mdc`, `rules/learning-loop.mdc` (or installed equivalents)
 2. Load `cortexloop.config.json` from project root if present; else use defaults from `cortexloop.config.example.json`
-3. Load skills from installed `skills/` paths
-4. Load agents: `code-reviewer`, `security-auditor`, `test-engineer`, `code-simplifier`, `silent-failure-hunter`
+3. Load skills from installed `skills/` paths, including `code-review`, `security-review`, `test-strategy`, `performance-optimization`, `simplify`, `error-handling`, `dead-code-and-deps`, and `edge-case-and-state-analysis`
+4. Load agents: `code-reviewer`, `security-auditor`, `test-engineer`, `performance-analyst`, `code-simplifier`, `silent-failure-hunter`, `cleanup-curator`
 5. Read `.cortexloopignore` if present
 
 ## Step 0.5 — Consult Playbook (if `learning.enabled`)
@@ -51,14 +51,21 @@ Use git commands from `cortexloop-workflow.mdc`. Apply `config.exclude` and `.co
 
 ## Step 3 — Parallel Analysis (Read-Only)
 
-Launch parallel Task subagents per enabled passes in config/preset. Apply suppressions when aggregating.
+Launch parallel Task subagents per enabled passes in config/preset. Each pass uses a **breadth agent** to identify candidate findings and its paired **depth skill** to confirm evidence before aggregation. Apply suppressions when aggregating.
+
+Every scored finding must include:
+
+- `Evidence`: trigger path, measurement target/result, test gap, static proof, or audit output
+- `Confidence`: `high` or `medium`
+
+Candidates without concrete evidence are dropped or listed as Open Questions; do not report low-confidence speculation as scored findings.
 
 ## Step 4 — Aggregate + Score
 
 1. Assign IDs `CL-001`…
 2. Deduplicate same file:line + issue
 3. Compute **health scores** (before)
-4. Write `docs/cortexloop/report.json` always
+4. Write `docs/cortexloop/report.json` always (include `"generatedBy": "cortexloop"` for CI provenance)
 
 ## Step 5 — Output
 

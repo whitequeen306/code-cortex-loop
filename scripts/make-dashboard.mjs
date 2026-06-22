@@ -36,7 +36,15 @@ if (!existsSync(reportPath)) {
 }
 
 const report = readJson(reportPath);
-const history = existsSync(historyPath) ? readJson(historyPath) : { runs: [] };
+let history = { runs: [] };
+if (existsSync(historyPath)) {
+  try {
+    history = readJson(historyPath);
+  } catch (err) {
+    console.warn(`[cortexloop] Warning: could not read history (${historyPath}): ${err.message}; continuing without trend data`);
+    history = { runs: [] };
+  }
+}
 const runs = Array.isArray(history.runs) ? history.runs : [];
 
 const overall = getOverallScore(report);

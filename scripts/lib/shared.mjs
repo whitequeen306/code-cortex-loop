@@ -1,6 +1,5 @@
-import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
+import { dirname, join, resolve, relative } from 'node:path';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 
@@ -50,7 +49,34 @@ export function readJson(path) {
 
 export function writeJson(path, data) {
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+  const tmp = `${path}.tmp`;
+  const body = `${JSON.stringify(data, null, 2)}\n`;
+  writeFileSync(tmp, body, 'utf8');
+  try {
+    renameSync(tmp, path);
+  } catch (err) {
+    try {
+      unlinkSync(tmp);
+    } catch {
+      /* ignore */
+    }
+    throw err;
+  }
+}
+
+/** Resolve a path inside the workspace; reject traversal escapes. */
+export function resolveWithinWorkspace(filePath, workspaceRoot = process.cwd()) {
+  const root = resolve(workspaceRoot);
+  const abs = resolve(root, filePath);
+  const rel = relative(root, abs);
+  if (rel.startsWith('..') || relative(root, abs).split('..').length > 1) {
+    throw new Error(`Path escapes workspace: ${filePath}`);
+  }
+  return abs;
+}
+
+export function readJsonWithinWorkspace(filePath, workspaceRoot = process.cwd()) {
+  return readJson(resolveWithinWorkspace(filePath, workspaceRoot));
 }
 
 export function ensureDirFor(filePath) {
@@ -77,10 +103,11 @@ export function getCategoryScores(report) {
 }
 
 export function countFindings(findings, { status = 'open' } = {}) {
-  const counts = { Critical: 0, High: 0, Medium: 0, Low: 0, Info: 0, total: 0 };
+  const counts = { Critical: 0, High: 0, Medium: 0, Low: 0, Info: 0, total: 0, unknown: 0 };
   for (const f of findings || []) {
     if (status === 'open' && (f.status === 'fixed' || f.status === 'suppressed')) continue;
     if (counts[f.severity] != null) counts[f.severity]++;
+    else counts.unknown++;
     counts.total++;
   }
   return counts;
@@ -113,13 +140,61 @@ export function normalizeProblem(problem = '') {
     .slice(0, 120);
 }
 
+/** Location for baseline fingerprint — keeps line numbers to avoid same-file collisions. */
+export function fingerprintLocation(location = '') {
+  return String(location).replace(/\\/g, '/').toLowerCase().trim();
+}
+
+export function normalizeProblemForFingerprint(problem = '') {
+  return String(problem)
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[`"'"]/g, '')
+    .trim();
+}
+
+function djb2Hex(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) + h) ^ str.charCodeAt(i);
+  }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
 export function findingFingerprint(finding) {
   const payload = [
     finding.category || '',
-    normalizeLocation(finding.location),
-    normalizeProblem(finding.problem),
+    fingerprintLocation(finding.location),
+    normalizeProblemForFingerprint(finding.problem),
   ].join('|');
-  return createHash('sha256').update(payload).digest('hex').slice(0, 16);
+  return djb2Hex(payload);
+}
+
+export const VALID_SEVERITIES = ['Critical', 'High', 'Medium', 'Low', 'Info'];
+
+/** Ensure report.json was produced by CodeCortexLoop, not hand-edited for CI bypass. */
+export function validateReport(report) {
+  if (!report || typeof report !== 'object') {
+    return 'Report must be a JSON object';
+  }
+  if (!report.version || !String(report.version).startsWith('2.')) {
+    return 'Report version must be 2.x';
+  }
+  if (report.generatedBy !== 'cortexloop') {
+    return 'Report must include generatedBy: "cortexloop" (run /cortexloop --ci or pipeline post-process)';
+  }
+  if (!Array.isArray(report.findings)) {
+    return 'Report must include findings array';
+  }
+  if (!report.scores || typeof report.scores !== 'object') {
+    return 'Report must include scores object';
+  }
+  for (const f of report.findings) {
+    if (!VALID_SEVERITIES.includes(f.severity)) {
+      return `Invalid finding severity: ${f.severity ?? '(missing)'}`;
+    }
+  }
+  return null;
 }
 
 export function tryGitCommit() {
@@ -157,6 +232,11 @@ export function escapeHtml(text) {
     .replace(/"/g, '&quot;');
 }
 
+/** Escape user/report-sourced text embedded in GitHub-flavored markdown. */
+export function escapeMarkdown(text) {
+  return String(text).replace(/([\\`*_[\]#<>])/g, '\\$1');
+}
+
 export function slugify(text) {
   return String(text)
     .toLowerCase()
@@ -186,6 +266,18 @@ export function savePlaybook(path, data) {
   writeJson(path, data);
 }
 
+export const TIER_WEIGHTS = {
+  verified: 1.5,
+  quarantined: 0.1,
+  candidate: 1,
+};
+
+export function mergeTier(projectTier, globalTier) {
+  if (projectTier === 'verified' || globalTier === 'verified') return 'verified';
+  if (projectTier === 'quarantined' && globalTier === 'quarantined') return 'quarantined';
+  return projectTier || globalTier || 'candidate';
+}
+
 export function mergePlaybooks(projectPb, globalPb) {
   const map = new Map();
 
@@ -204,7 +296,7 @@ export function mergePlaybooks(projectPb, globalPb) {
       appliedCount: Math.max(entry.appliedCount || 0, existing.appliedCount || 0),
       verifiedCount: Math.max(entry.verifiedCount || 0, existing.verifiedCount || 0),
       confidence: Math.max(entry.confidence || 0, existing.confidence || 0),
-      tier: entry.tier === 'verified' || existing.tier === 'verified' ? 'verified' : (entry.tier || existing.tier || 'candidate'),
+      tier: mergeTier(entry.tier, existing.tier),
       examples: [...new Set([...(entry.examples || []), ...(existing.examples || [])])],
       distinctContexts: [...new Set([...(entry.distinctContexts || []), ...(existing.distinctContexts || [])])],
     });
@@ -307,7 +399,7 @@ export function applyOutcome(entry, outcome, { context, evidence, now } = {}, cf
 export function playbookScore(entry, now = Date.now(), cfg = PLAYBOOK_DEFAULTS) {
   const c = decayedConfidence(entry, now, cfg);
   const n = entry.verifiedCount ?? entry.appliedCount ?? 1;
-  const tierWeight = entry.tier === 'verified' ? 1.5 : entry.tier === 'quarantined' ? 0.1 : 1;
+  const tierWeight = TIER_WEIGHTS[entry.tier] ?? TIER_WEIGHTS.candidate;
   const failPenalty = 1 / (1 + (entry.failedCount ?? 0));
   return c * Math.log(n + 1) * tierWeight * failPenalty;
 }

@@ -49,15 +49,25 @@ Config file overrides preset defaults. See `cortexloop.config.example.json`.
 
 ## Analysis Phase (Read-Only, Parallel)
 
-| Pass | Agent / Skill |
-|------|---------------|
-| Review | `code-reviewer` + `code-review` skill |
-| Security | `security-auditor` + `security-review` skill + `security-hardening` rule |
-| Tests | `test-engineer` |
-| Performance | `performance-optimization` skill |
-| Simplicity | `code-simplifier` + `simplify` skill |
-| Error handling | `silent-failure-hunter` |
-| Cleanup | `dead-code-and-deps` skill |
+| Pass | Breadth Agent | Depth Skill / Rule |
+|------|---------------|--------------------|
+| Review | `code-reviewer` | `code-review` + `edge-case-and-state-analysis` skill |
+| Security | `security-auditor` | `security-review` skill + `security-hardening` rule |
+| Tests | `test-engineer` | `test-strategy` + `edge-case-and-state-analysis` skill |
+| Performance | `performance-analyst` | `performance-optimization` skill |
+| Simplicity | `code-simplifier` | `simplify` skill |
+| Error handling | `silent-failure-hunter` | `error-handling` + `edge-case-and-state-analysis` skill |
+| Cleanup | `cleanup-curator` | `dead-code-and-deps` skill |
+
+### Breadth → Depth Gate
+
+Each breadth agent may produce **candidate findings**. A candidate becomes a scored finding only after the paired depth skill confirms:
+
+1. A concrete trigger path, measurement target, failing behavior, or static proof exists.
+2. The issue is reachable under project invariants; do not invent states ruled out by validation, types, or framework guarantees.
+3. The recommendation is specific enough for a human or Direct mode to act on.
+
+Candidates without proof go to "Open Questions" or are dropped. Do not inflate severity to create work.
 
 Each finding MUST include:
 ```
@@ -66,10 +76,14 @@ Each finding MUST include:
 - **Category:** ...
 - **Location:** path:line
 - **Problem:** ...
+- **Evidence:** [trigger path, measurement, test gap, static proof, or audit output]
+- **Confidence:** high | medium
 - **Recommendation:** ...
 - **Auto-fixable:** yes | no | needs-confirmation
 - **Suppressed:** no (or yes with reason)
 ```
+
+Low-confidence ideas are not scored findings. Put them in recommendations only when useful.
 
 ## Health Score (0–100 per category)
 

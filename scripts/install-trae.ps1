@@ -13,6 +13,16 @@ if ($Scope -eq "user") {
   $Target = Join-Path $ProjectPath ".trae"
 }
 
+$ResolvedTarget = [IO.Path]::GetFullPath($Target)
+if ($Scope -eq "user") {
+  $AllowedTarget = [IO.Path]::GetFullPath((Join-Path $env:USERPROFILE ".trae"))
+  if ($ResolvedTarget -ne $AllowedTarget) {
+    throw "[cortexloop] Refusing install: user Target must be $AllowedTarget"
+  }
+} elseif (-not ($ResolvedTarget -match '\\\.trae(\\|$)')) {
+  throw "[cortexloop] Refusing install: project Target must end with\.trae (got $ResolvedTarget)"
+}
+
 Write-Host "[cortexloop] Installing to Trae ($Scope scope): $Target"
 
 $map = @("commands", "agents", "skills", "rules", "scripts")

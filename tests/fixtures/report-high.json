@@ -1,0 +1,19 @@
+{
+  "version": "2.2",
+  "generatedBy": "cortexloop",
+  "timestamp": "2026-01-01T00:00:00.000Z",
+  "preset": "test",
+  "scope": "recent",
+  "mode": "ci",
+  "scores": { "before": { "overall": 70 } },
+  "findings": [
+    {
+      "id": "CL-901",
+      "severity": "High",
+      "category": "tests",
+      "location": "src/b.js:2",
+      "problem": "high issue",
+      "status": "open"
+    }
+  ]
+}

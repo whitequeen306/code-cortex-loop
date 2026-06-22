@@ -1,12 +1,12 @@
 param(
-  [string]$Target = "$env:USERPROFILE\.cursor"
+  [string]$Target = "$env:USERPROFILE\.config\opencode"
 )
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
 $ResolvedTarget = [IO.Path]::GetFullPath($Target)
-$AllowedTarget = [IO.Path]::GetFullPath((Join-Path $env:USERPROFILE ".cursor"))
+$AllowedTarget = [IO.Path]::GetFullPath((Join-Path $env:USERPROFILE ".config\opencode"))
 if ($ResolvedTarget -ne $AllowedTarget) {
   throw "[cortexloop] Refusing install: Target must be $AllowedTarget (got $ResolvedTarget)"
 }
@@ -19,7 +19,7 @@ $map = @{
   "scripts"  = Join-Path $Target "scripts"
 }
 
-Write-Host "[cortexloop] Installing to Cursor: $Target"
+Write-Host "[cortexloop] Installing to OpenCode: $Target"
 
 foreach ($key in $map.Keys) {
   $src = Join-Path $Root $key
@@ -30,5 +30,8 @@ foreach ($key in $map.Keys) {
   Write-Host "  copied $key -> $dst"
 }
 
-Write-Host "[cortexloop] Cursor install complete."
-Write-Host "  Restart Cursor, then type /cortexloop in chat."
+Copy-Item (Join-Path $Root "AGENTS.md") (Join-Path $Target "AGENTS.cortexloop.md") -Force
+Write-Host "  copied AGENTS.md -> $Target\AGENTS.cortexloop.md"
+
+Write-Host "[cortexloop] OpenCode install complete."
+Write-Host "  Restart OpenCode, then type /cortexloop in the TUI."

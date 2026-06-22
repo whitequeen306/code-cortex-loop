@@ -1,7 +1,12 @@
 # Example: gate a PR after your AI tool produces docs/cortexloop/report.json
 #
-# Step 1 (not shown): invoke Cursor / Claude Code / etc. with /cortexloop-pre-pr --ci
-# Step 2: this workflow validates the report and posts a PR comment
+# Step 1 (required): invoke your AI tool so report.json is produced by CodeCortexLoop
+# The committed report MUST include "generatedBy": "cortexloop" or ci-gate will reject it.
+#
+# - name: Run CodeCortexLoop analysis
+#   run: |
+#     # cursor / claude / your-tool --command "/cortexloop-pre-pr --ci"
+#     test -f docs/cortexloop/report.json
 
 name: CodeCortexLoop
 
