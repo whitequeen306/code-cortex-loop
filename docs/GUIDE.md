@@ -1,6 +1,6 @@
-# CodeCortexLoop — Full Guide
+# CodeCortexLoop — 完整指南
 
-Detailed documentation moved from README for a cleaner first impression. Start with [README](../README.md) for install and quick judgment.
+面向已安装用户的详细说明。快速判断与安装见 [README](../README.md)。
 
 ---
 
