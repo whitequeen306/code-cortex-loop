@@ -25,13 +25,16 @@
 
 ## 工具支持与退化模式
 
-| 工具 | Task 子 agent | 体验 |
-|------|---------------|------|
-| **Cursor** | 完整支持 | 7 个独立 Task 串行，领域隔离 |
-| **Claude Code** | 完整支持 | 同上 |
-| **Qoder / Trae / OpenCode / Codex** | 退化 | 单会话按 pass 顺序自我分段，**无真正子 agent 隔离** |
+| 工具 | 子 agent | 体验 |
+|------|----------|------|
+| **Cursor** | Task 工具 | 7 个独立 Task 串行，领域隔离 |
+| **Claude Code** | Task / 子 agent | 同上 |
+| **Qoder** | **Agent 工具** + `~/.qoder/agents/` | 7 个自定义智能体串行委派，**独立上下文**（需主会话启用 Agent 工具） |
+| **Trae / OpenCode / Codex** | 退化 | 单会话按 pass 顺序自我分段，无真正子 agent 隔离 |
 
-Orchestrator 在 Bootstrap 时会打印 `⚠️ Falling back to single-session mode` 当检测到非 Cursor/Claude 环境。
+Orchestrator 在 Bootstrap 时会按 `TOOL_TASK_SUPPORT` 分支：Cursor/Claude → Task；Qoder → Agent 工具；其它 → `⚠️ Falling back to single-session mode`。
+
+Qoder 详情：[adapters/qoder/README.md](../adapters/qoder/README.md)
 
 ## 命令
 

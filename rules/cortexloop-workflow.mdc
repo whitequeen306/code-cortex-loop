@@ -63,12 +63,13 @@ Seven domain experts run in **fixed order**. Each pass is one **mandatory Task s
 
 Category reports live under `docs/cortexloop/`. Presets disable passes via `config.passes`; enabled passes keep this order.
 
-### Tool support (full vs fallback)
+### Tool support (full / native / fallback)
 
 | Mode | Tools | Behavior |
 |------|-------|----------|
 | **full** | Cursor, Claude Code | One Task subagent per pass (mandatory) |
-| **fallback** | Qoder, Trae, OpenCode, Codex | Single session; print fallback warning; still write handoffs in order |
+| **native** | Qoder | One custom agent per pass via blocking `Agent` tool (mandatory) |
+| **fallback** | Trae, OpenCode, Codex | Single session; print fallback warning; still write handoffs in order |
 
 Before scoring, run `node scripts/validate-handoffs.mjs` (fail-fast if passes incomplete).
 

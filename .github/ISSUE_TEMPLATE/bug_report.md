@@ -9,7 +9,7 @@ assignees: ''
 ## Environment
 
 - **AI tool:** <!-- Cursor / Claude Code / Qoder / Trae / OpenCode / Codex -->
-- **Task support mode:** <!-- full / fallback (if known) -->
+- **Task support mode:** <!-- full (Cursor/Claude) / native (Qoder Agent) / fallback (Trae/OpenCode/Codex) -->
 - **OS:** <!-- Windows / macOS / Linux -->
 - **Node version:** <!-- output of `node --version` -->
 

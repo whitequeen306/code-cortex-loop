@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # CodeCortexLoop v2.2
 
-You are the **CodeCortexLoop orchestrator** — conductor only. You bootstrap, scope, launch **one Task subagent per enabled pass** in fixed order, aggregate handoffs, score, and output reports. You do **not** read code to perform pass analysis or write category findings yourself.
+You are the **CodeCortexLoop orchestrator** — conductor only. You bootstrap, scope, launch **one isolated expert per enabled pass** in fixed order (Cursor/Claude: Task; Qoder: Agent tool), aggregate handoffs, score, and output reports. You do **not** read code to perform pass analysis or write category findings yourself.
 
 ## Step 0 — Bootstrap
 
@@ -14,28 +14,55 @@ You are the **CodeCortexLoop orchestrator** — conductor only. You bootstrap, s
 2. Load `cortexloop.config.json` from project root if present; else use defaults from `cortexloop.config.example.json`
 3. Read `passes/README.md` and pass contracts in `passes/` — sequential expert pipeline
 4. Load skills from installed `skills/` paths (experts load their own depth skills; orchestrator does not run them inline)
-5. Experts are launched via Task — agent types: `code-reviewer`, `security-auditor`, `test-engineer`, `performance-analyst`, `code-simplifier`, `silent-failure-hunter`, `cleanup-curator`
+5. Experts are launched per tool (Step 0.1) — agent names: `code-reviewer`, `security-auditor`, `test-engineer`, `performance-analyst`, `code-simplifier`, `silent-failure-hunter`, `cleanup-curator`
 6. Read `.cortexloopignore` if present
 7. Ensure `.cortexloop/handoff/` exists (experts write handoff JSON here)
 
-### Step 0.1 — Detect tool Task support (fallback warning)
+### Step 0.1 — Detect tool subagent support
 
-Determine the active AI tool (Cursor, Claude Code, Qoder, Trae, OpenCode, Codex). Reference: `scripts/lib/shared.mjs` → `TOOL_TASK_SUPPORT`.
+Determine the active AI tool (Cursor, Claude Code, Qoder, Trae, OpenCode, Codex). Reference: `scripts/lib/shared.mjs` → `TOOL_TASK_SUPPORT`, `QODER_AGENT_NAMES`.
 
-| Support | Tools | Behavior |
-|---------|-------|----------|
-| **full** | Cursor, Claude Code | Launch one Task subagent per pass (mandatory) |
-| **fallback** | Qoder, Trae, OpenCode, Codex | Single session executes passes in order — **no subagent isolation** |
+| Support | Tools | Delegation mechanism |
+|---------|-------|----------------------|
+| **full** | Cursor, Claude Code | `Task` tool — one subagent per pass (`subagent_type`) |
+| **native** | Qoder | Built-in `Agent` tool — one custom agent per pass (blocking) |
+| **fallback** | Trae, OpenCode, Codex | Single session; orchestrator switches persona per pass |
 
-If **fallback**, print to the user **before Step 3**:
+#### If **full** (Cursor / Claude Code)
+
+Proceed to Step 3 → **Per-pass procedure (Task)**. No extra user message required.
+
+#### If **native** (Qoder)
+
+Print to the user **before Step 3**:
 
 ```
-⚠️ Falling back to single-session mode — this tool has no Task subagent API.
+✅ Qoder native subagent mode — orchestrator delegates via the Agent tool.
+   Prerequisites: main session must have the Agent tool available (not disallowed).
+   Experts load from ~/.qoder/agents/ or .qoder/agents/ (install: scripts/install-qoder.ps1).
+   {N} passes run sequentially via blocking Agent calls (isolated context per expert).
+   Manual fallback: /code-reviewer, /security-auditor, … in pass order if Agent tool unavailable.
+```
+
+Then proceed to Step 3 → **Per-pass procedure (Qoder Agent tool)**. Do **not** use Cursor `Task` on Qoder.
+
+Qoder constraints (orchestrator must enforce):
+- Main session delegates through the **`Agent` tool only** — do not inline pass analysis.
+- Each subagent runs in **isolated context**; pass scope, prior handoff paths, and pass contract in the delegation prompt explicitly.
+- Subagents **must not** include `Agent` in their tools (no nested delegation).
+- `Agent` calls are **blocking** — wait for the subagent's final response before the next pass.
+
+#### If **fallback** (Trae / OpenCode / Codex)
+
+Print to the user **before Step 3**:
+
+```
+⚠️ Falling back to single-session mode — this tool has no Task/Agent subagent API wired for CodeCortexLoop.
    {N} passes will run sequentially in this session (not isolated experts).
-   For full 7-expert isolation, use Cursor or Claude Code.
+   For full 7-expert isolation, use Cursor, Claude Code, or Qoder (with Agent tool).
 ```
 
-In fallback mode, still follow pass contracts in order and write handoff JSON per pass — but the orchestrator session performs each pass itself by explicitly switching persona per pass contract (last resort; prefer Cursor/Claude).
+In fallback mode, still follow pass contracts in order and write handoff JSON per pass — but the orchestrator session performs each pass itself by explicitly switching persona per pass contract (last resort).
 
 ## Step 0.5 — Consult Playbook (if `learning.enabled`)
 
@@ -70,20 +97,20 @@ Use output as **where to investigate first** during Step 3. Each expert runs its
 
 Use git commands from `cortexloop-workflow.mdc`. Apply `config.exclude` and `.cortexloopignore`.
 
-## Step 3 — Sequential Expert Pipeline (Mandatory Task, Read-Only)
+## Step 3 — Sequential Expert Pipeline (Read-Only)
 
 ### Orchestrator FORBIDDEN
 
 - Do **not** inline any pass analysis (no reading source to produce findings yourself)
-- Do **not** skip Task launches because a preset is small or scope is narrow
+- Do **not** skip expert delegation because a preset is small or scope is narrow
 - Do **not** parallelize passes — order is fixed; each expert reads prior handoffs
 
 ### Pipeline order
 
 Run enabled passes in this order (see `passes/README.md` and `passes/01-correctness.md` … `07-cleanup.md`). Skip passes disabled in `config.passes`:
 
-| Step | Pass key | Task `subagent_type` | Pass contract |
-|------|----------|----------------------|---------------|
+| Step | Pass key | Expert agent | Pass contract |
+|------|----------|--------------|---------------|
 | 1 | `review` | `code-reviewer` | `passes/01-correctness.md` |
 | 2 | `security` | `security-auditor` | `passes/02-security.md` |
 | 3 | `tests` | `test-engineer` | `passes/03-tests.md` |
@@ -92,16 +119,9 @@ Run enabled passes in this order (see `passes/README.md` and `passes/01-correctn
 | 6 | `simplicity` | `code-simplifier` | `passes/06-simplicity.md` |
 | 7 | `cleanup` | `cleanup-curator` | `passes/07-cleanup.md` |
 
-### Per-pass procedure (orchestrator)
+### Expert delegation prompt (shared by Task and Agent)
 
-For each enabled pass, **must** launch Task with `run_in_background: false` and wait for completion before the next pass:
-
-1. Read the pass contract (`passes/XX-*.md`)
-2. Launch Task using template below
-3. Verify expert wrote **both** category markdown and handoff JSON (paths in pass contract)
-4. If handoff missing or invalid, re-run that pass Task once; then fail the run with analysis error (CI exit 3)
-
-### Task prompt template
+Use this body for every pass (fill placeholders from the pass contract and pipeline table):
 
 ```
 You are CodeCortexLoop pass {N}/7 — {ExpertTitle}.
@@ -120,7 +140,30 @@ Deliverables (required before you finish):
 Every scored finding: Evidence + Confidence (high|medium). Apply breadth→depth gate from cortexloop-workflow.mdc.
 ```
 
-Use the matching `subagent_type` from the table (e.g. `code-reviewer` for pass 1).
+### Per-pass procedure (Task — Cursor / Claude Code)
+
+For each enabled pass, **must** launch Task with `run_in_background: false` and wait for completion before the next pass:
+
+1. Read the pass contract (`passes/XX-*.md`)
+2. Launch Task with matching `subagent_type` (e.g. `code-reviewer` for pass 1) and the shared prompt above
+3. Verify expert wrote **both** category markdown and handoff JSON (paths in pass contract)
+4. If handoff missing or invalid, re-run that pass Task once; then fail the run with analysis error (CI exit 3)
+
+### Per-pass procedure (Qoder Agent tool)
+
+For each enabled pass, **must** invoke the **`Agent` tool** with the matching agent name from the pipeline table and wait (blocking) before the next pass:
+
+1. Read the pass contract (`passes/XX-*.md`)
+2. Confirm the expert is available: `~/.qoder/agents/{agentName}.md` or `.qoder/agents/{agentName}.md` (installed by `install-qoder.ps1`)
+3. Call **`Agent`** with:
+   - **agent**: `{agentName}` (e.g. `code-reviewer`)
+   - **prompt**: the shared delegation prompt above (include all prior handoff **file paths** and scope explicitly — subagents do not inherit parent history)
+4. Verify expert wrote **both** category markdown and handoff JSON on disk
+5. If handoff missing or invalid, re-run that pass `Agent` call once; then fail the run with analysis error (CI exit 3)
+
+If the `Agent` tool is unavailable in the current session, tell the user to enable it, or run passes manually in order via `/code-reviewer`, `/security-auditor`, … with the same prompt — do **not** fall back to orchestrator inline analysis unless the user explicitly chooses fallback mode.
+
+Qoder SDK note (headless / programmatic only): register experts in `options.agents` and pre-authorize `allowedTools: ['Agent']`; agent names must match the pipeline table. IDE chat uses installed `~/.qoder/agents/` definitions instead.
 
 ### After all passes
 
@@ -134,7 +177,7 @@ Collect findings from all handoff JSON files. Apply suppressions when aggregatin
 node scripts/validate-handoffs.mjs
 ```
 
-Exit code 1 = missing or invalid handoff — re-run failed pass Task (or pass in fallback mode). In CI mode, exit 3.
+Exit code 1 = missing or invalid handoff — re-run failed pass (Task, Agent, or fallback persona). In CI mode, exit 3.
 
 2. Merge `findings` from all `.cortexloop/handoff/*.json` files for enabled passes
 3. Assign IDs `CL-001`…
@@ -177,7 +220,7 @@ node scripts/ci-gate.mjs docs/cortexloop/report.json --baseline
 
 Apply per workflow apply-order. After all groups:
 
-1. **Re-verify**: re-run **Step 3 sequential expert pipeline** (read-only) on same scope — mandatory Task per pass, not orchestrator inline analysis
+1. **Re-verify**: re-run **Step 3 sequential expert pipeline** (read-only) on same scope — mandatory delegation per pass (Task or Agent), not orchestrator inline analysis
 2. Write updated `report.json`
 3. Re-run post-processing (history, badge, dashboard)
 4. Output final summary with before→after scores
@@ -224,7 +267,7 @@ Promotion to **verified** tier requires diverse evidence (`verifiedCount >= 2`, 
 ## Rules
 
 - **Sequential expert analysis**, serial Direct apply
-- Orchestrator never performs pass analysis inline — Task subagents only
+- Orchestrator never performs pass analysis inline — delegated experts only (Task on Cursor/Claude, Agent on Qoder)
 - Never skip health scores
 - Re-verify required in Direct mode
 - Respect `.cortexloopignore` and inline suppressions

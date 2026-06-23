@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { validateHandoffs } from '../scripts/validate-handoffs.mjs';
 import { summarizeRun } from '../scripts/run-summary.mjs';
-import { TOOL_TASK_SUPPORT, TOOLS_WITH_FULL_TASK_SUPPORT } from '../scripts/lib/shared.mjs';
+import { TOOL_TASK_SUPPORT, TOOLS_WITH_FULL_TASK_SUPPORT, TOOLS_WITH_NATIVE_AGENT_SUPPORT, QODER_AGENT_NAMES } from '../scripts/lib/shared.mjs';
 
 test('validateHandoffs passes when all enabled handoffs exist and valid', () => {
   const dir = join(tmpdir(), `cortexloop-vh-${Date.now()}`);
@@ -70,4 +70,12 @@ test('TOOL_TASK_SUPPORT marks cursor and claude as full', () => {
   assert.equal(TOOL_TASK_SUPPORT.claude, 'full');
   assert.ok(TOOLS_WITH_FULL_TASK_SUPPORT.includes('cursor'));
   assert.ok(!TOOLS_WITH_FULL_TASK_SUPPORT.includes('codex'));
+});
+
+test('TOOL_TASK_SUPPORT marks qoder as native with agent name map', () => {
+  assert.equal(TOOL_TASK_SUPPORT.qoder, 'native');
+  assert.ok(TOOLS_WITH_NATIVE_AGENT_SUPPORT.includes('qoder'));
+  assert.equal(QODER_AGENT_NAMES.review, 'code-reviewer');
+  assert.equal(QODER_AGENT_NAMES.security, 'security-auditor');
+  assert.equal(QODER_AGENT_NAMES.cleanup, 'cleanup-curator');
 });

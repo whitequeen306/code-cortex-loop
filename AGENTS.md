@@ -116,12 +116,12 @@ Playbook hits are **recall, not authority** — re-derive and verify every fix; 
 
 ## Orchestrator vs domain experts
 
-| Role | Does | Must not | Fallback (Qoder/Trae/OpenCode/Codex) |
-|------|------|----------|--------------------------------------|
-| **Orchestrator** | Bootstrap, scope, launch Task per pass, aggregate handoffs, score, Direct apply | Inline pass analysis (full mode), write category findings without pass contract | Runs each pass in-session with persona switch; prints fallback warning |
-| **Domain expert** (Task subagent) | Single-domain analysis, read prior handoffs, write category md + handoff json | Analyze other categories, invoke other agents | N/A — not available; orchestrator absorbs pass |
+| Role | Does | Must not | Qoder / Fallback (Trae/OpenCode/Codex) |
+|------|------|----------|----------------------------------------|
+| **Orchestrator** | Bootstrap, scope, delegate one expert per pass, aggregate handoffs, score, Direct apply | Inline pass analysis (full/native mode), write category findings without pass contract | **Qoder:** delegate via `Agent` tool to installed agents; **Fallback:** in-session persona switch + warning |
+| **Domain expert** | Single-domain analysis, read prior handoffs, write category md + handoff json | Analyze other categories, invoke other agents | **Qoder:** isolated subagent via Agent tool; **Fallback:** N/A — orchestrator absorbs pass |
 
-Sequential order: see `passes/README.md`. **Full Task isolation**: Cursor, Claude Code only (`TOOL_TASK_SUPPORT` in `scripts/lib/shared.mjs`).
+Sequential order: see `passes/README.md`. **Full Task isolation**: Cursor, Claude Code (`TOOL_TASK_SUPPORT: full`). **Native Agent isolation**: Qoder (`TOOL_TASK_SUPPORT: native`). See `QODER_AGENT_NAMES` in `scripts/lib/shared.mjs`.
 
 ## Domain experts (Task subagent types)
 

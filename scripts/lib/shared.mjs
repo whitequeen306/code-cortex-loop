@@ -138,18 +138,27 @@ export const PASS_PIPELINE = [
 
 export const PASS_KEYS = PASS_PIPELINE.map((p) => p.passKey);
 
-/** Task subagent support by tool — used for fallback warnings in orchestrator bootstrap. */
+/** Subagent support by tool — used for orchestrator bootstrap (see commands/cortexloop.md Step 0.1). */
 export const TOOL_TASK_SUPPORT = {
   cursor: 'full',
   claude: 'full',
-  qoder: 'fallback',
+  qoder: 'native',
   trae: 'fallback',
   opencode: 'fallback',
   codex: 'fallback',
 };
 
+/** passKey → agent name for Qoder Agent-tool delegation (aligned with PASS_PIPELINE). */
+export const QODER_AGENT_NAMES = Object.fromEntries(
+  PASS_PIPELINE.map((p) => [p.passKey, p.agent]),
+);
+
 export const TOOLS_WITH_FULL_TASK_SUPPORT = Object.entries(TOOL_TASK_SUPPORT)
   .filter(([, mode]) => mode === 'full')
+  .map(([tool]) => tool);
+
+export const TOOLS_WITH_NATIVE_AGENT_SUPPORT = Object.entries(TOOL_TASK_SUPPORT)
+  .filter(([, mode]) => mode === 'native')
   .map(([tool]) => tool);
 
 export function getEnabledPipeline(passesConfig = {}) {

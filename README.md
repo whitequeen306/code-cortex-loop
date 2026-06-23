@@ -10,7 +10,7 @@
 
 | 能力 | 说明 |
 |------|------|
-| **七专家串行** | Orchestrator 调度 7 个 Task，每人只负责本领域 |
+| **七专家串行** | Orchestrator 调度 7 路独立专家（Cursor/Claude：`Task`；Qoder：`Agent` 工具），每人只负责本领域 |
 | **健康分 0–100** | 七维打分 + 总分；Direct 模式输出 **修复前 → 修复后** |
 | **三种模式** | Report（只诊断）· Direct（修复+复验）· CI（门禁） |
 | **Playbook** | 项目内学习修复模式（候选/已验证，防幻觉） |
@@ -48,7 +48,7 @@ cd code-cortex-loop
 
 | 问题 | 原因 |
 |------|------|
-| 你常用 **Cursor** 或 **Claude Code** 吗？ | 只有这两款有真正的 Task 子 agent 隔离；其它工具会退化为单会话 |
+| 你常用 **Cursor**、**Claude Code** 或 **Qoder** 吗？ | Cursor/Claude 用 Task；Qoder 用 Agent 工具委派 7 专家；Trae/OpenCode/Codex 会退化为单会话 |
 | 改动量 **≥ 几百行** 或是一个完整功能吗？ | 改个 typo 用 linter 就够了 |
 | 能接受每次 **约 3–10 分钟** 跑完整流程吗？ | 见下方 [性能预算](#性能预算)；小 PR 用 `/cortexloop-quick` |
 
@@ -62,7 +62,7 @@ cd code-cortex-loop
 | **多领域审查** | 7 路专家串行 | 单次 review | 规则扫描 | 看你怎么 prompt |
 | **项目内学习** | Playbook（候选/已验证） | 产品记忆 | 基线/issue | 手动维护 |
 | **成本** | 你的模型 token | 订阅 | 授权/云 | 写规则的时间 |
-| **适合谁** | 已习惯 Cursor/Claude Agent 的开发者 | 零配置 PR review 的团队 | 合规/静态分析 | 爱折腾的人 |
+| **适合谁** | 已习惯 Cursor/Claude/Qoder Agent 的开发者 | 零配置 PR review 的团队 | 合规/静态分析 | 爱折腾的人 |
 
 **不是 SaaS**，是 **harness + 零依赖脚本**，让现有 AI 工具像一支有流程的审查团队。
 
@@ -83,13 +83,15 @@ flowchart LR
   reflect -.-> pre
 ```
 
-- **Orchestrator**（主会话）：定 scope、按序启动 Task、汇总 handoff、打分；**禁止**自己 inline 做 pass 分析
-- **领域专家**（每 pass 一个 Task）：只负责本领域，写类别报告 + handoff JSON，供下游专家阅读
+- **Orchestrator**（主会话）：定 scope、按序委派专家、汇总 handoff、打分；**禁止**自己 inline 做 pass 分析
+- **领域专家**（每 pass 一个独立子 agent）：只负责本领域，写类别报告 + handoff JSON，供下游专家阅读
+  - **Cursor / Claude Code**：通过 `Task` 工具启动（`subagent_type`）
+  - **Qoder**：通过内置 `Agent` 工具委派 `~/.qoder/agents/` 中的自定义智能体（阻塞、独立上下文）
 - **分析串行、修复串行**（Direct 模式下每组修复后跑测试）
 
 ### 七专家固定顺序
 
-| 步 | Pass | 专家 (Task) | 类别报告 | Handoff |
+| 步 | Pass | 专家 | 类别报告 | Handoff |
 |----|------|-------------|----------|---------|
 | 1 | `review` | `code-reviewer` | `01-correctness.md` | `.cortexloop/handoff/01-correctness.json` |
 | 2 | `security` | `security-auditor` | `02-security.md` | `.cortexloop/handoff/02-security.json` |
@@ -194,16 +196,26 @@ node scripts/playbook.mjs feedback --signature=<sig> --outcome=external_verified
 
 ## 工具支持
 
-| 工具 | 安装参数 | 配置目录 | Task 子 agent |
-|------|----------|----------|---------------|
-| **Cursor** | `cursor` | `~/.cursor/` | ✅ 完整 |
-| **Claude Code** | `claude` | `~/.claude/` | ✅ 完整 |
-| Qoder | `qoder` | `~/.qoder/` | ⚠️ 退化（单会话） |
-| Trae | `trae` | `~/.trae/` | ⚠️ 退化 |
+| 工具 | 安装参数 | 配置目录 | 子 agent |
+|------|----------|----------|----------|
+| **Cursor** | `cursor` | `~/.cursor/` | ✅ Task 完整 |
+| **Claude Code** | `claude` | `~/.claude/` | ✅ Task 完整 |
+| **Qoder** | `qoder` | `~/.qoder/` | ✅ Agent 工具（需主会话启用 Agent；见 [adapters/qoder/](adapters/qoder/)） |
+| Trae | `trae` | `~/.trae/` | ⚠️ 退化（单会话） |
 | OpenCode | `opencode` | `~/.config/opencode/` | ⚠️ 退化 |
 | Codex | `codex` | `~/.codex/` | ⚠️ 退化（走 skills） |
 
-非 Cursor/Claude 时会提示 `⚠️ Falling back to single-session mode`。各工具差异：[adapters/](adapters/)。
+Trae / OpenCode / Codex 会提示 `⚠️ Falling back to single-session mode`。Qoder 使用原生子智能体委派（`Agent` 工具）。各工具差异：[adapters/](adapters/)。
+
+### Qoder 快速上手
+
+1. 安装：`.\scripts\install-qoder.ps1`（或 `./scripts/install.sh qoder`），**重启 Qoder**
+2. 确认 `~/.qoder/agents/` 下有 7 个专家（`code-reviewer.md` 等）
+3. 在 **Agent 模式**聊天中运行 `/cortexloop`；主会话须启用 **Agent 工具**
+4. Bootstrap 应显示 `✅ Qoder native subagent mode`；orchestrator 按 pass 顺序委派 7 专家
+5. 若 Agent 工具不可用，可手动按顺序调用 `/code-reviewer` → … → `/cleanup-curator`
+
+详见 [adapters/qoder/README.md](adapters/qoder/README.md)。
 
 ---
 
