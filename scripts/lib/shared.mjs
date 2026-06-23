@@ -14,6 +14,7 @@ export const DEFAULT_PR_COMMENT = '.cortexloop/pr-comment.md';
 export const DEFAULT_PLAYBOOK = '.cortexloop/playbook.json';
 export const DEFAULT_PLAYBOOK_ZH = '.cortexloop/playbook-zh.md';
 export const DEFAULT_REFLECTION = '.cortexloop/reflection.json';
+export const DEFAULT_HANDOFF_DIR = '.cortexloop/handoff';
 export const GLOBAL_PLAYBOOK = join(homedir(), '.cortexloop', 'playbook.json');
 export const GLOBAL_PLAYBOOK_ZH = join(homedir(), '.cortexloop', 'playbook-zh.md');
 
@@ -52,6 +53,124 @@ export const CATEGORY_LABELS = {
   errorHandling: 'Error Handling',
   cleanup: 'Cleanup',
 };
+
+/** Sequential expert pipeline — single source of truth for pass order and artifacts. */
+export const PASS_PIPELINE = [
+  {
+    order: 1,
+    passKey: 'review',
+    category: 'correctness',
+    expert: 'code-reviewer',
+    agent: 'code-reviewer',
+    skills: ['code-review', 'edge-case-and-state-analysis'],
+    passContract: 'passes/01-correctness.md',
+    categoryReport: 'docs/cortexloop/01-correctness.md',
+    handoffFile: '.cortexloop/handoff/01-correctness.json',
+  },
+  {
+    order: 2,
+    passKey: 'security',
+    category: 'security',
+    expert: 'security-auditor',
+    agent: 'security-auditor',
+    skills: ['security-review'],
+    rules: ['security-hardening'],
+    passContract: 'passes/02-security.md',
+    categoryReport: 'docs/cortexloop/02-security.md',
+    handoffFile: '.cortexloop/handoff/02-security.json',
+  },
+  {
+    order: 3,
+    passKey: 'tests',
+    category: 'tests',
+    expert: 'test-engineer',
+    agent: 'test-engineer',
+    skills: ['test-strategy', 'edge-case-and-state-analysis'],
+    passContract: 'passes/03-tests.md',
+    categoryReport: 'docs/cortexloop/05-tests.md',
+    handoffFile: '.cortexloop/handoff/03-tests.json',
+  },
+  {
+    order: 4,
+    passKey: 'errorHandling',
+    category: 'errorHandling',
+    expert: 'silent-failure-hunter',
+    agent: 'silent-failure-hunter',
+    skills: ['error-handling', 'edge-case-and-state-analysis'],
+    passContract: 'passes/04-error-handling.md',
+    categoryReport: 'docs/cortexloop/06-error-handling.md',
+    handoffFile: '.cortexloop/handoff/04-error-handling.json',
+  },
+  {
+    order: 5,
+    passKey: 'performance',
+    category: 'performance',
+    expert: 'performance-analyst',
+    agent: 'performance-analyst',
+    skills: ['performance-optimization'],
+    passContract: 'passes/05-performance.md',
+    categoryReport: 'docs/cortexloop/03-performance.md',
+    handoffFile: '.cortexloop/handoff/05-performance.json',
+  },
+  {
+    order: 6,
+    passKey: 'simplicity',
+    category: 'simplicity',
+    expert: 'code-simplifier',
+    agent: 'code-simplifier',
+    skills: ['simplify'],
+    passContract: 'passes/06-simplicity.md',
+    categoryReport: 'docs/cortexloop/04-simplicity.md',
+    handoffFile: '.cortexloop/handoff/06-simplicity.json',
+  },
+  {
+    order: 7,
+    passKey: 'cleanup',
+    category: 'cleanup',
+    expert: 'cleanup-curator',
+    agent: 'cleanup-curator',
+    skills: ['dead-code-and-deps'],
+    passContract: 'passes/07-cleanup.md',
+    categoryReport: 'docs/cortexloop/07-cleanup.md',
+    handoffFile: '.cortexloop/handoff/07-cleanup.json',
+  },
+];
+
+export const PASS_KEYS = PASS_PIPELINE.map((p) => p.passKey);
+
+export function getEnabledPipeline(passesConfig = {}) {
+  return PASS_PIPELINE.filter((p) => passesConfig[p.passKey] !== false);
+}
+
+export function priorHandoffFiles(pipelineStep) {
+  return PASS_PIPELINE.filter((p) => p.order < pipelineStep.order).map((p) => p.handoffFile);
+}
+
+const HANDOFF_SEVERITIES = ['Critical', 'High', 'Medium', 'Low', 'Info'];
+const HANDOFF_CONFIDENCE = ['high', 'medium'];
+
+export function validatePassHandoff(handoff) {
+  if (!handoff || typeof handoff !== 'object') return 'handoff must be an object';
+  if (!handoff.pass || typeof handoff.pass !== 'string') return 'pass is required';
+  if (!handoff.category || typeof handoff.category !== 'string') return 'category is required';
+  if (!handoff.expert || typeof handoff.expert !== 'string') return 'expert is required';
+  if (!handoff.summary || typeof handoff.summary !== 'string') return 'summary is required';
+  if (!Array.isArray(handoff.findings)) return 'findings must be an array';
+  for (const f of handoff.findings) {
+    if (!f.severity || !HANDOFF_SEVERITIES.includes(f.severity)) return `invalid severity: ${f.severity}`;
+    if (!f.location || !f.problem) return 'finding missing location or problem';
+    if (!f.evidence) return 'finding missing evidence';
+    if (!f.confidence || !HANDOFF_CONFIDENCE.includes(f.confidence)) return `invalid confidence: ${f.confidence}`;
+    if (!f.recommendation) return 'finding missing recommendation';
+  }
+  if (handoff.deferToLaterPasses != null && !Array.isArray(handoff.deferToLaterPasses)) {
+    return 'deferToLaterPasses must be an array';
+  }
+  if (handoff.openQuestions != null && !Array.isArray(handoff.openQuestions)) {
+    return 'openQuestions must be an array';
+  }
+  return null;
+}
 
 export const SEVERITY_COLORS = {
   Critical: '#dc2626',

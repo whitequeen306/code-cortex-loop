@@ -17,6 +17,7 @@ $map = @{
   "skills"   = Join-Path $Target "skills"
   "rules"    = Join-Path $Target "rules"
   "scripts"  = Join-Path $Target "scripts"
+  "passes"   = Join-Path $Target "passes"
 }
 
 Write-Host "[cortexloop] Installing to Qoder: $Target"

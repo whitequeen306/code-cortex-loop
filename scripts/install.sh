@@ -52,7 +52,7 @@ install_cursor() {
 
   echo "[cortexloop] Installing to Cursor: $target"
 
-  mkdir -p "$target"/{commands,agents,skills,rules,scripts}
+  mkdir -p "$target"/{commands,agents,skills,rules,scripts,passes}
 
   copy_tree "$ROOT/commands" "$target/commands" "commands"
 
@@ -64,6 +64,8 @@ install_cursor() {
 
   copy_tree "$ROOT/scripts" "$target/scripts" "scripts"
 
+  copy_tree "$ROOT/passes" "$target/passes" "passes"
+
 }
 
 
@@ -74,7 +76,7 @@ install_claude() {
 
   echo "[cortexloop] Installing to Claude Code: $target"
 
-  mkdir -p "$target"/{commands,agents,skills,scripts}
+  mkdir -p "$target"/{commands,agents,skills,scripts,passes}
 
   copy_tree "$ROOT/commands" "$target/commands" "commands"
 
@@ -83,6 +85,8 @@ install_claude() {
   copy_tree "$ROOT/skills" "$target/skills" "skills"
 
   copy_tree "$ROOT/scripts" "$target/scripts" "scripts"
+
+  copy_tree "$ROOT/passes" "$target/passes" "passes"
 
   cp "$ROOT/AGENTS.md" "$target/AGENTS.cortexloop.md"
 
@@ -96,7 +100,7 @@ install_qoder() {
 
   echo "[cortexloop] Installing to Qoder: $target"
 
-  mkdir -p "$target"/{commands,agents,skills,rules,scripts}
+  mkdir -p "$target"/{commands,agents,skills,rules,scripts,passes}
 
   copy_tree "$ROOT/commands" "$target/commands" "commands"
 
@@ -107,6 +111,8 @@ install_qoder() {
   copy_tree "$ROOT/rules" "$target/rules" "rules"
 
   copy_tree "$ROOT/scripts" "$target/scripts" "scripts"
+
+  copy_tree "$ROOT/passes" "$target/passes" "passes"
 
   cp "$ROOT/AGENTS.md" "$target/AGENTS.cortexloop.md"
 
@@ -120,7 +126,7 @@ install_trae() {
 
   echo "[cortexloop] Installing to Trae (user): $target"
 
-  mkdir -p "$target"/{commands,agents,skills,rules,scripts}
+  mkdir -p "$target"/{commands,agents,skills,rules,scripts,passes}
 
   copy_tree "$ROOT/commands" "$target/commands" "commands"
 
@@ -131,6 +137,8 @@ install_trae() {
   copy_tree "$ROOT/rules" "$target/rules" "rules"
 
   copy_tree "$ROOT/scripts" "$target/scripts" "scripts"
+
+  copy_tree "$ROOT/passes" "$target/passes" "passes"
 
   cp "$ROOT/AGENTS.md" "$target/AGENTS.cortexloop.md"
 
@@ -144,7 +152,7 @@ install_opencode() {
 
   echo "[cortexloop] Installing to OpenCode: $target"
 
-  mkdir -p "$target"/{commands,agents,skills,rules,scripts}
+  mkdir -p "$target"/{commands,agents,skills,rules,scripts,passes}
 
   copy_tree "$ROOT/commands" "$target/commands" "commands"
 
@@ -155,6 +163,8 @@ install_opencode() {
   copy_tree "$ROOT/rules" "$target/rules" "rules"
 
   copy_tree "$ROOT/scripts" "$target/scripts" "scripts"
+
+  copy_tree "$ROOT/passes" "$target/passes" "passes"
 
   cp "$ROOT/AGENTS.md" "$target/AGENTS.cortexloop.md"
 
@@ -170,11 +180,13 @@ install_codex() {
 
   echo "[cortexloop] Installing to Codex: $target"
 
-  mkdir -p "$target"/{skills,scripts,prompts}
+  mkdir -p "$target"/{skills,scripts,prompts,passes}
 
   copy_tree "$ROOT/skills" "$target/skills" "skills"
 
   copy_tree "$ROOT/scripts" "$target/scripts" "scripts"
+
+  copy_tree "$ROOT/passes" "$target/passes" "passes"
 
   cp "$ROOT"/commands/*.md "$target/prompts/"
 

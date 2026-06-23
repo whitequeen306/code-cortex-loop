@@ -1,0 +1,62 @@
+# CodeCortexLoop Pass Modules
+
+Seven **domain experts** run in a fixed **sequential pipeline**. Each expert is a mandatory Task subagent — the orchestrator does not perform pass analysis inline.
+
+## Roles
+
+| Role | Responsibility |
+|------|----------------|
+| **Orchestrator** | Bootstrap, scope, launch Task per enabled pass, collect handoffs, aggregate, score, Direct apply |
+| **Domain expert** | One pass only — read prior handoffs, analyze in-scope, write category report + handoff JSON |
+
+## Pipeline order
+
+| Step | Pass key | Expert | Contract | Category report | Handoff |
+|------|----------|--------|----------|-----------------|---------|
+| 1 | `review` | `code-reviewer` | [01-correctness.md](01-correctness.md) | `docs/cortexloop/01-correctness.md` | `.cortexloop/handoff/01-correctness.json` |
+| 2 | `security` | `security-auditor` | [02-security.md](02-security.md) | `docs/cortexloop/02-security.md` | `.cortexloop/handoff/02-security.json` |
+| 3 | `tests` | `test-engineer` | [03-tests.md](03-tests.md) | `docs/cortexloop/05-tests.md` | `.cortexloop/handoff/03-tests.json` |
+| 4 | `errorHandling` | `silent-failure-hunter` | [04-error-handling.md](04-error-handling.md) | `docs/cortexloop/06-error-handling.md` | `.cortexloop/handoff/04-error-handling.json` |
+| 5 | `performance` | `performance-analyst` | [05-performance.md](05-performance.md) | `docs/cortexloop/03-performance.md` | `.cortexloop/handoff/05-performance.json` |
+| 6 | `simplicity` | `code-simplifier` | [06-simplicity.md](06-simplicity.md) | `docs/cortexloop/04-simplicity.md` | `.cortexloop/handoff/06-simplicity.json` |
+| 7 | `cleanup` | `cleanup-curator` | [07-cleanup.md](07-cleanup.md) | `docs/cortexloop/07-cleanup.md` | `.cortexloop/handoff/07-cleanup.json` |
+
+Category report filenames follow legacy `01`–`07` category numbering. Handoff filenames follow **execution order**.
+
+## Presets
+
+Presets disable passes via `cortexloop.config.json` → `passes`. Enabled passes still run in the table order above — never reorder.
+
+Example: **quick** enables `review`, `security`, `errorHandling` → steps 1, 2, 4 only.
+
+## Handoff protocol
+
+Each expert writes:
+
+1. **Category markdown** — human-readable findings for that domain
+2. **Handoff JSON** — machine-readable brief for downstream experts
+
+Schema: [schemas/pass-handoff.schema.json](../schemas/pass-handoff.schema.json)
+
+```json
+{
+  "pass": "security",
+  "category": "security",
+  "expert": "security-auditor",
+  "summary": "1-3 sentences for the next expert.",
+  "findings": [],
+  "deferToLaterPasses": [{ "pass": "performance", "note": "..." }],
+  "openQuestions": []
+}
+```
+
+- **summary** — max ~3 sentences; no raw diffs
+- **findings** — scored items only (passed depth gate); include Evidence + Confidence
+- **deferToLaterPasses** — flag cross-domain concerns without analyzing them
+- **openQuestions** — unresolved items; not scored findings
+
+Downstream experts read **all prior handoff JSON files** plus scope files. They may incorporate defer notes but must not re-run upstream analysis.
+
+## Single source of truth
+
+Pass order and paths are defined in `scripts/lib/shared.mjs` → `PASS_PIPELINE`. Keep contracts aligned with that constant.

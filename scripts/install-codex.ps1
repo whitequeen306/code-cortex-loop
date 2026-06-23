@@ -17,6 +17,7 @@ Write-Host "[cortexloop] Installing to Codex: $Target"
 $map = @{
   "skills"  = Join-Path $Target "skills"
   "scripts" = Join-Path $Target "scripts"
+  "passes"  = Join-Path $Target "passes"
 }
 
 foreach ($key in $map.Keys) {

@@ -47,17 +47,37 @@ Config file overrides preset defaults. See `cortexloop.config.example.json`.
 
 **Whole project:** all source files respecting `.gitignore` + config `exclude`.
 
-## Analysis Phase (Read-Only, Parallel)
+## Analysis Phase (Read-Only, Sequential Experts)
 
-| Pass | Breadth Agent | Depth Skill / Rule |
-|------|---------------|--------------------|
-| Review | `code-reviewer` | `code-review` + `edge-case-and-state-analysis` skill |
-| Security | `security-auditor` | `security-review` skill + `security-hardening` rule |
-| Tests | `test-engineer` | `test-strategy` + `edge-case-and-state-analysis` skill |
-| Performance | `performance-analyst` | `performance-optimization` skill |
-| Simplicity | `code-simplifier` | `simplify` skill |
-| Error handling | `silent-failure-hunter` | `error-handling` + `edge-case-and-state-analysis` skill |
-| Cleanup | `cleanup-curator` | `dead-code-and-deps` skill |
+Seven domain experts run in **fixed order**. Each pass is one **mandatory Task subagent** — the orchestrator does not analyze code inline. See `passes/README.md` for contracts.
+
+| Step | Pass key | Expert (Task type) | Pass contract | Category report | Handoff |
+|------|----------|-------------------|---------------|-----------------|---------|
+| 1 | `review` | `code-reviewer` | `passes/01-correctness.md` | `01-correctness.md` | `.cortexloop/handoff/01-correctness.json` |
+| 2 | `security` | `security-auditor` | `passes/02-security.md` | `02-security.md` | `.cortexloop/handoff/02-security.json` |
+| 3 | `tests` | `test-engineer` | `passes/03-tests.md` | `05-tests.md` | `.cortexloop/handoff/03-tests.json` |
+| 4 | `errorHandling` | `silent-failure-hunter` | `passes/04-error-handling.md` | `06-error-handling.md` | `.cortexloop/handoff/04-error-handling.json` |
+| 5 | `performance` | `performance-analyst` | `passes/05-performance.md` | `03-performance.md` | `.cortexloop/handoff/05-performance.json` |
+| 6 | `simplicity` | `code-simplifier` | `passes/06-simplicity.md` | `04-simplicity.md` | `.cortexloop/handoff/06-simplicity.json` |
+| 7 | `cleanup` | `cleanup-curator` | `passes/07-cleanup.md` | `07-cleanup.md` | `.cortexloop/handoff/07-cleanup.json` |
+
+Category reports live under `docs/cortexloop/`. Presets disable passes via `config.passes`; enabled passes keep this order.
+
+### Handoff protocol
+
+Each expert writes category markdown + handoff JSON (`schemas/pass-handoff.schema.json`). Downstream experts read **all prior handoff files**. Cross-domain concerns use `deferToLaterPasses` — no upstream expert analyzes another domain.
+
+### Depth skills (loaded by experts, not orchestrator)
+
+| Pass | Depth skill / rule |
+|------|-------------------|
+| Review | `code-review`, `edge-case-and-state-analysis` |
+| Security | `security-review`, `security-hardening` |
+| Tests | `test-strategy`, `edge-case-and-state-analysis` |
+| Performance | `performance-optimization` |
+| Simplicity | `simplify` |
+| Error handling | `error-handling`, `edge-case-and-state-analysis` |
+| Cleanup | `dead-code-and-deps` |
 
 ### Breadth → Depth Gate
 
@@ -143,6 +163,7 @@ Write to `docs/cortexloop/`:
 | `.cortexloop/pr-comment.md` | `pr-comment.mjs` | GitHub PR comment body |
 | `.cortexloop/playbook.json` | `playbook.mjs record` | Learned fix patterns (English; model query) |
 | `.cortexloop/playbook-zh.md` | auto on record/feedback/prune | Chinese human-readable playbook (not fed to model) |
+| `.cortexloop/handoff/*.json` | sequential expert passes | Per-pass findings + brief for downstream experts |
 | `.cortexloop/reflection.json` | reflect skill | Latest reflection (record input) |
 | `docs/cortexloop/08-reflection.md` | reflect skill | Human retrospective |
 
@@ -179,7 +200,7 @@ After **each logical group**: run tests + lint; revert group on failure.
 
 ## Re-Verify (Direct mode only, after all fixes)
 
-1. Re-run analysis passes (read-only) on same scope
+1. Re-run **sequential expert pipeline** (Step 3) read-only on same scope — mandatory Task per enabled pass
 2. Recompute health scores → **after** scores
 3. Confirm fixed IDs no longer appear (or marked resolved)
 4. Report regressions if new Critical/High findings appear

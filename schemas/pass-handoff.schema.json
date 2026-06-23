@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cortexloop.dev/schemas/pass-handoff.schema.json",
+  "title": "CodeCortexLoop Pass Handoff",
+  "description": "Structured output from one sequential expert pass to the orchestrator and downstream experts.",
+  "type": "object",
+  "required": ["pass", "category", "expert", "summary", "findings"],
+  "additionalProperties": false,
+  "properties": {
+    "pass": {
+      "type": "string",
+      "description": "Config pass key (e.g. review, security, tests)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "correctness",
+        "security",
+        "performance",
+        "simplicity",
+        "tests",
+        "errorHandling",
+        "cleanup"
+      ]
+    },
+    "expert": {
+      "type": "string",
+      "description": "Agent/subagent type name"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 600,
+      "description": "1-3 sentence brief for downstream experts"
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "deferToLaterPasses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/defer" },
+      "default": []
+    },
+    "openQuestions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "required": [
+        "severity",
+        "location",
+        "problem",
+        "evidence",
+        "confidence",
+        "recommendation",
+        "autoFixable"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["Critical", "High", "Medium", "Low", "Info"]
+        },
+        "location": { "type": "string" },
+        "problem": { "type": "string" },
+        "evidence": { "type": "string" },
+        "confidence": { "type": "string", "enum": ["high", "medium"] },
+        "recommendation": { "type": "string" },
+        "autoFixable": {
+          "type": "string",
+          "enum": ["yes", "no", "needs-confirmation"]
+        }
+      }
+    },
+    "defer": {
+      "type": "object",
+      "required": ["pass", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "pass": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

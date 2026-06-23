@@ -25,7 +25,7 @@ if ($Scope -eq "user") {
 
 Write-Host "[cortexloop] Installing to Trae ($Scope scope): $Target"
 
-$map = @("commands", "agents", "skills", "rules", "scripts")
+$map = @("commands", "agents", "skills", "rules", "scripts", "passes")
 foreach ($key in $map) {
   $src = Join-Path $Root $key
   $dst = Join-Path $Target $key

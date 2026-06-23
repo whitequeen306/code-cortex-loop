@@ -19,4 +19,4 @@ performance:
 
 Skip preset selection. Still ask Report vs Direct unless `--ci`.
 
-Follow all steps in `commands/cortexloop.md` and `rules/cortexloop-workflow.mdc`. Run post-processing scripts (history, badge, dashboard) after `report.json` is written.
+All 7 passes run in **sequential expert order** (mandatory Task per pass). Follow all steps in `commands/cortexloop.md` and `rules/cortexloop-workflow.mdc`. Run post-processing scripts (history, badge, dashboard) after `report.json` is written.

@@ -16,6 +16,7 @@ $map = @{
   "agents"   = Join-Path $Target "agents"
   "skills"   = Join-Path $Target "skills"
   "scripts"  = Join-Path $Target "scripts"
+  "passes"   = Join-Path $Target "passes"
 }
 
 Write-Host "[cortexloop] Installing to Claude Code: $Target"

@@ -20,4 +20,4 @@ ci:
 
 Ideal before opening a PR. In CI, use `/cortexloop-pre-pr --ci` or `cortexloop.config.json` with `"preset": "pre-pr"`.
 
-Follow all steps in `commands/cortexloop.md` and `rules/cortexloop-workflow.mdc`. Run post-processing scripts (history, badge, dashboard) after `report.json` is written.
+All enabled passes run in **sequential expert order** (mandatory Task per pass). Follow all steps in `commands/cortexloop.md` and `rules/cortexloop-workflow.mdc`. Run post-processing scripts (history, badge, dashboard) after `report.json` is written.

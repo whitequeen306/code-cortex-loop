@@ -23,7 +23,7 @@
 
 | 能力 | 说明 |
 |------|------|
-| **一键 7 路体检** | `/cortexloop` 并行跑审查 / 安全 / 测试 / 性能 / 精简 / 错误处理 / 清理，只读分析、互不干扰 |
+| **七专家串行协作** | `/cortexloop` 按固定顺序启动 7 个领域专家（Task 子 agent），每人只负责本领域；orchestrator 只调度与汇总，不 inline 分析 |
 | **健康分（0–100）** | 按类别打分 + 总分，Direct 修复后给出 **修复前 → 修复后** 对比 |
 | **可自我进化** ⭐ | 内置 **Playbook 记忆库**（**防幻觉信任模型**：两层候选/已验证、验证驱动置信度、负信号、外部预言机优先）；分析前查已验证线索，Direct 后反思沉淀 |
 | **可视化看板** | 自包含的 `report.html`，浏览器直接打开，无需起服务 |
@@ -36,8 +36,11 @@
 
 ```mermaid
 flowchart LR
-  pre["分析前<br/>查 Playbook"] --> analyze["7 路并行分析"]
-  analyze --> Score["健康分"]
+  pre["分析前<br/>查 Playbook"] --> orch["Orchestrator<br/>指挥"]
+  orch --> e1["专家1<br/>正确性"]
+  e1 --> e2["专家2<br/>安全"]
+  e2 --> e7["…专家7"]
+  e7 --> Score["汇总 + 健康分"]
   Score --> Out{"Report / Direct / CI"}
   Out -->|Direct| Fix["串行修复 + 复验"]
   Fix --> reflect["自动反思"]
@@ -77,7 +80,7 @@ chmod +x scripts/install.sh
 ./scripts/install.sh cursor
 ```
 
-安装脚本会把 `commands/`、`agents/`、`skills/`、`rules/`、`scripts/` 拷贝到对应工具的配置目录（Codex 仅拷贝 skills/scripts/prompts，见 [adapters/codex](adapters/codex/README.md)）。
+安装脚本会把 `commands/`、`agents/`、`passes/`、`skills/`、`rules/`、`scripts/` 拷贝到对应工具的配置目录（Codex 拷贝 skills/scripts/passes/prompts，见 [adapters/codex](adapters/codex/README.md)）。
 
 装完后 **重启对应工具**，在 Cursor / Claude / Qoder / Trae / OpenCode 中输入 `/cortexloop`；Codex 见下方专门说明。
 
@@ -284,7 +287,7 @@ node scripts/playbook.mjs prune --drop-quarantined
 | 错误处理 | `silent-failure-hunter` | 静默失败、过宽 catch |
 | 清理 | `dead-code-and-deps` | 死代码、有漏洞的依赖 |
 
-**分析并行（只读），修复串行（每组之间跑测试）。**
+**分析串行（七专家 Task 接力，只读），修复串行（每组之间跑测试）。** Orchestrator 禁止 inline 分析 —— 详见 `passes/README.md`。
 
 ---
 
@@ -506,6 +509,7 @@ node scripts/ci-gate.mjs docs/cortexloop/report.json --baseline   # 棘轮模式
 | `.cortexloop/pr-comment.md` | GitHub PR 评论正文 |
 | `.cortexloop/playbook.json` | **自我进化的修复记忆库**（英文，模型 query） |
 | `.cortexloop/playbook-zh.md` | Playbook 中文版（团队阅读，模型不读） |
+| `.cortexloop/handoff/*.json` | 七专家串行 handoff（每 pass 一份，供下游专家读取） |
 | `.cortexloop/reflection.json` | 最近一次反思（record 的输入，含中英文字段） |
 
 每条问题包含：`CL-001`、严重度、类别、位置、问题、**证据**、**置信度**、建议、是否可自动修复。低置信度猜测不进入计分 findings，只进入 Open Questions 或建议区。
@@ -529,7 +533,8 @@ cd examples/demo-app
 ```
 cortexloop/
 ├── commands/           # /cortexloop, /cortexloop-quick, /cortexloop-reflect, ...
-├── agents/             # code-reviewer, security-auditor, performance-analyst, cleanup-curator, ...
+├── passes/             # 七专家串行合约（01-correctness … 07-cleanup）
+├── agents/             # 领域专家 persona（与 passes 一一对应）
 ├── skills/             # performance, test-strategy, error-handling, edge-case/state, reflect, ...
 ├── rules/              # workflow, refactor-safety, learning-loop, ...
 ├── scripts/            # install.*, ci-gate, baseline, playbook, make-dashboard, ...

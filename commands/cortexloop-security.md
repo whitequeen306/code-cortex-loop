@@ -19,4 +19,4 @@ scope: recent
 
 Skip preset selection. Still ask Report vs Direct unless `--ci`.
 
-Follow all steps in `commands/cortexloop.md` and `rules/cortexloop-workflow.mdc`. Run post-processing scripts (history, badge, dashboard) after `report.json` is written.
+Enabled passes run sequentially (security → errorHandling → cleanup). Follow all steps in `commands/cortexloop.md` and `rules/cortexloop-workflow.mdc`. Run post-processing scripts (history, badge, dashboard) after `report.json` is written.

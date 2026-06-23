@@ -108,22 +108,32 @@ Playbook hits are **recall, not authority** — re-derive and verify every fix; 
 | PR comment body | `.cortexloop/pr-comment.md` |
 | Playbook (model) | `.cortexloop/playbook.json` |
 | Playbook (中文阅读) | `.cortexloop/playbook-zh.md` |
+| Handoff (per pass) | `.cortexloop/handoff/*.json` |
 | Reflection (structured) | `.cortexloop/reflection.json` |
 | Reflection (human) | `docs/cortexloop/08-reflection.md` |
 
-## Agents (subagent types)
+## Orchestrator vs domain experts
 
-| Agent | Role |
-|-------|------|
-| `code-reviewer` | 5-axis review |
-| `security-auditor` | OWASP, secrets, auth |
-| `test-engineer` | Coverage gaps |
-| `performance-analyst` | Broad performance risk discovery |
-| `code-simplifier` | Clarity without behavior change |
-| `silent-failure-hunter` | Error handling audit |
-| `cleanup-curator` | Dead code and dependency curation |
+| Role | Does | Must not |
+|------|------|----------|
+| **Orchestrator** (`/cortexloop` main session) | Bootstrap, scope, launch Task per pass, aggregate handoffs, score, Direct apply | Inline pass analysis, write category findings |
+| **Domain expert** (Task subagent, one per pass) | Single-domain analysis, read prior handoffs, write category md + handoff json | Analyze other categories, invoke other agents |
 
-Orchestration belongs to `/cortexloop` — agents do not invoke each other.
+Sequential order: see `passes/README.md`. Each expert loads its pass contract and depth skill(s).
+
+## Domain experts (Task subagent types)
+
+| Agent | Pass | Domain |
+|-------|------|--------|
+| `code-reviewer` | 1 | Correctness & architecture |
+| `security-auditor` | 2 | Security |
+| `test-engineer` | 3 | Test strategy & coverage |
+| `silent-failure-hunter` | 4 | Error handling |
+| `performance-analyst` | 5 | Performance |
+| `code-simplifier` | 6 | Simplicity |
+| `cleanup-curator` | 7 | Dead code & dependencies |
+
+Experts do not invoke each other — orchestrator runs the pipeline in order.
 
 ## Commands
 
