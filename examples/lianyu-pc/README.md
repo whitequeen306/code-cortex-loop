@@ -9,30 +9,28 @@
 
 ## 结果概览
 
-| 指标 | 数值 |
-|------|------|
-| **健康分** | **32 / 100** |
-| Critical | 9 |
-| High | 32 |
-| Medium | 31 |
-| Low | 9 |
-| **合计** | **81** 条 finding |
+| 阶段 | 健康分 | Critical | High | Medium | Low | 合计 |
+|------|--------|----------|------|--------|-----|------|
+| **Report 诊断**（真实） | **32** | 9 | 32 | 31 | 9 | 81 |
+| **Direct 示意*** | **84** | 0 | 0 | 31 | 9 | 40 |
 
-| 类别 | 分数 |
-|------|------|
-| Correctness | 0 |
-| Security | 55 |
-| Error handling | 0 |
-| Performance | 22 |
-| Tests | 0 |
-| Simplicity | 39 |
-| Cleanup | 81 |
+\* Direct 示意：按 `08-reflection.md` 修复全部 Critical+High（41 项）后，用同一扣分模型重算；**非完整七专家复验**。
+
+| 类别 | Report | Direct 示意 |
+|------|--------|-------------|
+| Correctness | 0 | 88 |
+| Security | 55 | 75 |
+| Performance | 22 | 72 |
+| Simplicity | 39 | 79 |
+| Tests | 0 | 92 |
+| Error handling | 0 | 100 |
+| Cleanup | 81 | 81 |
 
 ## 文件说明
 
 | 文件 | 用途 |
 |------|------|
-| [showcase.html](docs/cortexloop/showcase.html) | **优化可视化看板**（README 用） |
+| [showcase.html](docs/cortexloop/showcase.html) | **Report → Direct 对比看板**（README 用） |
 | [report.html](docs/cortexloop/report.html) | 标准完整看板（含全部 finding 表） |
 | [report.json](docs/cortexloop/report.json) | 机器可读，CI 门禁输入 |
 | [00-summary.md](docs/cortexloop/00-summary.md) … `07-cleanup.md` | 分类 Markdown 报告 |
@@ -50,6 +48,7 @@
 ```bash
 node scripts/make-showcase-dashboard.mjs examples/lianyu-pc/docs/cortexloop/report.json \
   --out=examples/lianyu-pc/docs/cortexloop/showcase.html \
-  --title="LianYu-PC" --subtitle="Vue 3 + Spring Boot · 全栈"
+  --title="LianYu-PC" --subtitle="Vue 3 + Spring Boot 全栈 · github.com/whitequeen306/LianYuPC" \
+  --layout=compare
 python scripts/capture-showcase-screenshot.py
 ```

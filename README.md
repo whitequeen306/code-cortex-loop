@@ -1,16 +1,22 @@
 # CodeCortexLoop
 
-[![LianYu-PC 真实项目 Report 可视化](docs/assets/lianyu-pc-showcase.png)](examples/lianyu-pc/docs/cortexloop/showcase.html)
-
-**真实大项目 `/cortexloop-deep` Report：** [LianYu-PC](examples/lianyu-pc/)（Vue 3 + Spring Boot 全栈）· 健康分 **32/100** · **81** 条 finding · [完整看板](examples/lianyu-pc/docs/cortexloop/report.html) · [report.json](examples/lianyu-pc/docs/cortexloop/report.json)
-
-**想查看被测项目本身？** → [https://github.com/whitequeen306/LianYuPC](https://github.com/whitequeen306/LianYuPC)
-
 **一条命令，七位领域专家，可自我进化的 Playbook。**
 
 面向 AI 编码工具的「写完代码后」流水线：**正确性 → 安全 → 测试 → 错误处理 → 性能 → 精简 → 清理** —— 配套健康分、HTML 看板、handoff 接力、双语 Playbook、基线棘轮与 CI 集成。
 
 [![健康分徽章](examples/demo-app/.cortexloop/health-badge.svg)](examples/demo-app/docs/cortexloop/report.html)
+
+## 核心能力
+
+| 能力 | 说明 |
+|------|------|
+| **七专家串行** | Orchestrator 调度 7 个 Task，每人只负责本领域 |
+| **健康分 0–100** | 七维打分 + 总分；Direct 模式输出 **修复前 → 修复后** |
+| **三种模式** | Report（只诊断）· Direct（修复+复验）· CI（门禁） |
+| **Playbook** | 项目内学习修复模式（候选/已验证，防幻觉） |
+| **零依赖脚本** | 看板、徽章、history、ci-gate 纯 Node，无 npm 依赖 |
+
+---
 
 ## 一键安装
 
@@ -244,20 +250,22 @@ jobs:
 
 ## 真实项目案例：LianYu-PC
 
-在 **Vue 3 + Spring Boot 全栈项目**上跑 `/cortexloop-deep` **Report 模式**（2026-06-22，整库扫描）。下图由 `make-showcase-dashboard.mjs` 生成，便于 README 阅读；**完整 81 条明细**见标准看板。
+[![Report → Direct 先后对比](docs/assets/lianyu-pc-showcase.png)](examples/lianyu-pc/docs/cortexloop/showcase.html)
 
-| 指标 | 数值 |
-|------|------|
-| 健康分 | **32 / 100** |
-| Critical / High / Medium / Low | 9 / 32 / 31 / 9 |
-| 最弱类别 | Correctness、Tests、Error handling（0 分） |
-| 相对最好 | Cleanup（81） |
+在 **Vue 3 + Spring Boot 全栈项目**上跑 `/cortexloop-deep` **Report 模式**（2026-06-22，整库扫描）。上图展示 **Report 诊断 → Direct 修复示意** 的先后对比；完整 81 条明细见标准看板。
+
+| 阶段 | 健康分 | Critical / High / Medium / Low | 说明 |
+|------|--------|--------------------------------|------|
+| **Report 诊断** | **32** | 9 / 32 / 31 / 9 | 真实扫描产物 |
+| **Direct 示意*** | **84** | 0 / 0 / 31 / 9 | 按 reflection 清零 Critical+High（41 项）后重算 |
+
+\* Direct 右侧为**示意得分**（非完整七专家复验）；LianYu-PC 原项目有 `08-reflection.md` 记录修复，完整复验待重跑。
 
 **典型发现：** 验证码表达式泄露 · SSE 错误仍持久化 · 前端轮询静默失败 · 认证/SSE 核心路径零测试
 
 | 链接 | 说明 |
 |------|------|
-| [showcase.html](examples/lianyu-pc/docs/cortexloop/showcase.html) | 优化可视化看板（上图来源） |
+| [showcase.html](examples/lianyu-pc/docs/cortexloop/showcase.html) | **Report → Direct 对比看板**（上图来源） |
 | [report.html](examples/lianyu-pc/docs/cortexloop/report.html) | 标准看板（含全部 finding 表） |
 | [00-summary.md](examples/lianyu-pc/docs/cortexloop/00-summary.md) | 人类可读摘要 |
 | [examples/lianyu-pc/](examples/lianyu-pc/) | 案例目录说明 |

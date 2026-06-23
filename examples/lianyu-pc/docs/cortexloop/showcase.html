@@ -3,207 +3,178 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>LianYu-PC — CodeCortexLoop Showcase</title>
+<title>LianYu-PC — Report → Direct</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: "Segoe UI", Inter, system-ui, sans-serif;
-    background: linear-gradient(145deg, #0f172a 0%, #1e293b 45%, #0f172a 100%);
+    background: linear-gradient(145deg, #0f172a, #1e293b);
     color: #e2e8f0;
-    min-height: 100vh;
-    padding: 28px 20px 36px;
+    padding: 24px 16px;
   }
   .frame {
-    max-width: 1120px;
+    max-width: 960px;
     margin: 0 auto;
-    border-radius: 20px;
+    border-radius: 18px;
     overflow: hidden;
-    box-shadow: 0 24px 80px rgba(0,0,0,.45);
     border: 1px solid rgba(255,255,255,.08);
     background: #0b1220;
+    box-shadow: 0 20px 60px rgba(0,0,0,.4);
   }
   .hero {
-    padding: 28px 32px 24px;
-    background: linear-gradient(120deg, rgba(37,99,235,.25), rgba(124,58,237,.15));
+    padding: 22px 28px;
+    background: linear-gradient(120deg, rgba(37,99,235,.22), rgba(16,185,129,.12));
     border-bottom: 1px solid rgba(255,255,255,.06);
   }
-  .brand { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(148,163,184,.9); }
-  .hero h1 { font-size: 32px; font-weight: 800; margin: 8px 0 4px; color: #f8fafc; }
-  .hero .sub { color: rgba(226,232,240,.75); font-size: 15px; }
-  .hero .meta { margin-top: 10px; font-size: 12px; color: rgba(148,163,184,.85); }
-  .body { padding: 24px 28px 28px; display: grid; gap: 20px; }
-  .row { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: stretch; }
-  @media (max-width: 860px) { .row { grid-template-columns: 1fr; } }
-  .panel {
+  .brand { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: rgba(148,163,184,.9); }
+  .hero h1 { font-size: 26px; font-weight: 800; margin: 6px 0 2px; }
+  .hero .sub { font-size: 14px; color: rgba(226,232,240,.75); }
+  .hero .meta { margin-top: 8px; font-size: 11px; color: rgba(148,163,184,.85); }
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 12px;
+    padding: 24px 28px;
+    align-items: center;
+  }
+  @media (max-width: 720px) { .compare { grid-template-columns: 1fr; } .mid-arrow { transform: rotate(90deg); } }
+  .col {
     background: rgba(255,255,255,.04);
     border: 1px solid rgba(255,255,255,.07);
-    border-radius: 16px;
-    padding: 20px;
-  }
-  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: rgba(148,163,184,.95); margin-bottom: 14px; }
-  .score-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-  .total-findings { text-align: center; font-size: 13px; color: rgba(148,163,184,.9); }
-  .total-findings strong { display: block; font-size: 28px; color: #f8fafc; margin-top: 4px; }
-  .sev-row { display: grid; grid-template-columns: 88px 1fr 32px; gap: 10px; align-items: center; margin: 10px 0; font-size: 13px; }
-  .sev-label { display: flex; align-items: center; gap: 8px; color: rgba(226,232,240,.85); }
-  .dot { width: 8px; height: 8px; border-radius: 50%; }
-  .sev-track { height: 8px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
-  .sev-fill { height: 100%; border-radius: 999px; }
-  .sev-num { text-align: right; font-weight: 700; color: #f1f5f9; }
-  .cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-  .cat-card { background: rgba(255,255,255,.03); border-radius: 12px; padding: 12px 14px; border: 1px solid rgba(255,255,255,.05); }
-  .cat-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-  .cat-name { font-size: 12px; color: rgba(148,163,184,.95); }
-  .cat-score { font-size: 20px; font-weight: 800; }
-  .cat-track { height: 6px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
-  .cat-fill { height: 100%; border-radius: 999px; }
-  .findings { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-  .finding-card {
-    background: rgba(255,255,255,.03);
-    border: 1px solid rgba(255,255,255,.06);
     border-radius: 14px;
-    padding: 14px 16px;
+    padding: 18px;
+    text-align: center;
   }
-  .finding-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .badge { color: #fff; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; letter-spacing: .03em; }
-  .fid { font-size: 11px; color: #93c5fd; background: rgba(59,130,246,.12); padding: 2px 6px; border-radius: 6px; }
-  .fcat { font-size: 11px; color: rgba(148,163,184,.9); }
-  .finding-card h3 { font-size: 14px; line-height: 1.45; color: #f1f5f9; font-weight: 600; margin-bottom: 8px; }
-  .floc code { font-size: 11px; color: rgba(148,163,184,.95); word-break: break-all; }
-  footer { text-align: center; padding: 14px; font-size: 11px; color: rgba(148,163,184,.7); border-top: 1px solid rgba(255,255,255,.06); }
-  .muted { color: rgba(148,163,184,.8); font-size: 13px; }
+  .col h2 { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: rgba(148,163,184,.95); margin-bottom: 12px; }
+  .col .mode { font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 8px; }
+  .col .hint { font-size: 11px; color: rgba(148,163,184,.85); margin-bottom: 12px; min-height: 28px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 12px; }
+  .pill { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid; }
+  .mid-arrow {
+    font-size: 28px;
+    font-weight: 800;
+    color: #34d399;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .mid-arrow small { display: block; font-size: 13px; color: #6ee7b7; margin-top: 4px; }
+  .cats { padding: 0 28px 24px; }
+  .cats h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: rgba(148,163,184,.95); margin-bottom: 12px; }
+  .cmp-row {
+    display: grid;
+    grid-template-columns: 110px 36px 24px 36px 40px;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+  }
+  .cmp-name { color: rgba(148,163,184,.95); }
+  .cmp-before { text-align: right; color: rgba(226,232,240,.7); }
+  .cmp-arrow { text-align: center; color: rgba(148,163,184,.6); }
+  .cmp-after { font-weight: 800; text-align: right; }
+  .cmp-delta { text-align: right; font-size: 12px; font-weight: 700; }
+  footer { padding: 12px; text-align: center; font-size: 10px; color: rgba(148,163,184,.65); border-top: 1px solid rgba(255,255,255,.06); }
 </style>
 </head>
 <body>
 <div class="frame">
   <header class="hero">
-    <div class="brand">CodeCortexLoop · Real Project Report</div>
+    <div class="brand">CodeCortexLoop · 真实项目 · Report → Direct</div>
     <h1>LianYu-PC</h1>
-    <p class="sub">Vue 3 + Spring Boot · 全栈 · /cortexloop-deep Report</p>
-    <p class="meta">preset · deep  ·  scope · whole  ·  mode · report  ·  2026-06-22</p>
+    <p class="sub">Vue 3 + Spring Boot 全栈 · github.com/whitequeen306/LianYuPC</p>
+    <p class="meta">deep · whole · 2026-06-22</p>
   </header>
-  <div class="body">
-    <div class="row">
-      <div class="panel score-wrap">
-        <h2>Overall</h2>
-        <svg width="200" height="200" viewBox="0 0 200 200" aria-hidden="true">
+  <div class="compare">
+    <div class="col">
+      <h2>Step 1</h2>
+      <div class="mode">Report 诊断</div>
+      <div class="hint">七专家扫描 · 结构化报告</div>
+      <svg width="160" height="160" viewBox="0 0 160 160" aria-hidden="true">
     <defs>
-      <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#dc2626" stop-opacity="1"/>
+      <linearGradient id="ringBefore" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#dc2626"/>
         <stop offset="100%" stop-color="#dc2626" stop-opacity="0.55"/>
       </linearGradient>
     </defs>
-    <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="14"/>
-    <circle cx="100" cy="100" r="90" fill="none" stroke="url(#ringGrad)" stroke-width="14"
-      stroke-linecap="round" stroke-dasharray="180.95573684677208 565.4866776461628" transform="rotate(-90 100 100)"/>
-    <text x="100" y="94" text-anchor="middle" font-size="48" font-weight="800" fill="#f8fafc">32</text>
-    <text x="100" y="122" text-anchor="middle" font-size="13" fill="rgba(248,250,252,0.65)">健康分</text>
+    <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="12"/>
+    <circle cx="80" cy="80" r="70" fill="none" stroke="url(#ringBefore)" stroke-width="12"
+      stroke-linecap="round" stroke-dasharray="140.74335088082273 439.822971502571" transform="rotate(-90 80 80)"/>
+    <text x="80" y="76" text-anchor="middle" font-size="40" font-weight="800" fill="#f8fafc">32</text>
+    <text x="80" y="98" text-anchor="middle" font-size="11" fill="rgba(248,250,252,.65)">健康分</text>
   </svg>
-        <div class="total-findings">未解决问题<strong>81</strong></div>
-      </div>
-      <div class="panel">
-        <h2>Severity breakdown</h2>
-        <div class="sev-row">
-    <div class="sev-label"><span class="dot" style="background:#dc2626"></span>Critical</div>
-    <div class="sev-track"><div class="sev-fill" style="width:11%;background:#dc2626"></div></div>
-    <div class="sev-num">9</div>
-  </div>
-        <div class="sev-row">
-    <div class="sev-label"><span class="dot" style="background:#ea580c"></span>High</div>
-    <div class="sev-track"><div class="sev-fill" style="width:40%;background:#ea580c"></div></div>
-    <div class="sev-num">32</div>
-  </div>
-        <div class="sev-row">
-    <div class="sev-label"><span class="dot" style="background:#ca8a04"></span>Medium</div>
-    <div class="sev-track"><div class="sev-fill" style="width:38%;background:#ca8a04"></div></div>
-    <div class="sev-num">31</div>
-  </div>
-        <div class="sev-row">
-    <div class="sev-label"><span class="dot" style="background:#2563eb"></span>Low</div>
-    <div class="sev-track"><div class="sev-fill" style="width:11%;background:#2563eb"></div></div>
-    <div class="sev-num">9</div>
-  </div>
-      </div>
+      <div class="pills"><span class="pill" style="border-color:#dc2626;color:#dc2626">Critical 9</span><span class="pill" style="border-color:#ea580c;color:#ea580c">High 32</span><span class="pill" style="border-color:#ca8a04;color:#ca8a04">Medium 31</span><span class="pill" style="border-color:#2563eb;color:#2563eb">Low 9</span></div>
+      <div class="hint" style="margin-top:10px">未解决 <strong>81</strong> 项</div>
     </div>
-    <div class="panel">
-      <h2>Category scores</h2>
-      <div class="cats"><div class="cat-card">
-      <div class="cat-top"><span class="cat-name">Correctness</span><span class="cat-score" style="color:#dc2626">0</span></div>
-      <div class="cat-track"><div class="cat-fill" style="width:0%;background:#dc2626"></div></div>
-    </div><div class="cat-card">
-      <div class="cat-top"><span class="cat-name">Security</span><span class="cat-score" style="color:#ea580c">55</span></div>
-      <div class="cat-track"><div class="cat-fill" style="width:55%;background:#ea580c"></div></div>
-    </div><div class="cat-card">
-      <div class="cat-top"><span class="cat-name">Performance</span><span class="cat-score" style="color:#dc2626">22</span></div>
-      <div class="cat-track"><div class="cat-fill" style="width:22%;background:#dc2626"></div></div>
-    </div><div class="cat-card">
-      <div class="cat-top"><span class="cat-name">Simplicity</span><span class="cat-score" style="color:#dc2626">39</span></div>
-      <div class="cat-track"><div class="cat-fill" style="width:39%;background:#dc2626"></div></div>
-    </div><div class="cat-card">
-      <div class="cat-top"><span class="cat-name">Tests</span><span class="cat-score" style="color:#dc2626">0</span></div>
-      <div class="cat-track"><div class="cat-fill" style="width:0%;background:#dc2626"></div></div>
-    </div><div class="cat-card">
-      <div class="cat-top"><span class="cat-name">Error Handling</span><span class="cat-score" style="color:#dc2626">0</span></div>
-      <div class="cat-track"><div class="cat-fill" style="width:0%;background:#dc2626"></div></div>
-    </div><div class="cat-card">
-      <div class="cat-top"><span class="cat-name">Cleanup</span><span class="cat-score" style="color:#16a34a">81</span></div>
-      <div class="cat-track"><div class="cat-fill" style="width:81%;background:#16a34a"></div></div>
-    </div></div>
-    </div>
-    <div class="panel">
-      <h2>Top priorities</h2>
-      <div class="findings"><article class="finding-card">
-        <div class="finding-head">
-          <span class="badge" style="background:#dc2626">Critical</span>
-          <code class="fid">CL-010</code>
-          <span class="fcat">correctness</span>
-        </div>
-        <h3>SSE stream errors with partial content still persist assistant messages</h3>
-        <p class="floc"><code>backend/lianyu-service/src/main/java/com/lianyu/service/ai/AiChatService.java:1048</code></p>
-      </article><article class="finding-card">
-        <div class="finding-head">
-          <span class="badge" style="background:#dc2626">Critical</span>
-          <code class="fid">CL-023</code>
-          <span class="fcat">error-handling</span>
-        </div>
-        <h3>Background message polling swallows all errors silently</h3>
-        <p class="floc"><code>frontend/src/pages/ChatPage.vue:827</code></p>
-      </article><article class="finding-card">
-        <div class="finding-head">
-          <span class="badge" style="background:#dc2626">Critical</span>
-          <code class="fid">CL-024</code>
-          <span class="fcat">error-handling</span>
-        </div>
-        <h3>Notification store updates use silent API in empty catch blocks</h3>
-        <p class="floc"><code>frontend/src/stores/notifications.js:106</code></p>
-      </article><article class="finding-card">
-        <div class="finding-head">
-          <span class="badge" style="background:#dc2626">Critical</span>
-          <code class="fid">CL-050</code>
-          <span class="fcat">tests</span>
-        </div>
-        <h3>Auth register/login/idempotent flows untested</h3>
-        <p class="floc"><code>backend/lianyu-service/.../auth/impl/AuthServiceImpl.java</code></p>
-      </article><article class="finding-card">
-        <div class="finding-head">
-          <span class="badge" style="background:#dc2626">Critical</span>
-          <code class="fid">CL-051</code>
-          <span class="fcat">tests</span>
-        </div>
-        <h3>Captcha verify/burn-after-read untested</h3>
-        <p class="floc"><code>backend/lianyu-service/.../auth/CaptchaService.java</code></p>
-      </article><article class="finding-card">
-        <div class="finding-head">
-          <span class="badge" style="background:#dc2626">Critical</span>
-          <code class="fid">CL-052</code>
-          <span class="fcat">tests</span>
-        </div>
-        <h3>Zero frontend tests for auth/SSE client</h3>
-        <p class="floc"><code>frontend/</code></p>
-      </article></div>
+    <div class="mid-arrow">→<small>+52 分</small></div>
+    <div class="col">
+      <h2>Step 2</h2>
+      <div class="mode">Direct 修复 + 复验</div>
+      <div class="hint">Critical/High 清零后重算*</div>
+      <svg width="160" height="160" viewBox="0 0 160 160" aria-hidden="true">
+    <defs>
+      <linearGradient id="ringAfter" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#16a34a"/>
+        <stop offset="100%" stop-color="#16a34a" stop-opacity="0.55"/>
+      </linearGradient>
+    </defs>
+    <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="12"/>
+    <circle cx="80" cy="80" r="70" fill="none" stroke="url(#ringAfter)" stroke-width="12"
+      stroke-linecap="round" stroke-dasharray="369.45129606215966 439.822971502571" transform="rotate(-90 80 80)"/>
+    <text x="80" y="76" text-anchor="middle" font-size="40" font-weight="800" fill="#f8fafc">84</text>
+    <text x="80" y="98" text-anchor="middle" font-size="11" fill="rgba(248,250,252,.65)">健康分</text>
+  </svg>
+      <div class="pills"><span class="pill" style="border-color:#dc2626;color:#dc2626">Critical 0</span><span class="pill" style="border-color:#ea580c;color:#ea580c">High 0</span><span class="pill" style="border-color:#ca8a04;color:#ca8a04">Medium 31</span><span class="pill" style="border-color:#2563eb;color:#2563eb">Low 9</span></div>
+      <div class="hint" style="margin-top:10px">未解决 <strong>40</strong> 项</div>
     </div>
   </div>
-  <footer>CodeCortexLoop · Report mode · 完整明细见 report.html / report.json</footer>
+  <div class="cats">
+    <h3>七维类别 · 修复前 → 修复后</h3>
+    <div class="cmp-row">
+      <span class="cmp-name">Correctness</span>
+      <span class="cmp-before">0</span>
+      <span class="cmp-arrow">→</span>
+      <span class="cmp-after" style="color:#16a34a">88</span>
+      <span class="cmp-delta" style="color:#34d399">+88</span>
+    </div><div class="cmp-row">
+      <span class="cmp-name">Security</span>
+      <span class="cmp-before">55</span>
+      <span class="cmp-arrow">→</span>
+      <span class="cmp-after" style="color:#16a34a">75</span>
+      <span class="cmp-delta" style="color:#34d399">+20</span>
+    </div><div class="cmp-row">
+      <span class="cmp-name">Performance</span>
+      <span class="cmp-before">22</span>
+      <span class="cmp-arrow">→</span>
+      <span class="cmp-after" style="color:#ca8a04">72</span>
+      <span class="cmp-delta" style="color:#34d399">+50</span>
+    </div><div class="cmp-row">
+      <span class="cmp-name">Simplicity</span>
+      <span class="cmp-before">39</span>
+      <span class="cmp-arrow">→</span>
+      <span class="cmp-after" style="color:#16a34a">79</span>
+      <span class="cmp-delta" style="color:#34d399">+40</span>
+    </div><div class="cmp-row">
+      <span class="cmp-name">Tests</span>
+      <span class="cmp-before">0</span>
+      <span class="cmp-arrow">→</span>
+      <span class="cmp-after" style="color:#059669">92</span>
+      <span class="cmp-delta" style="color:#34d399">+92</span>
+    </div><div class="cmp-row">
+      <span class="cmp-name">Error Handling</span>
+      <span class="cmp-before">0</span>
+      <span class="cmp-arrow">→</span>
+      <span class="cmp-after" style="color:#059669">100</span>
+      <span class="cmp-delta" style="color:#34d399">+100</span>
+    </div><div class="cmp-row">
+      <span class="cmp-name">Cleanup</span>
+      <span class="cmp-before">81</span>
+      <span class="cmp-arrow">→</span>
+      <span class="cmp-after" style="color:#16a34a">81</span>
+      <span class="cmp-delta" style="color:rgba(148,163,184,.8)">0</span>
+    </div>
+  </div>
+  <footer>* Direct 示意：按 reflection 修复全部 Critical+High（41 项）后重算得分；完整复验见 report.html</footer>
 </div>
 </body>
 </html>

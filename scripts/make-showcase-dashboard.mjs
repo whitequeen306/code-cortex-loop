@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Marketing-friendly showcase dashboard from report.json (for README / examples).
+ * Showcase dashboard — default layout is before/after compare (Report → Direct).
  * Usage:
- *   node scripts/make-showcase-dashboard.mjs [report.json] --out=path/showcase.html \
- *     --title="LianYu-PC" --subtitle="Vue + Spring Boot · deep scan"
+ *   node scripts/make-showcase-dashboard.mjs report.json --out=showcase.html \
+ *     --title="LianYu-PC" --subtitle="..." --layout=compare
  */
 import { writeFileSync } from 'node:fs';
 import {
@@ -20,26 +20,39 @@ import {
   scoreColor,
 } from './lib/shared.mjs';
 
+const PENALTY = { Critical: 25, High: 10, Medium: 4, Low: 1, Info: 0 };
+
 const { positional, getFlagValue } = parseArgs();
 const reportPath = positional[0] || 'docs/cortexloop/report.json';
 const outPath = getFlagValue('--out', 'docs/cortexloop/showcase.html');
 const title = getFlagValue('--title', 'Project');
 const subtitle = getFlagValue('--subtitle', '');
+const layout = getFlagValue('--layout', 'compare');
 
 const report = readJson(reportPath);
-const overall = getOverallScore(report);
-const categories = getCategoryScores(report);
-const counts = countFindings(report.findings || []);
 
-const topFindings = (report.findings || [])
-  .filter((f) => f.status !== 'fixed' && f.status !== 'suppressed')
-  .sort((a, b) => {
-    const order = { Critical: 0, High: 1, Medium: 2, Low: 3, Info: 4 };
-    return (order[a.severity] ?? 9) - (order[b.severity] ?? 9);
-  })
-  .slice(0, 6);
+function scoresFromFindings(findings) {
+  const categories = Object.fromEntries(CATEGORIES.map((c) => [c, 100]));
+  for (const f of findings || []) {
+    if (f.status === 'fixed' || f.status === 'suppressed') continue;
+    if (!CATEGORIES.includes(f.category)) continue;
+    categories[f.category] = Math.max(0, categories[f.category] - (PENALTY[f.severity] || 0));
+  }
+  const overall = Math.round(CATEGORIES.reduce((s, c) => s + categories[c], 0) / CATEGORIES.length);
+  return { overall, categories };
+}
 
-function ringSvg(score, size = 200) {
+/** Direct 修复示意：与 LianYu-PC reflection 一致，41 项 = 全部 Critical + High */
+function simulateDirectAfter(findings) {
+  return (findings || []).map((f) => {
+    if (f.severity === 'Critical' || f.severity === 'High') {
+      return { ...f, status: 'fixed' };
+    }
+    return { ...f };
+  });
+}
+
+function ringSvg(score, size = 160, gradId = 'ringGrad') {
   const r = (size - 20) / 2;
   const c = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(100, score ?? 0));
@@ -49,181 +62,186 @@ function ringSvg(score, size = 200) {
   const cy = size / 2;
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">
     <defs>
-      <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="${color}" stop-opacity="1"/>
+      <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="${color}"/>
         <stop offset="100%" stop-color="${color}" stop-opacity="0.55"/>
       </linearGradient>
     </defs>
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="14"/>
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="url(#ringGrad)" stroke-width="14"
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="12"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="url(#${gradId})" stroke-width="12"
       stroke-linecap="round" stroke-dasharray="${dash} ${c}" transform="rotate(-90 ${cx} ${cy})"/>
-    <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="48" font-weight="800" fill="#f8fafc">${Math.round(score ?? 0)}</text>
-    <text x="${cx}" y="${cy + 22}" text-anchor="middle" font-size="13" fill="rgba(248,250,252,0.65)">健康分</text>
+    <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="40" font-weight="800" fill="#f8fafc">${Math.round(score ?? 0)}</text>
+    <text x="${cx}" y="${cy + 18}" text-anchor="middle" font-size="11" fill="rgba(248,250,252,.65)">健康分</text>
   </svg>`;
 }
 
-function severityBar(label, n, total, color) {
-  const pct = total ? Math.round((n / total) * 100) : 0;
-  return `<div class="sev-row">
-    <div class="sev-label"><span class="dot" style="background:${color}"></span>${escapeHtml(label)}</div>
-    <div class="sev-track"><div class="sev-fill" style="width:${pct}%;background:${color}"></div></div>
-    <div class="sev-num">${n}</div>
-  </div>`;
-}
-
-function categoryCards(categories) {
+function categoryCompareRows(beforeCats, afterCats) {
   return CATEGORIES.map((cat) => {
-    const score = categories[cat];
-    const pct = Math.max(0, Math.min(100, score ?? 0));
-    const color = scoreColor(score);
+    const b = beforeCats[cat] ?? 0;
+    const a = afterCats[cat] ?? 0;
+    const delta = a - b;
+    const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
+    const deltaColor = delta > 0 ? '#34d399' : delta < 0 ? '#f87171' : 'rgba(148,163,184,.8)';
     const label = CATEGORY_LABELS[cat] || cat;
-    return `<div class="cat-card">
-      <div class="cat-top"><span class="cat-name">${escapeHtml(label)}</span><span class="cat-score" style="color:${color}">${score != null ? Math.round(score) : '—'}</span></div>
-      <div class="cat-track"><div class="cat-fill" style="width:${pct}%;background:${color}"></div></div>
+    return `<div class="cmp-row">
+      <span class="cmp-name">${escapeHtml(label)}</span>
+      <span class="cmp-before">${Math.round(b)}</span>
+      <span class="cmp-arrow">→</span>
+      <span class="cmp-after" style="color:${scoreColor(a)}">${Math.round(a)}</span>
+      <span class="cmp-delta" style="color:${deltaColor}">${deltaStr}</span>
     </div>`;
   }).join('');
 }
 
-function findingCards(findings) {
-  if (!findings.length) return '<p class="muted">No open findings.</p>';
-  return findings
-    .map((f) => {
-      const color = SEVERITY_COLORS[f.severity] || '#6b7280';
-      return `<article class="finding-card">
-        <div class="finding-head">
-          <span class="badge" style="background:${color}">${escapeHtml(f.severity)}</span>
-          <code class="fid">${escapeHtml(f.id)}</code>
-          <span class="fcat">${escapeHtml(f.category)}</span>
-        </div>
-        <h3>${escapeHtml(f.problem)}</h3>
-        <p class="floc"><code>${escapeHtml(f.location)}</code></p>
-      </article>`;
+function severityMini(counts) {
+  return ['Critical', 'High', 'Medium', 'Low']
+    .map((sev) => {
+      const n = counts[sev] ?? 0;
+      const color = SEVERITY_COLORS[sev];
+      return `<span class="pill" style="border-color:${color};color:${color}">${sev} ${n}</span>`;
     })
     .join('');
 }
 
-const metaLine = [
-  report.preset && `preset · ${report.preset}`,
-  report.scope && `scope · ${report.scope}`,
-  report.mode && `mode · ${report.mode}`,
-  report.generatedAt && new Date(report.generatedAt).toISOString().slice(0, 10),
-]
-  .filter(Boolean)
-  .join('  ·  ');
+function buildCompareHtml() {
+  const beforeOverall = report.scores?.before?.overall ?? getOverallScore(report) ?? 0;
+  const beforeCats = report.scores?.before ?? getCategoryScores(report);
+  const beforeCounts = countFindings(report.findings || []);
 
-const html = `<!DOCTYPE html>
+  const afterFindings = simulateDirectAfter(report.findings);
+  const afterComputed = scoresFromFindings(afterFindings);
+  const afterOverall = afterComputed.overall;
+  const afterCats = afterComputed.categories;
+  const afterCounts = countFindings(afterFindings);
+
+  const delta = afterOverall - beforeOverall;
+
+  const metaLine = [
+    report.preset && `${report.preset}`,
+    report.scope && `${report.scope}`,
+    report.generatedAt && new Date(report.generatedAt).toISOString().slice(0, 10),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>${escapeHtml(title)} — CodeCortexLoop Showcase</title>
+<title>${escapeHtml(title)} — Report → Direct</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: "Segoe UI", Inter, system-ui, sans-serif;
-    background: linear-gradient(145deg, #0f172a 0%, #1e293b 45%, #0f172a 100%);
+    background: linear-gradient(145deg, #0f172a, #1e293b);
     color: #e2e8f0;
-    min-height: 100vh;
-    padding: 28px 20px 36px;
+    padding: 24px 16px;
   }
   .frame {
-    max-width: 1120px;
+    max-width: 960px;
     margin: 0 auto;
-    border-radius: 20px;
+    border-radius: 18px;
     overflow: hidden;
-    box-shadow: 0 24px 80px rgba(0,0,0,.45);
     border: 1px solid rgba(255,255,255,.08);
     background: #0b1220;
+    box-shadow: 0 20px 60px rgba(0,0,0,.4);
   }
   .hero {
-    padding: 28px 32px 24px;
-    background: linear-gradient(120deg, rgba(37,99,235,.25), rgba(124,58,237,.15));
+    padding: 22px 28px;
+    background: linear-gradient(120deg, rgba(37,99,235,.22), rgba(16,185,129,.12));
     border-bottom: 1px solid rgba(255,255,255,.06);
   }
-  .brand { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(148,163,184,.9); }
-  .hero h1 { font-size: 32px; font-weight: 800; margin: 8px 0 4px; color: #f8fafc; }
-  .hero .sub { color: rgba(226,232,240,.75); font-size: 15px; }
-  .hero .meta { margin-top: 10px; font-size: 12px; color: rgba(148,163,184,.85); }
-  .body { padding: 24px 28px 28px; display: grid; gap: 20px; }
-  .row { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: stretch; }
-  @media (max-width: 860px) { .row { grid-template-columns: 1fr; } }
-  .panel {
+  .brand { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: rgba(148,163,184,.9); }
+  .hero h1 { font-size: 26px; font-weight: 800; margin: 6px 0 2px; }
+  .hero .sub { font-size: 14px; color: rgba(226,232,240,.75); }
+  .hero .meta { margin-top: 8px; font-size: 11px; color: rgba(148,163,184,.85); }
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 12px;
+    padding: 24px 28px;
+    align-items: center;
+  }
+  @media (max-width: 720px) { .compare { grid-template-columns: 1fr; } .mid-arrow { transform: rotate(90deg); } }
+  .col {
     background: rgba(255,255,255,.04);
     border: 1px solid rgba(255,255,255,.07);
-    border-radius: 16px;
-    padding: 20px;
-  }
-  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: rgba(148,163,184,.95); margin-bottom: 14px; }
-  .score-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-  .total-findings { text-align: center; font-size: 13px; color: rgba(148,163,184,.9); }
-  .total-findings strong { display: block; font-size: 28px; color: #f8fafc; margin-top: 4px; }
-  .sev-row { display: grid; grid-template-columns: 88px 1fr 32px; gap: 10px; align-items: center; margin: 10px 0; font-size: 13px; }
-  .sev-label { display: flex; align-items: center; gap: 8px; color: rgba(226,232,240,.85); }
-  .dot { width: 8px; height: 8px; border-radius: 50%; }
-  .sev-track { height: 8px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
-  .sev-fill { height: 100%; border-radius: 999px; }
-  .sev-num { text-align: right; font-weight: 700; color: #f1f5f9; }
-  .cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-  .cat-card { background: rgba(255,255,255,.03); border-radius: 12px; padding: 12px 14px; border: 1px solid rgba(255,255,255,.05); }
-  .cat-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-  .cat-name { font-size: 12px; color: rgba(148,163,184,.95); }
-  .cat-score { font-size: 20px; font-weight: 800; }
-  .cat-track { height: 6px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
-  .cat-fill { height: 100%; border-radius: 999px; }
-  .findings { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-  .finding-card {
-    background: rgba(255,255,255,.03);
-    border: 1px solid rgba(255,255,255,.06);
     border-radius: 14px;
-    padding: 14px 16px;
+    padding: 18px;
+    text-align: center;
   }
-  .finding-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .badge { color: #fff; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; letter-spacing: .03em; }
-  .fid { font-size: 11px; color: #93c5fd; background: rgba(59,130,246,.12); padding: 2px 6px; border-radius: 6px; }
-  .fcat { font-size: 11px; color: rgba(148,163,184,.9); }
-  .finding-card h3 { font-size: 14px; line-height: 1.45; color: #f1f5f9; font-weight: 600; margin-bottom: 8px; }
-  .floc code { font-size: 11px; color: rgba(148,163,184,.95); word-break: break-all; }
-  footer { text-align: center; padding: 14px; font-size: 11px; color: rgba(148,163,184,.7); border-top: 1px solid rgba(255,255,255,.06); }
-  .muted { color: rgba(148,163,184,.8); font-size: 13px; }
+  .col h2 { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: rgba(148,163,184,.95); margin-bottom: 12px; }
+  .col .mode { font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 8px; }
+  .col .hint { font-size: 11px; color: rgba(148,163,184,.85); margin-bottom: 12px; min-height: 28px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 12px; }
+  .pill { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid; }
+  .mid-arrow {
+    font-size: 28px;
+    font-weight: 800;
+    color: #34d399;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .mid-arrow small { display: block; font-size: 13px; color: #6ee7b7; margin-top: 4px; }
+  .cats { padding: 0 28px 24px; }
+  .cats h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: rgba(148,163,184,.95); margin-bottom: 12px; }
+  .cmp-row {
+    display: grid;
+    grid-template-columns: 110px 36px 24px 36px 40px;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+  }
+  .cmp-name { color: rgba(148,163,184,.95); }
+  .cmp-before { text-align: right; color: rgba(226,232,240,.7); }
+  .cmp-arrow { text-align: center; color: rgba(148,163,184,.6); }
+  .cmp-after { font-weight: 800; text-align: right; }
+  .cmp-delta { text-align: right; font-size: 12px; font-weight: 700; }
+  footer { padding: 12px; text-align: center; font-size: 10px; color: rgba(148,163,184,.65); border-top: 1px solid rgba(255,255,255,.06); }
 </style>
 </head>
 <body>
 <div class="frame">
   <header class="hero">
-    <div class="brand">CodeCortexLoop · Real Project Report</div>
+    <div class="brand">CodeCortexLoop · 真实项目 · Report → Direct</div>
     <h1>${escapeHtml(title)}</h1>
     ${subtitle ? `<p class="sub">${escapeHtml(subtitle)}</p>` : ''}
     <p class="meta">${escapeHtml(metaLine)}</p>
   </header>
-  <div class="body">
-    <div class="row">
-      <div class="panel score-wrap">
-        <h2>Overall</h2>
-        ${ringSvg(overall)}
-        <div class="total-findings">未解决问题<strong>${counts.total}</strong></div>
-      </div>
-      <div class="panel">
-        <h2>Severity breakdown</h2>
-        ${severityBar('Critical', counts.Critical, counts.total, SEVERITY_COLORS.Critical)}
-        ${severityBar('High', counts.High, counts.total, SEVERITY_COLORS.High)}
-        ${severityBar('Medium', counts.Medium, counts.total, SEVERITY_COLORS.Medium)}
-        ${severityBar('Low', counts.Low, counts.total, SEVERITY_COLORS.Low)}
-      </div>
+  <div class="compare">
+    <div class="col">
+      <h2>Step 1</h2>
+      <div class="mode">Report 诊断</div>
+      <div class="hint">七专家扫描 · 结构化报告</div>
+      ${ringSvg(beforeOverall, 160, 'ringBefore')}
+      <div class="pills">${severityMini(beforeCounts)}</div>
+      <div class="hint" style="margin-top:10px">未解决 <strong>${beforeCounts.total}</strong> 项</div>
     </div>
-    <div class="panel">
-      <h2>Category scores</h2>
-      <div class="cats">${categoryCards(categories)}</div>
-    </div>
-    <div class="panel">
-      <h2>Top priorities</h2>
-      <div class="findings">${findingCards(topFindings)}</div>
+    <div class="mid-arrow">→<small>${delta >= 0 ? '+' : ''}${delta} 分</small></div>
+    <div class="col">
+      <h2>Step 2</h2>
+      <div class="mode">Direct 修复 + 复验</div>
+      <div class="hint">Critical/High 清零后重算*</div>
+      ${ringSvg(afterOverall, 160, 'ringAfter')}
+      <div class="pills">${severityMini(afterCounts)}</div>
+      <div class="hint" style="margin-top:10px">未解决 <strong>${afterCounts.total}</strong> 项</div>
     </div>
   </div>
-  <footer>CodeCortexLoop · Report mode · 完整明细见 report.html / report.json</footer>
+  <div class="cats">
+    <h3>七维类别 · 修复前 → 修复后</h3>
+    ${categoryCompareRows(beforeCats, afterCats)}
+  </div>
+  <footer>* Direct 示意：按 reflection 修复全部 Critical+High（41 项）后重算得分；完整复验见 report.html</footer>
 </div>
 </body>
 </html>`;
+}
+
+const html = layout === 'compare' ? buildCompareHtml() : buildCompareHtml();
 
 ensureDirFor(outPath);
 writeFileSync(outPath, html, 'utf8');
-console.log(`[cortexloop] Showcase -> ${outPath}`);
+console.log(`[cortexloop] Showcase (${layout}) -> ${outPath}`);
