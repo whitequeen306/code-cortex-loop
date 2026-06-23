@@ -4,6 +4,8 @@
 
 **真实大项目 `/cortexloop-deep` Report：** [LianYu-PC](examples/lianyu-pc/)（Vue 3 + Spring Boot 全栈）· 健康分 **32/100** · **81** 条 finding · [完整看板](examples/lianyu-pc/docs/cortexloop/report.html) · [report.json](examples/lianyu-pc/docs/cortexloop/report.json)
 
+**想查看被测项目本身？** → [https://github.com/whitequeen306/LianYuPC](https://github.com/whitequeen306/LianYuPC)
+
 **一条命令，七位领域专家，可自我进化的 Playbook。**
 
 面向 AI 编码工具的「写完代码后」流水线：**正确性 → 安全 → 测试 → 错误处理 → 性能 → 精简 → 清理** —— 配套健康分、HTML 看板、handoff 接力、双语 Playbook、基线棘轮与 CI 集成。
@@ -260,7 +262,8 @@ jobs:
 | [00-summary.md](examples/lianyu-pc/docs/cortexloop/00-summary.md) | 人类可读摘要 |
 | [examples/lianyu-pc/](examples/lianyu-pc/) | 案例目录说明 |
 
-> 产物为 Report 模式拷贝，**不含** LianYu-PC 源码，**未修改**原项目。
+> 产物为 Report 模式拷贝，**不含** LianYu-PC 源码，**未修改**原项目。  
+> **想查看此项目：** [github.com/whitequeen306/LianYuPC](https://github.com/whitequeen306/LianYuPC)
 
 ### 教学用 Demo
 

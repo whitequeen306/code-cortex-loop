@@ -1,10 +1,11 @@
 # LianYu-PC — CodeCortexLoop 真实项目报告
 
-**来源：** [LianYu-PC](https://github.com/)（本地全栈项目，Vue 3 + Spring Boot）  
+**来源：** [LianYu-PC](https://github.com/whitequeen306/LianYuPC)（Vue 3 + Spring Boot 全栈）  
 **运行方式：** `/cortexloop-deep` · **Report 模式** · 整库扫描  
 **生成时间：** 2026-06-22  
 
-> 本目录为 **Report 模式产物拷贝**，不含 LianYu-PC 源码。原项目未被修改。
+> 本目录为 **Report 模式产物拷贝**，不含 LianYu-PC 源码。原项目未被修改。  
+> **想查看此项目：** [https://github.com/whitequeen306/LianYuPC](https://github.com/whitequeen306/LianYuPC)
 
 ## 结果概览
 

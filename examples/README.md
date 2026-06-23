@@ -2,7 +2,9 @@
 
 ## 真实大项目报告 — [lianyu-pc/](lianyu-pc/)
 
-Vue 3 + Spring Boot 全栈项目 **LianYu-PC** 的 `/cortexloop-deep` **Report 模式**产物（2026-06-22）。
+Vue 3 + Spring Boot 全栈项目 **[LianYu-PC](https://github.com/whitequeen306/LianYuPC)** 的 `/cortexloop-deep` **Report 模式**产物（2026-06-22）。
+
+**想查看此项目：** [github.com/whitequeen306/LianYuPC](https://github.com/whitequeen306/LianYuPC)
 
 - [showcase.html](lianyu-pc/docs/cortexloop/showcase.html) — 优化可视化（README 首图）
 - [report.html](lianyu-pc/docs/cortexloop/report.html) — 完整标准看板
