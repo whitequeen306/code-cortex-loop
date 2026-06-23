@@ -78,6 +78,136 @@
         "Info": 0,
         "total": 10
       }
+    },
+    {
+      "timestamp": "2026-06-16T12:00:00.000Z",
+      "preset": "default",
+      "scope": "whole",
+      "mode": "report",
+      "commit": "e511d56",
+      "branch": "master",
+      "overall": 58,
+      "categories": {
+        "correctness": 62,
+        "security": 45,
+        "performance": 66,
+        "simplicity": 55,
+        "tests": 58,
+        "errorHandling": 48,
+        "cleanup": 52
+      },
+      "findings": {
+        "Critical": 2,
+        "High": 4,
+        "Medium": 3,
+        "Low": 1,
+        "Info": 0,
+        "total": 10
+      }
+    },
+    {
+      "timestamp": "2026-06-16T12:00:00.000Z",
+      "preset": "default",
+      "scope": "whole",
+      "mode": "report",
+      "commit": "e511d56",
+      "branch": "master",
+      "overall": 58,
+      "categories": {
+        "correctness": 62,
+        "security": 45,
+        "performance": 66,
+        "simplicity": 55,
+        "tests": 58,
+        "errorHandling": 48,
+        "cleanup": 52
+      },
+      "findings": {
+        "Critical": 2,
+        "High": 4,
+        "Medium": 3,
+        "Low": 1,
+        "Info": 0,
+        "total": 10
+      }
+    },
+    {
+      "timestamp": "2026-06-16T12:00:00.000Z",
+      "preset": "default",
+      "scope": "whole",
+      "mode": "report",
+      "commit": "e511d56",
+      "branch": "master",
+      "overall": 58,
+      "categories": {
+        "correctness": 62,
+        "security": 45,
+        "performance": 66,
+        "simplicity": 55,
+        "tests": 58,
+        "errorHandling": 48,
+        "cleanup": 52
+      },
+      "findings": {
+        "Critical": 2,
+        "High": 4,
+        "Medium": 3,
+        "Low": 1,
+        "Info": 0,
+        "total": 10
+      }
+    },
+    {
+      "timestamp": "2026-06-16T12:00:00.000Z",
+      "preset": "default",
+      "scope": "whole",
+      "mode": "report",
+      "commit": "e511d56",
+      "branch": "master",
+      "overall": 58,
+      "categories": {
+        "correctness": 62,
+        "security": 45,
+        "performance": 66,
+        "simplicity": 55,
+        "tests": 58,
+        "errorHandling": 48,
+        "cleanup": 52
+      },
+      "findings": {
+        "Critical": 2,
+        "High": 4,
+        "Medium": 3,
+        "Low": 1,
+        "Info": 0,
+        "total": 10
+      }
+    },
+    {
+      "timestamp": "2026-06-16T12:00:00.000Z",
+      "preset": "default",
+      "scope": "whole",
+      "mode": "report",
+      "commit": "e511d56",
+      "branch": "master",
+      "overall": 58,
+      "categories": {
+        "correctness": 62,
+        "security": 45,
+        "performance": 66,
+        "simplicity": 55,
+        "tests": 58,
+        "errorHandling": 48,
+        "cleanup": 52
+      },
+      "findings": {
+        "Critical": 2,
+        "High": 4,
+        "Medium": 3,
+        "Low": 1,
+        "Info": 0,
+        "total": 10
+      }
     }
   ]
 }

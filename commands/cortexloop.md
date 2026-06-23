@@ -18,6 +18,25 @@ You are the **CodeCortexLoop orchestrator** — conductor only. You bootstrap, s
 6. Read `.cortexloopignore` if present
 7. Ensure `.cortexloop/handoff/` exists (experts write handoff JSON here)
 
+### Step 0.1 — Detect tool Task support (fallback warning)
+
+Determine the active AI tool (Cursor, Claude Code, Qoder, Trae, OpenCode, Codex). Reference: `scripts/lib/shared.mjs` → `TOOL_TASK_SUPPORT`.
+
+| Support | Tools | Behavior |
+|---------|-------|----------|
+| **full** | Cursor, Claude Code | Launch one Task subagent per pass (mandatory) |
+| **fallback** | Qoder, Trae, OpenCode, Codex | Single session executes passes in order — **no subagent isolation** |
+
+If **fallback**, print to the user **before Step 3**:
+
+```
+⚠️ Falling back to single-session mode — this tool has no Task subagent API.
+   {N} passes will run sequentially in this session (not isolated experts).
+   For full 7-expert isolation, use Cursor or Claude Code.
+```
+
+In fallback mode, still follow pass contracts in order and write handoff JSON per pass — but the orchestrator session performs each pass itself by explicitly switching persona per pass contract (last resort; prefer Cursor/Claude).
+
 ## Step 0.5 — Consult Playbook (if `learning.enabled`)
 
 Before analysis, query **verified-tier** learned patterns only (recall, not authority — re-derive and re-verify every fix):
@@ -109,11 +128,19 @@ Collect findings from all handoff JSON files. Apply suppressions when aggregatin
 
 ## Step 4 — Aggregate + Score
 
-1. Merge `findings` from all `.cortexloop/handoff/*.json` files for enabled passes
-2. Assign IDs `CL-001`…
-3. Deduplicate same file:line + issue
-4. Compute **health scores** (before)
-5. Write `docs/cortexloop/report.json` always (include `"generatedBy": "cortexloop"` for CI provenance)
+1. **Validate handoffs** (fail-fast before scoring):
+
+```bash
+node scripts/validate-handoffs.mjs
+```
+
+Exit code 1 = missing or invalid handoff — re-run failed pass Task (or pass in fallback mode). In CI mode, exit 3.
+
+2. Merge `findings` from all `.cortexloop/handoff/*.json` files for enabled passes
+3. Assign IDs `CL-001`…
+4. Deduplicate same file:line + issue
+5. Compute **health scores** (before)
+6. Write `docs/cortexloop/report.json` always (include `"generatedBy": "cortexloop"` for CI provenance)
 
 ## Step 5 — Output
 
@@ -130,6 +157,7 @@ node scripts/record-history.mjs docs/cortexloop/report.json
 node scripts/make-badge.mjs docs/cortexloop/report.json
 node scripts/make-dashboard.mjs docs/cortexloop/report.json
 node scripts/pr-comment.mjs docs/cortexloop/report.json
+node scripts/run-summary.mjs --out=docs/cortexloop/run-summary.md
 ```
 
 If baseline enabled: `node scripts/baseline.mjs diff` before CI gate.

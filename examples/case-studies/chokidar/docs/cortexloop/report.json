@@ -1,0 +1,111 @@
+{
+  "version": "2.0",
+  "timestamp": "2026-06-18T10:30:00.000Z",
+  "generatedBy": "cortexloop",
+  "preset": "default",
+  "scope": "whole",
+  "mode": "report",
+  "repository": "paulmillr/chokidar@7f6b645",
+  "scores": {
+    "before": {
+      "overall": 71,
+      "correctness": 74,
+      "security": 82,
+      "performance": 68,
+      "simplicity": 70,
+      "tests": 65,
+      "errorHandling": 62,
+      "cleanup": 78
+    },
+    "after": {
+      "overall": 79,
+      "correctness": 78,
+      "security": 82,
+      "performance": 72,
+      "simplicity": 72,
+      "tests": 68,
+      "errorHandling": 74,
+      "cleanup": 78
+    }
+  },
+  "findings": [
+    {
+      "id": "CL-001",
+      "severity": "High",
+      "category": "correctness",
+      "location": "lib/fsevents-handler.js:142",
+      "problem": "Race between add and change events when awaitWriteFinish poll interval < write latency",
+      "evidence": "Integration test flaky on CI macOS runners; pollInterval default 100ms vs large file copies",
+      "confidence": "high",
+      "recommendation": "Debounce change until size stable for pollInterval × stabilityThreshold",
+      "autoFixable": "needs-confirmation",
+      "status": "open"
+    },
+    {
+      "id": "CL-002",
+      "severity": "High",
+      "category": "errorHandling",
+      "location": "index.js:88",
+      "problem": "Watcher error events not forwarded when ignoreInitial and watching glob root",
+      "evidence": "Unit test gap; manual repro with unreadable subdir emits silent failure",
+      "confidence": "high",
+      "recommendation": "Attach error listener before ready; bubble via _emit",
+      "autoFixable": "yes",
+      "status": "fixed"
+    },
+    {
+      "id": "CL-003",
+      "severity": "High",
+      "category": "performance",
+      "location": "lib/nodefs-handler.js:201",
+      "problem": "fs.statSync in readdir loop blocks event loop on large trees",
+      "evidence": "Profiling: 1000-entry dir adds ~120ms sync block on main thread",
+      "confidence": "high",
+      "recommendation": "Batch stat via async fs.promises.stat with concurrency limit",
+      "autoFixable": "needs-confirmation",
+      "status": "open"
+    },
+    {
+      "id": "CL-004",
+      "severity": "Medium",
+      "category": "tests",
+      "location": "test/",
+      "problem": "No regression test for EMFILE / too many watchers edge case",
+      "evidence": "Issue #1095 class of bugs; test suite has no ulimit simulation",
+      "confidence": "medium",
+      "recommendation": "Add mocked fs.watch failure path test",
+      "autoFixable": "no",
+      "status": "open"
+    },
+    {
+      "id": "CL-005",
+      "severity": "Medium",
+      "category": "simplicity",
+      "location": "lib/constants.js",
+      "problem": "Duplicate platform flags scattered across handlers",
+      "evidence": "isMac/isWindows checked in 4 files with slightly different logic",
+      "confidence": "high",
+      "recommendation": "Centralize platform detection in constants module",
+      "autoFixable": "yes",
+      "status": "open"
+    },
+    {
+      "id": "CL-006",
+      "severity": "Low",
+      "category": "cleanup",
+      "location": "package.json",
+      "problem": "Dev dependency glob@7 still present though glob@10 used in scripts",
+      "evidence": "npm ls shows duplicate glob major versions",
+      "confidence": "high",
+      "recommendation": "Align glob version or remove unused devDep",
+      "autoFixable": "yes",
+      "status": "open"
+    }
+  ],
+  "summary": {
+    "found": { "Critical": 0, "High": 3, "Medium": 2, "Low": 1 },
+    "fixed": { "High": 1 },
+    "deferred": { "High": 2, "Medium": 2, "Low": 1 },
+    "suppressed": 0
+  }
+}

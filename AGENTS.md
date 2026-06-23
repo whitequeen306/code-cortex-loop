@@ -65,6 +65,8 @@ node scripts/record-history.mjs docs/cortexloop/report.json
 node scripts/make-badge.mjs docs/cortexloop/report.json
 node scripts/make-dashboard.mjs docs/cortexloop/report.json
 node scripts/pr-comment.mjs docs/cortexloop/report.json
+node scripts/validate-handoffs.mjs
+node scripts/run-summary.mjs --out=docs/cortexloop/run-summary.md
 ```
 
 ## Learning Loop (v2.2)
@@ -114,12 +116,12 @@ Playbook hits are **recall, not authority** — re-derive and verify every fix; 
 
 ## Orchestrator vs domain experts
 
-| Role | Does | Must not |
-|------|------|----------|
-| **Orchestrator** (`/cortexloop` main session) | Bootstrap, scope, launch Task per pass, aggregate handoffs, score, Direct apply | Inline pass analysis, write category findings |
-| **Domain expert** (Task subagent, one per pass) | Single-domain analysis, read prior handoffs, write category md + handoff json | Analyze other categories, invoke other agents |
+| Role | Does | Must not | Fallback (Qoder/Trae/OpenCode/Codex) |
+|------|------|----------|--------------------------------------|
+| **Orchestrator** | Bootstrap, scope, launch Task per pass, aggregate handoffs, score, Direct apply | Inline pass analysis (full mode), write category findings without pass contract | Runs each pass in-session with persona switch; prints fallback warning |
+| **Domain expert** (Task subagent) | Single-domain analysis, read prior handoffs, write category md + handoff json | Analyze other categories, invoke other agents | N/A — not available; orchestrator absorbs pass |
 
-Sequential order: see `passes/README.md`. Each expert loads its pass contract and depth skill(s).
+Sequential order: see `passes/README.md`. **Full Task isolation**: Cursor, Claude Code only (`TOOL_TASK_SUPPORT` in `scripts/lib/shared.mjs`).
 
 ## Domain experts (Task subagent types)
 

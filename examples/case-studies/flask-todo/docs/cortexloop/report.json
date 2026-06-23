@@ -1,0 +1,77 @@
+{
+  "version": "2.0",
+  "timestamp": "2026-06-20T09:15:00.000Z",
+  "generatedBy": "cortexloop",
+  "preset": "default",
+  "scope": "whole",
+  "mode": "report",
+  "repository": "flask-todo (tutorial composite)",
+  "scores": {
+    "before": {
+      "overall": 68,
+      "correctness": 72,
+      "security": 42,
+      "performance": 78,
+      "simplicity": 74,
+      "tests": 55,
+      "errorHandling": 52,
+      "cleanup": 80
+    }
+  },
+  "findings": [
+    {
+      "id": "CL-001",
+      "severity": "Critical",
+      "category": "security",
+      "location": "app.py:34",
+      "problem": "SQL injection in search via f-string query",
+      "evidence": "search=' OR 1=1 -- returns all todos",
+      "confidence": "high",
+      "recommendation": "Use parameterized query: WHERE content LIKE ?",
+      "autoFixable": "yes",
+      "status": "open"
+    },
+    {
+      "id": "CL-002",
+      "severity": "High",
+      "category": "errorHandling",
+      "location": "app.py:89",
+      "problem": "Bare except swallows delete failures",
+      "evidence": "Invalid id returns 302 redirect with no flash message",
+      "confidence": "high",
+      "recommendation": "Catch sqlite3.Error specifically; flash user-visible error",
+      "autoFixable": "yes",
+      "status": "open"
+    },
+    {
+      "id": "CL-003",
+      "severity": "High",
+      "category": "security",
+      "location": "templates/",
+      "problem": "Forms lack CSRF protection",
+      "evidence": "No Flask-WTF or CSRF token in POST /add or /delete",
+      "confidence": "high",
+      "recommendation": "Enable CSRFProtect or SameSite cookies + token",
+      "autoFixable": "needs-confirmation",
+      "status": "open"
+    },
+    {
+      "id": "CL-004",
+      "severity": "Medium",
+      "category": "tests",
+      "location": "tests/test_app.py",
+      "problem": "No test for search or delete error paths",
+      "evidence": "Only test_index and test_add covered",
+      "confidence": "high",
+      "recommendation": "Add pytest cases for injection attempt and invalid delete",
+      "autoFixable": "no",
+      "status": "open"
+    }
+  ],
+  "summary": {
+    "found": { "Critical": 1, "High": 2, "Medium": 1, "Low": 0 },
+    "fixed": {},
+    "deferred": {},
+    "suppressed": 0
+  }
+}

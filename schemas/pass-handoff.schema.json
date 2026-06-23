@@ -45,6 +45,11 @@
       "type": "array",
       "items": { "type": "string" },
       "default": []
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp when handoff was written (for run-summary duration)"
     }
   },
   "$defs": {

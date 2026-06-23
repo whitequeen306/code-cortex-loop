@@ -1,0 +1,20 @@
+{
+  "pass": "review",
+  "category": "correctness",
+  "expert": "code-reviewer",
+  "summary": "One High race in fsevents awaitWriteFinish; platform-specific event ordering gaps.",
+  "generatedAt": "2026-06-18T10:22:00.000Z",
+  "findings": [
+    {
+      "severity": "High",
+      "location": "lib/fsevents-handler.js:142",
+      "problem": "Race between add and change when poll interval shorter than write latency",
+      "evidence": "Flaky integration test on macOS CI; default pollInterval 100ms",
+      "confidence": "high",
+      "recommendation": "Debounce change until file size stable",
+      "autoFixable": "needs-confirmation"
+    }
+  ],
+  "deferToLaterPasses": [{ "pass": "tests", "note": "Add flaky-test repro for awaitWriteFinish" }],
+  "openQuestions": []
+}

@@ -138,6 +138,20 @@ export const PASS_PIPELINE = [
 
 export const PASS_KEYS = PASS_PIPELINE.map((p) => p.passKey);
 
+/** Task subagent support by tool — used for fallback warnings in orchestrator bootstrap. */
+export const TOOL_TASK_SUPPORT = {
+  cursor: 'full',
+  claude: 'full',
+  qoder: 'fallback',
+  trae: 'fallback',
+  opencode: 'fallback',
+  codex: 'fallback',
+};
+
+export const TOOLS_WITH_FULL_TASK_SUPPORT = Object.entries(TOOL_TASK_SUPPORT)
+  .filter(([, mode]) => mode === 'full')
+  .map(([tool]) => tool);
+
 export function getEnabledPipeline(passesConfig = {}) {
   return PASS_PIPELINE.filter((p) => passesConfig[p.passKey] !== false);
 }

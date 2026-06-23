@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="146" height="20" role="img" aria-label="cortexloop health: 58">
+<svg xmlns="http://www.w3.org/2000/svg" width="153" height="20" role="img" aria-label="cortexloop health: 58">
   <title>cortexloop health: 58</title>
   <linearGradient id="s" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
     <stop offset="1" stop-opacity=".1"/>
   </linearGradient>
-  <clipPath id="r"><rect width="146" height="20" rx="3" fill="#fff"/></clipPath>
+  <clipPath id="r"><rect width="153" height="20" rx="3" fill="#fff"/></clipPath>
   <g clip-path="url(#r)">
-    <rect width="122" height="20" fill="#555"/>
-    <rect x="122" width="24" height="20" fill="#ea580c"/>
-    <rect width="146" height="20" fill="url(#s)"/>
+    <rect width="129" height="20" fill="#555"/>
+    <rect x="129" width="24" height="20" fill="#ea580c"/>
+    <rect width="153" height="20" fill="url(#s)"/>
   </g>
   <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
-    <text x="61" y="14">cortexloop health</text>
-    <text x="134" y="14">58</text>
+    <text x="64.5" y="14">cortexloop health</text>
+    <text x="141" y="14">58</text>
   </g>
 </svg>

@@ -63,6 +63,15 @@ Seven domain experts run in **fixed order**. Each pass is one **mandatory Task s
 
 Category reports live under `docs/cortexloop/`. Presets disable passes via `config.passes`; enabled passes keep this order.
 
+### Tool support (full vs fallback)
+
+| Mode | Tools | Behavior |
+|------|-------|----------|
+| **full** | Cursor, Claude Code | One Task subagent per pass (mandatory) |
+| **fallback** | Qoder, Trae, OpenCode, Codex | Single session; print fallback warning; still write handoffs in order |
+
+Before scoring, run `node scripts/validate-handoffs.mjs` (fail-fast if passes incomplete).
+
 ### Handoff protocol
 
 Each expert writes category markdown + handoff JSON (`schemas/pass-handoff.schema.json`). Downstream experts read **all prior handoff files**. Cross-domain concerns use `deferToLaterPasses` — no upstream expert analyzes another domain.
@@ -164,6 +173,7 @@ Write to `docs/cortexloop/`:
 | `.cortexloop/playbook.json` | `playbook.mjs record` | Learned fix patterns (English; model query) |
 | `.cortexloop/playbook-zh.md` | auto on record/feedback/prune | Chinese human-readable playbook (not fed to model) |
 | `.cortexloop/handoff/*.json` | sequential expert passes | Per-pass findings + brief for downstream experts |
+| `docs/cortexloop/run-summary.md` | `run-summary.mjs` | Pass count, duration, est. tokens |
 | `.cortexloop/reflection.json` | reflect skill | Latest reflection (record input) |
 | `docs/cortexloop/08-reflection.md` | reflect skill | Human retrospective |
 

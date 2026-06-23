@@ -2,6 +2,8 @@
 
 This folder contains a **deliberately flawed** mini app plus **pre-generated CodeCortexLoop outputs** so you can see results without running an AI tool first.
 
+**Also see:** [case-studies/](case-studies/) — real open-source repo analysis outputs (chokidar, fastify-hello, flask-todo).
+
 ## What's inside
 
 ```
