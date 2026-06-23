@@ -139,10 +139,10 @@ cp .cortexloopignore.example .cortexloopignore
 | `.cortexloop/playbook.json` | 英文 Playbook（模型） |
 | `.cortexloop/playbook-zh.md` | 中文 Playbook（人类） |
 
-## Demo 与 Case Studies
+## Demo 与真实案例
 
 - [examples/demo-app](../examples/demo-app/) — 故意写满 bug 的学习样例
-- [examples/case-studies](../examples/case-studies/) — 真实开源仓库分析报告
+- [examples/lianyu-pc](../examples/lianyu-pc/) — **真实大项目** LianYu-PC Report（Vue + Spring Boot）
 
 ## 性能预算
 

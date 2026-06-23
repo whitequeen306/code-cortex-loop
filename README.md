@@ -1,6 +1,8 @@
 # CodeCortexLoop
 
-![chokidar 看板样例：健康分 + 问题列表](docs/assets/chokidar-launch-preview.png)
+[![LianYu-PC 真实项目 Report 可视化](docs/assets/lianyu-pc-showcase.png)](examples/lianyu-pc/docs/cortexloop/showcase.html)
+
+**真实大项目 `/cortexloop-deep` Report：** [LianYu-PC](examples/lianyu-pc/)（Vue 3 + Spring Boot 全栈）· 健康分 **32/100** · **81** 条 finding · [完整看板](examples/lianyu-pc/docs/cortexloop/report.html) · [report.json](examples/lianyu-pc/docs/cortexloop/report.json)
 
 **一条命令，七位领域专家，可自我进化的 Playbook。**
 
@@ -238,21 +240,31 @@ jobs:
 
 ---
 
-## 案例与 Demo
+## 真实项目案例：LianYu-PC
 
-### 报告样例（case-studies）
+在 **Vue 3 + Spring Boot 全栈项目**上跑 `/cortexloop-deep` **Report 模式**（2026-06-22，整库扫描）。下图由 `make-showcase-dashboard.mjs` 生成，便于 README 阅读；**完整 81 条明细**见标准看板。
 
-`examples/case-studies/` 存放**报告产物样例**（非被测项目源码）。自行复现步骤见各案例 README。
+| 指标 | 数值 |
+|------|------|
+| 健康分 | **32 / 100** |
+| Critical / High / Medium / Low | 9 / 32 / 31 / 9 |
+| 最弱类别 | Correctness、Tests、Error handling（0 分） |
+| 相对最好 | Cleanup（81） |
 
-| 项目 | 分数 | 典型问题 | 看板 |
-|------|------|----------|------|
-| [chokidar](examples/case-studies/chokidar/) | 71 → 79 | watcher 错误被吞 | [打开](examples/case-studies/chokidar/docs/cortexloop/report.html) |
-| [fastify-hello](examples/case-studies/fastify-hello/) | 64 | 管理接口无鉴权 | [打开](examples/case-studies/fastify-hello/docs/cortexloop/report.html) |
-| [flask-todo](examples/case-studies/flask-todo/) | 68 | 搜索 SQL 注入 | [打开](examples/case-studies/flask-todo/docs/cortexloop/report.html) |
+**典型发现：** 验证码表达式泄露 · SSE 错误仍持久化 · 前端轮询静默失败 · 认证/SSE 核心路径零测试
+
+| 链接 | 说明 |
+|------|------|
+| [showcase.html](examples/lianyu-pc/docs/cortexloop/showcase.html) | 优化可视化看板（上图来源） |
+| [report.html](examples/lianyu-pc/docs/cortexloop/report.html) | 标准看板（含全部 finding 表） |
+| [00-summary.md](examples/lianyu-pc/docs/cortexloop/00-summary.md) | 人类可读摘要 |
+| [examples/lianyu-pc/](examples/lianyu-pc/) | 案例目录说明 |
+
+> 产物为 Report 模式拷贝，**不含** LianYu-PC 源码，**未修改**原项目。
 
 ### 教学用 Demo
 
-[examples/demo-app/](examples/demo-app/) — 故意写满 bug 的小项目，可本地跑 `/cortexloop` 对比预置报告。
+[examples/demo-app/](examples/demo-app/) — 故意写满 bug 的小项目，适合第一次试 `/cortexloop`。
 
 ---
 
@@ -298,9 +310,9 @@ passes/       # 七专家串行合约
 agents/       # 领域专家 persona
 skills/       # 深度 skill + reflect
 rules/        # workflow、learning-loop、refactor-safety …
-scripts/      # ci-gate、playbook、看板、安装脚本（零 npm 依赖）
+scripts/      # ci-gate、playbook、看板、showcase、安装脚本（零 npm 依赖）
 schemas/      # report、config、handoff JSON schema
-examples/     # demo-app + case-studies
+examples/     # demo-app + lianyu-pc（真实大项目 Report）
 action.yml    # GitHub 复合 Action
 ```
 
