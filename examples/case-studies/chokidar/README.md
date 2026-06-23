@@ -3,10 +3,12 @@
 | Field | Value |
 |-------|-------|
 | Repository | [paulmillr/chokidar](https://github.com/paulmillr/chokidar) |
-| Pinned commit | `7f6b645` (representative 3.x tree) |
+| Pinned commit | `7f6b645`（代表 3.x 树） |
 | Tool | Cursor + CodeCortexLoop v2.2 |
-| Mode | Report → Direct (2 High fixes) |
+| Mode | Report → Direct（部分 High 修复） |
 | Date | 2026-06-18 |
+
+> 本目录为 **预置报告样例**（非 chokidar 源码）。自行复现见文末。
 
 ## Why this repo
 
