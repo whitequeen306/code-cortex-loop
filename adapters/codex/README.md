@@ -1,13 +1,8 @@
 # Codex Adapter
 
-Codex does not currently use CodeCortexLoop as a native `/cortexloop` slash command in the same way Cursor or OpenCode do. Codex custom prompts exist under `~/.codex/prompts/`, but they are deprecated in favor of skills and `AGENTS.md`.
+Codex does not expose a native `/cortexloop` slash command like Cursor or OpenCode. Codex custom prompts live under `~/.codex/prompts/` but are **deprecated** in favor of skills, `AGENTS.md`, and **custom subagents** (`~/.codex/agents/*.toml`).
 
-This adapter installs:
-
-- CodeCortexLoop skills to `~/.codex/skills/`
-- helper scripts to `~/.codex/scripts/`
-- legacy prompt shortcuts to `~/.codex/prompts/`
-- `AGENTS.cortexloop.md` as reference instructions to merge into your Codex `AGENTS.md`
+CodeCortexLoop on Codex uses **partial subagent mode**: the orchestrator must **explicitly instruct Codex to spawn** one TOML subagent per pass, in order, and wait for deliverables before the next spawn. Codex does **not** auto-spawn subagents.
 
 ## Install
 
@@ -30,29 +25,47 @@ chmod +x scripts/install.sh
 
 If `CODEX_HOME` is set, the installer uses that directory. Otherwise it uses `~/.codex`.
 
-## Target paths
+## What gets installed
 
 | Asset | Path |
 |-------|------|
 | Skills | `$CODEX_HOME/skills/` or `~/.codex/skills/` |
 | Scripts | `$CODEX_HOME/scripts/` or `~/.codex/scripts/` |
-| Legacy prompts | `$CODEX_HOME/prompts/` or `~/.codex/prompts/` |
+| **TOML subagents** | `$CODEX_HOME/agents/*.toml` (from `agents/*.md` via `generate-codex-agents.mjs`) |
+| Example config | `$CODEX_HOME/codex.cortexloop.example.toml` |
+| Legacy prompts | `$CODEX_HOME/prompts/` (invoke as `/prompts:cortexloop`) |
 | Reference rules | `$CODEX_HOME/AGENTS.cortexloop.md` |
 
-## Usage
+## Post-install setup
 
-Recommended:
-
-1. Ensure Codex skills are enabled in `$CODEX_HOME/config.toml`:
+1. Merge `[features]` and `[agents]` from `codex.cortexloop.example.toml` into `$CODEX_HOME/config.toml`:
 
    ```toml
    [features]
    skills = true
+
+   [agents]
+   max_threads = 6
+   max_depth = 1
    ```
 
-2. Restart Codex.
-3. Ask: `Use CodeCortexLoop to review this project`.
-4. Or open `/skills` and choose the relevant CodeCortexLoop skill.
+2. Merge `AGENTS.cortexloop.md` into your user or project `AGENTS.md`.
+3. Restart Codex.
+4. Confirm seven experts exist: `~/.codex/agents/code-reviewer.toml`, … `cleanup-curator.toml`.
+
+## Usage (partial spawn mode)
+
+Ask Codex with **explicit sequential spawn** language, for example:
+
+```text
+Run CodeCortexLoop Report on this project. Spawn subagents strictly ONE AT A TIME in pass order; wait for each to write report + handoff JSON before the next:
+code-reviewer → security-auditor → test-engineer → silent-failure-hunter → performance-analyst → code-simplifier → cleanup-curator
+After all passes: node scripts/validate-handoffs.mjs
+```
+
+Bootstrap should print `✅ Codex partial subagent mode` (not the single-session fallback warning).
+
+Inspect subagent threads in the Codex CLI with `/agent`.
 
 Optional legacy prompt shortcut:
 
@@ -60,8 +73,17 @@ Optional legacy prompt shortcut:
 /prompts:cortexloop
 ```
 
-Codex may show this under `prompts:` rather than as a top-level `/cortexloop` command.
+## Constraints
+
+- **No auto-spawn** — every run must say "spawn subagents" and name the pass order.
+- **One expert at a time** — do not fan out all seven passes in parallel or inline in the main session when TOML agents are configured.
+- **`max_depth = 1`** — subagents must not spawn nested subagents.
+- Subagent names must match the pipeline table (`code-reviewer`, `security-auditor`, …).
+
+## Fallback
+
+If TOML agents are missing or spawn is unavailable, Codex falls back to **single-session persona switch** only when the user confirms. For full 7-expert isolation, prefer Cursor, Claude Code, OpenCode (Task), Qoder (Agent), or Trae (SOLO).
 
 ## AGENTS.md
 
-Codex reads `AGENTS.md` files automatically. The installer does not overwrite your existing `AGENTS.md`; it writes `AGENTS.cortexloop.md` so you can merge the rules you want into your user or project `AGENTS.md`.
+The installer does not overwrite your existing `AGENTS.md`; it writes `AGENTS.cortexloop.md` so you can merge the rules you want.

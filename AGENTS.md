@@ -118,10 +118,10 @@ Playbook hits are **recall, not authority** — re-derive and verify every fix; 
 
 | Role | Does | Must not | Qoder / Trae / Fallback |
 |------|------|----------|-------------------------|
-| **Orchestrator** | Bootstrap, scope, delegate one expert per pass, aggregate handoffs, score, Direct apply | Inline pass analysis (full/native/partial mode), write category findings without pass contract | **OpenCode/Cursor:** Task tool; **Qoder:** `Agent` tool; **Trae:** SOLO Coder; **Fallback:** persona switch |
+| **Orchestrator** | Bootstrap, scope, delegate one expert per pass, aggregate handoffs, score, Direct apply | Inline pass analysis (full/native/partial mode), write category findings without pass contract | **OpenCode/Cursor:** Task tool; **Qoder:** `Agent` tool; **Trae:** SOLO Coder; **Codex:** explicit spawn; **Fallback:** persona switch |
 | **Domain expert** | Single-domain analysis, read prior handoffs, write category md + handoff json | Analyze other categories, invoke other agents | **Qoder/Trae:** isolated subagent when delegated; **Fallback:** orchestrator absorbs pass |
 
-Sequential order: see `passes/README.md`. **Full Task**: Cursor, Claude Code, OpenCode (`full`). **Native Agent**: Qoder (`native`). **Partial SOLO**: Trae (`partial`). See `OPENCODE_AGENT_NAMES`, `QODER_AGENT_NAMES`, `TRAE_AGENT_NAMES` in `scripts/lib/shared.mjs`.
+Sequential order: see `passes/README.md`. **Full Task**: Cursor, Claude Code, OpenCode (`full`). **Native Agent**: Qoder (`native`). **Partial**: Trae SOLO, Codex spawn (`partial`). See `OPENCODE_AGENT_NAMES`, `QODER_AGENT_NAMES`, `TRAE_AGENT_NAMES`, `CODEX_AGENT_NAMES` in `scripts/lib/shared.mjs`.
 
 ## Domain experts (Task subagent types)
 

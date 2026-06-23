@@ -1,0 +1,11 @@
+# CodeCortexLoop — merge these keys into ~/.codex/config.toml (or project .codex/config.toml)
+
+[features]
+skills = true
+
+[agents]
+max_threads = 6
+max_depth = 1
+
+# Codex does not auto-spawn subagents. Run /cortexloop with explicit sequential spawn instructions.
+# See adapters/codex/README.md and AGENTS.cortexloop.md after install.

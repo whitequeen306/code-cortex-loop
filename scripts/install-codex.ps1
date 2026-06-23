@@ -37,6 +37,19 @@ Write-Host "  copied commands -> $prompts (deprecated Codex prompts; invoke as /
 Copy-Item (Join-Path $Root "AGENTS.md") (Join-Path $Target "AGENTS.cortexloop.md") -Force
 Write-Host "  copied AGENTS.md -> $Target\AGENTS.cortexloop.md"
 
+$agentsSrc = Join-Path $Root "agents"
+$agentsDst = Join-Path $Target "agents"
+if (Test-Path $agentsSrc) {
+  node (Join-Path $Root "scripts\generate-codex-agents.mjs") $agentsSrc $agentsDst
+  if ($LASTEXITCODE -ne 0) { throw "[cortexloop] generate-codex-agents.mjs failed" }
+}
+
+$exampleToml = Join-Path $Root "adapters\codex\codex.cortexloop.example.toml"
+if (Test-Path $exampleToml) {
+  Copy-Item $exampleToml (Join-Path $Target "codex.cortexloop.example.toml") -Force
+  Write-Host "  copied codex.cortexloop.example.toml -> $Target"
+}
+
 $config = Join-Path $Target "config.toml"
 if (-not (Test-Path $config)) {
   @"
@@ -49,5 +62,7 @@ skills = true
 }
 
 Write-Host "[cortexloop] Codex install complete."
-Write-Host "  Restart Codex. Use /skills or ask: Use CodeCortexLoop to review this project."
+Write-Host "  Merge $Target\codex.cortexloop.example.toml into config.toml ([agents] max_depth = 1)."
+Write-Host "  Merge AGENTS.cortexloop.md into project AGENTS.md."
+Write-Host "  Restart Codex. Ask: Run CodeCortexLoop Report — spawn subagents one at a time in pass order."
 Write-Host "  Optional deprecated prompt shortcut: /prompts:cortexloop"

@@ -94,7 +94,7 @@ Re-run `node scripts/patch-opencode-agents.mjs .opencode/agents` after copying a
 
 1. `~/.config/opencode/agents/code-reviewer.md` exists and contains `mode: subagent`
 2. `opencode.json` allows Build to Task the 7 expert names
-3. `/cortexloop` runs without single-session fallback warning (unless on Codex)
+3. `/cortexloop` runs without single-session fallback warning when subagents are configured (Task on OpenCode; spawn on Codex; SOLO on Trae)
 
 ## vs Cursor
 

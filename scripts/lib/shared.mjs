@@ -145,7 +145,7 @@ export const TOOL_TASK_SUPPORT = {
   opencode: 'full',
   qoder: 'native',
   trae: 'partial',
-  codex: 'fallback',
+  codex: 'partial',
 };
 
 /** passKey → agent name for Task-tool delegation (OpenCode uses same names; aligned with PASS_PIPELINE). */
@@ -160,6 +160,11 @@ export const QODER_AGENT_NAMES = Object.fromEntries(
 
 /** passKey → agent name for Trae SOLO custom-agent delegation (same names as PASS_PIPELINE). */
 export const TRAE_AGENT_NAMES = Object.fromEntries(
+  PASS_PIPELINE.map((p) => [p.passKey, p.agent]),
+);
+
+/** passKey → agent name for Codex explicit subagent spawn (TOML agents; aligned with PASS_PIPELINE). */
+export const CODEX_AGENT_NAMES = Object.fromEntries(
   PASS_PIPELINE.map((p) => [p.passKey, p.agent]),
 );
 

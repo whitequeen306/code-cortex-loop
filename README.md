@@ -48,7 +48,7 @@ cd code-cortex-loop
 
 | 问题 | 原因 |
 |------|------|
-| 你常用 **Cursor**、**Claude Code**、**OpenCode**、**Qoder** 或 **Trae（SOLO）** 吗？ | Cursor/Claude/OpenCode：`Task`；Qoder：`Agent`；Trae：SOLO 委派；Codex 退化为单会话 |
+| 你常用 **Cursor**、**Claude Code**、**OpenCode**、**Qoder**、**Trae（SOLO）** 或 **Codex** 吗？ | Cursor/Claude/OpenCode：`Task`；Qoder：`Agent`；Trae：SOLO；Codex：显式 spawn |
 | 改动量 **≥ 几百行** 或是一个完整功能吗？ | 改个 typo 用 linter 就够了 |
 | 能接受每次 **约 3–10 分钟** 跑完整流程吗？ | 见下方 [性能预算](#性能预算)；小 PR 用 `/cortexloop-quick` |
 
@@ -204,9 +204,9 @@ node scripts/playbook.mjs feedback --signature=<sig> --outcome=external_verified
 | **OpenCode** | `opencode` | `~/.config/opencode/` | ✅ Task（需 `permission.task`；见 [adapters/opencode/](adapters/opencode/)） |
 | **Qoder** | `qoder` | `~/.qoder/` | ✅ Agent 工具（需主会话启用 Agent；见 [adapters/qoder/](adapters/qoder/)） |
 | **Trae** | `trae` | `~/.trae/` | ⚡ SOLO 模式 + 自定义智能体（见 [adapters/trae/](adapters/trae/)） |
-| Codex | `codex` | `~/.codex/` | ⚠️ 退化（走 skills） |
+| **Codex** | `codex` | `~/.codex/` | ⚡ 显式 spawn + TOML 子 agent（见 [adapters/codex/](adapters/codex/)） |
 
-仅 **Codex** 会提示 `⚠️ Falling back to single-session mode`。OpenCode 与 Cursor 共用 Task 流程。各工具差异：[adapters/](adapters/)。
+未配置子 agent 或用户确认时才会退化为单会话 fallback。OpenCode 与 Cursor 共用 Task 流程。各工具差异：[adapters/](adapters/)。
 
 > **ZCode**（智谱 Z.ai ADE）是独立产品，与 Trae 不同，当前**未适配** CodeCortexLoop。
 
@@ -229,6 +229,17 @@ node scripts/playbook.mjs feedback --signature=<sig> --outcome=external_verified
 5. SOLO Coder 按 pass 顺序委派专家；每步写 report + handoff JSON
 
 普通 IDE 聊天（非 SOLO）会退化为单会话。详见 [adapters/trae/README.md](adapters/trae/README.md)。
+
+### Codex 快速上手（显式 spawn）
+
+1. 安装：`.\scripts\install-codex.ps1`（或 `./scripts/install.sh codex`），**重启 Codex**
+2. 将 `~/.codex/codex.cortexloop.example.toml` 的 `[agents]` 合并进 `config.toml`（`max_depth = 1`）
+3. 确认 `~/.codex/agents/` 下有 7 个 `.toml` 专家
+4. 合并 `AGENTS.cortexloop.md` 到项目或用户的 `AGENTS.md`
+5. 运行 `/prompts:cortexloop` 或明确要求：**按 pass 顺序逐个 spawn 子 agent**；Bootstrap 应显示 `✅ Codex partial subagent mode`
+6. CLI 可用 `/agent` 查看子 agent 线程
+
+Codex **不会自动 spawn**——必须在 prompt 里写清顺序。详见 [adapters/codex/README.md](adapters/codex/README.md)。
 
 ### OpenCode 快速上手
 

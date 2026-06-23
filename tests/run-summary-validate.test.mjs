@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { validateHandoffs } from '../scripts/validate-handoffs.mjs';
 import { summarizeRun } from '../scripts/run-summary.mjs';
-import { TOOL_TASK_SUPPORT, TOOLS_WITH_FULL_TASK_SUPPORT, TOOLS_WITH_NATIVE_AGENT_SUPPORT, TOOLS_WITH_PARTIAL_SUPPORT, OPENCODE_AGENT_NAMES, QODER_AGENT_NAMES, TRAE_AGENT_NAMES } from '../scripts/lib/shared.mjs';
+import { TOOL_TASK_SUPPORT, TOOLS_WITH_FULL_TASK_SUPPORT, TOOLS_WITH_NATIVE_AGENT_SUPPORT, TOOLS_WITH_PARTIAL_SUPPORT, OPENCODE_AGENT_NAMES, QODER_AGENT_NAMES, TRAE_AGENT_NAMES, CODEX_AGENT_NAMES } from '../scripts/lib/shared.mjs';
 
 test('validateHandoffs passes when all enabled handoffs exist and valid', () => {
   const dir = join(tmpdir(), `cortexloop-vh-${Date.now()}`);
@@ -93,4 +93,13 @@ test('TOOL_TASK_SUPPORT marks trae as partial with agent name map', () => {
   assert.equal(TRAE_AGENT_NAMES.review, 'code-reviewer');
   assert.equal(TRAE_AGENT_NAMES.errorHandling, 'silent-failure-hunter');
   assert.equal(TRAE_AGENT_NAMES.cleanup, 'cleanup-curator');
+});
+
+test('TOOL_TASK_SUPPORT marks codex as partial with agent name map', () => {
+  assert.equal(TOOL_TASK_SUPPORT.codex, 'partial');
+  assert.ok(TOOLS_WITH_PARTIAL_SUPPORT.includes('codex'));
+  assert.ok(!TOOLS_WITH_FULL_TASK_SUPPORT.includes('codex'));
+  assert.equal(CODEX_AGENT_NAMES.review, 'code-reviewer');
+  assert.equal(CODEX_AGENT_NAMES.security, 'security-auditor');
+  assert.equal(CODEX_AGENT_NAMES.cleanup, 'cleanup-curator');
 });

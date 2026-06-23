@@ -32,11 +32,11 @@
 | **OpenCode** | **Task 工具** + subagent | 与 Cursor 同流程；需 `permission.task` + `mode: subagent` |
 | **Qoder** | **Agent 工具** + `~/.qoder/agents/` | 7 个自定义智能体串行委派，**独立上下文** |
 | **Trae** | **SOLO 模式** + 自定义智能体 | SOLO Coder 串行委派；普通 IDE 聊天退化为单会话 |
-| **Codex** | 退化 | 单会话按 pass 顺序自我分段 |
+| **Codex** | **显式 spawn** + `~/.codex/agents/*.toml` | 按 pass 顺序逐个 spawn；Codex 不会自动 spawn |
 
-Orchestrator 分支：Cursor/Claude/OpenCode → Task；Qoder → Agent；Trae → SOLO；Codex → fallback。
+Orchestrator 分支：Cursor/Claude/OpenCode → Task；Qoder → Agent；Trae → SOLO；Codex → spawn；未知工具 → fallback。
 
-Trae / Qoder / OpenCode 详情：[adapters/trae/README.md](../adapters/trae/README.md) · [adapters/qoder/README.md](../adapters/qoder/README.md) · [adapters/opencode/README.md](../adapters/opencode/README.md)
+Trae / Qoder / OpenCode / Codex 详情：[adapters/trae/README.md](../adapters/trae/README.md) · [adapters/qoder/README.md](../adapters/qoder/README.md) · [adapters/opencode/README.md](../adapters/opencode/README.md) · [adapters/codex/README.md](../adapters/codex/README.md)
 
 > **ZCode**（智谱 Z.ai ADE）为独立产品，当前未适配。
 

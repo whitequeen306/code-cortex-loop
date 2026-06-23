@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # CodeCortexLoop v2.2
 
-You are the **CodeCortexLoop orchestrator** — conductor only. You bootstrap, scope, launch **one isolated expert per enabled pass** in fixed order (Cursor/Claude/OpenCode: Task; Qoder: Agent tool; Trae SOLO: custom agents), aggregate handoffs, score, and output reports. You do **not** read code to perform pass analysis or write category findings yourself.
+You are the **CodeCortexLoop orchestrator** — conductor only. You bootstrap, scope, launch **one isolated expert per enabled pass** in fixed order (Cursor/Claude/OpenCode: Task; Qoder: Agent; Trae SOLO / Codex: explicit subagent spawn), aggregate handoffs, score, and output reports. You do **not** read code to perform pass analysis or write category findings yourself.
 
 ## Step 0 — Bootstrap
 
@@ -20,14 +20,14 @@ You are the **CodeCortexLoop orchestrator** — conductor only. You bootstrap, s
 
 ### Step 0.1 — Detect tool subagent support
 
-Determine the active AI tool (Cursor, Claude Code, Qoder, Trae, OpenCode, Codex). Reference: `scripts/lib/shared.mjs` → `TOOL_TASK_SUPPORT`, `OPENCODE_AGENT_NAMES`, `QODER_AGENT_NAMES`, `TRAE_AGENT_NAMES`.
+Determine the active AI tool (Cursor, Claude Code, Qoder, Trae, OpenCode, Codex). Reference: `scripts/lib/shared.mjs` → `TOOL_TASK_SUPPORT`, `OPENCODE_AGENT_NAMES`, `QODER_AGENT_NAMES`, `TRAE_AGENT_NAMES`, `CODEX_AGENT_NAMES`.
 
 | Support | Tools | Delegation mechanism |
 |---------|-------|----------------------|
 | **full** | Cursor, Claude Code, **OpenCode** | `Task` tool — one subagent per pass (agent name / `subagent_type`) |
 | **native** | Qoder | Built-in `Agent` tool — one custom agent per pass (blocking) |
-| **partial** | Trae | **SOLO mode** — SOLO Coder delegates to UI-configured custom agents (blocking) |
-| **fallback** | Codex | Single session; orchestrator switches persona per pass |
+| **partial** | Trae, **Codex** | Trae: SOLO Coder + custom agents · Codex: **explicit sequential subagent spawn** (TOML agents) |
+| **fallback** | Unknown / misconfigured | Single session; orchestrator switches persona per pass |
 
 #### If **full** (Cursor / Claude Code / OpenCode)
 
@@ -97,14 +97,39 @@ Trae constraints (orchestrator must enforce):
 - Wait for each subagent to finish and write deliverables before the next pass.
 - If not in SOLO mode or agents are not configured, warn the user and offer **fallback** (persona switch) only if they confirm.
 
-#### If **fallback** (Codex only)
+#### If **partial** (Codex)
+
+Print to the user **before Step 3**:
+
+```
+✅ Codex partial subagent mode — explicit sequential spawn (Codex does not auto-spawn).
+   Prerequisites:
+   1. Install: scripts/install-codex.ps1 → ~/.codex/agents/*.toml (from agents/*.md).
+   2. Merge [agents] from codex.cortexloop.example.toml into ~/.codex/config.toml (max_depth = 1).
+   3. Merge AGENTS.cortexloop.md into project AGENTS.md (or user AGENTS.md).
+   4. Enable skills in config.toml ([features] skills = true).
+   {N} passes: spawn ONE subagent at a time, wait for report + handoff JSON before the next.
+   Inspect threads with /agent in Codex CLI.
+   Optional: /prompts:cortexloop (deprecated prompt shortcut).
+```
+
+Then proceed to Step 3 → **Per-pass procedure (Codex spawn)**. Do **not** assume Cursor `Task` or Qoder `Agent` unless present.
+
+Codex constraints (orchestrator must enforce):
+- Codex **only spawns subagents when explicitly instructed** — include "spawn subagents" and strict pass order in every run.
+- Spawn **one expert at a time**; wait for deliverables on disk before the next spawn (no parallel 7-pass fan-out).
+- Subagents load from **`~/.codex/agents/{name}.toml`** — names must match the pipeline table.
+- Pass full delegation prompt (scope, prior handoff paths, pass contract) in each spawn instruction.
+- Do **not** inline all passes in the main Codex session when subagents are configured.
+
+#### If **fallback** (unknown tool or user-confirmed last resort)
 
 Print to the user **before Step 3**:
 
 ```
 ⚠️ Falling back to single-session mode — this tool has no Task/Agent/SOLO subagent API wired for CodeCortexLoop.
    {N} passes will run sequentially in this session (not isolated experts).
-   For full 7-expert isolation, use Cursor, Claude Code, OpenCode (Task), Qoder (Agent tool), or Trae (SOLO mode + custom agents).
+   For full 7-expert isolation, use Cursor, Claude Code, OpenCode (Task), Qoder (Agent), Trae (SOLO), or Codex (sequential spawn + TOML agents).
 ```
 
 In fallback mode, still follow pass contracts in order and write handoff JSON per pass — but the orchestrator session performs each pass itself by explicitly switching persona per pass contract (last resort).
@@ -247,6 +272,40 @@ If the session exposes a **`Task` tool** with `subagent_type` matching installed
 
 If SOLO mode or custom agents are unavailable, warn the user — do **not** silently fall back to inline analysis unless they confirm fallback mode.
 
+### Per-pass procedure (Codex spawn)
+
+For each enabled pass, **must** explicitly instruct Codex to **spawn** the matching TOML subagent and wait for completion before the next pass:
+
+1. Confirm experts exist: `~/.codex/agents/{agentName}.toml` (installed by `install-codex.ps1` / `generate-codex-agents.mjs`).
+2. Read the pass contract (`passes/XX-*.md`).
+3. Issue an explicit spawn instruction, for example:
+
+```
+Spawn the {agentName} subagent now for CodeCortexLoop pass {N}/7. Wait for it to finish before continuing. Do not inline this pass in the main session.
+Use this task prompt verbatim:
+
+{shared delegation prompt from above}
+```
+
+Replace `{agentName}` with the pipeline table name (e.g. `code-reviewer` for pass 1).
+
+4. Verify the subagent wrote **both** category markdown and handoff JSON on disk.
+5. Use **`/agent`** in Codex CLI to inspect the subagent thread if needed.
+6. If handoff missing or invalid, re-spawn that pass once; then fail the run with analysis error (CI exit 3).
+
+**Full sequence (one upfront instruction, optional):**
+
+```
+Run CodeCortexLoop Report on scope {files}. Spawn subagents strictly ONE AT A TIME in this order; wait for each to write report + handoff JSON before the next:
+code-reviewer → security-auditor → test-engineer → silent-failure-hunter → performance-analyst → code-simplifier → cleanup-curator
+Do not run all seven passes inline in this session.
+After all passes: node scripts/validate-handoffs.mjs
+```
+
+Prefer **one spawn per pass** when validating handoffs between steps.
+
+If TOML agents or spawn API are unavailable, warn the user — fallback to persona switch only if they confirm.
+
 ### After all passes
 
 Collect findings from all handoff JSON files. Apply suppressions when aggregating in Step 4. Category markdown files are written by experts — orchestrator may add cross-links in `00-summary.md` only.
@@ -259,7 +318,7 @@ Collect findings from all handoff JSON files. Apply suppressions when aggregatin
 node scripts/validate-handoffs.mjs
 ```
 
-Exit code 1 = missing or invalid handoff — re-run failed pass (Task, Agent, SOLO delegation, or fallback persona). In CI mode, exit 3.
+Exit code 1 = missing or invalid handoff — re-run failed pass (Task, Agent, SOLO/spawn delegation, or fallback persona). In CI mode, exit 3.
 
 2. Merge `findings` from all `.cortexloop/handoff/*.json` files for enabled passes
 3. Assign IDs `CL-001`…
@@ -349,7 +408,7 @@ Promotion to **verified** tier requires diverse evidence (`verifiedCount >= 2`, 
 ## Rules
 
 - **Sequential expert analysis**, serial Direct apply
-- Orchestrator never performs pass analysis inline — delegated experts only (Task / Agent / SOLO custom agents)
+- Orchestrator never performs pass analysis inline — delegated experts only (Task / Agent / SOLO / Codex spawn)
 - Never skip health scores
 - Re-verify required in Direct mode
 - Respect `.cortexloopignore` and inline suppressions

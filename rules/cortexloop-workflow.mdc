@@ -69,8 +69,8 @@ Category reports live under `docs/cortexloop/`. Presets disable passes via `conf
 |------|-------|----------|
 | **full** | Cursor, Claude Code, OpenCode | One Task subagent per pass (mandatory) |
 | **native** | Qoder | One custom agent per pass via blocking `Agent` tool (mandatory) |
-| **partial** | Trae | One custom agent per pass via SOLO Coder delegation (mandatory in SOLO mode) |
-| **fallback** | Codex | Single session; print fallback warning; still write handoffs in order |
+| **partial** | Trae, Codex | Trae: SOLO Coder delegation · Codex: explicit sequential TOML subagent spawn |
+| **fallback** | Unknown / misconfigured | Single session; print fallback warning; still write handoffs in order |
 
 Before scoring, run `node scripts/validate-handoffs.mjs` (fail-fast if passes incomplete).
 

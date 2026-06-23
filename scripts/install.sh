@@ -184,7 +184,7 @@ install_codex() {
 
   echo "[cortexloop] Installing to Codex: $target"
 
-  mkdir -p "$target"/{skills,scripts,prompts,passes}
+  mkdir -p "$target"/{skills,scripts,prompts,passes,agents}
 
   copy_tree "$ROOT/skills" "$target/skills" "skills"
 
@@ -195,6 +195,10 @@ install_codex() {
   cp "$ROOT"/commands/*.md "$target/prompts/"
 
   cp "$ROOT/AGENTS.md" "$target/AGENTS.cortexloop.md"
+
+  node "$ROOT/scripts/generate-codex-agents.mjs" "$ROOT/agents" "$target/agents"
+
+  cp "$ROOT/adapters/codex/codex.cortexloop.example.toml" "$target/codex.cortexloop.example.toml" 2>/dev/null || true
 
   local config="$target/config.toml"
   if [ ! -f "$config" ]; then
@@ -207,7 +211,9 @@ EOF
     echo "  note: ensure $config contains [features] skills = true"
   fi
 
-  echo "  Restart Codex. Use /skills or ask: Use CodeCortexLoop to review this project."
+  echo "  Merge $target/codex.cortexloop.example.toml into config.toml ([agents] max_depth = 1)."
+  echo "  Merge AGENTS.cortexloop.md into project AGENTS.md."
+  echo "  Restart Codex. Ask: Run CodeCortexLoop Report — spawn subagents one at a time in pass order."
   echo "  Optional deprecated prompt shortcut: /prompts:cortexloop"
 
 }
