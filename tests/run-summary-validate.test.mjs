@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { validateHandoffs } from '../scripts/validate-handoffs.mjs';
 import { summarizeRun } from '../scripts/run-summary.mjs';
-import { TOOL_TASK_SUPPORT, TOOLS_WITH_FULL_TASK_SUPPORT, TOOLS_WITH_NATIVE_AGENT_SUPPORT, QODER_AGENT_NAMES } from '../scripts/lib/shared.mjs';
+import { TOOL_TASK_SUPPORT, TOOLS_WITH_FULL_TASK_SUPPORT, TOOLS_WITH_NATIVE_AGENT_SUPPORT, TOOLS_WITH_PARTIAL_SUPPORT, OPENCODE_AGENT_NAMES, QODER_AGENT_NAMES, TRAE_AGENT_NAMES } from '../scripts/lib/shared.mjs';
 
 test('validateHandoffs passes when all enabled handoffs exist and valid', () => {
   const dir = join(tmpdir(), `cortexloop-vh-${Date.now()}`);
@@ -68,8 +68,15 @@ test('summarizeRun counts executed passes from chokidar case study', () => {
 test('TOOL_TASK_SUPPORT marks cursor and claude as full', () => {
   assert.equal(TOOL_TASK_SUPPORT.cursor, 'full');
   assert.equal(TOOL_TASK_SUPPORT.claude, 'full');
+  assert.equal(TOOL_TASK_SUPPORT.opencode, 'full');
   assert.ok(TOOLS_WITH_FULL_TASK_SUPPORT.includes('cursor'));
+  assert.ok(TOOLS_WITH_FULL_TASK_SUPPORT.includes('opencode'));
   assert.ok(!TOOLS_WITH_FULL_TASK_SUPPORT.includes('codex'));
+});
+
+test('OPENCODE_AGENT_NAMES aligns with pipeline experts', () => {
+  assert.equal(OPENCODE_AGENT_NAMES.review, 'code-reviewer');
+  assert.equal(OPENCODE_AGENT_NAMES.performance, 'performance-analyst');
 });
 
 test('TOOL_TASK_SUPPORT marks qoder as native with agent name map', () => {
@@ -78,4 +85,12 @@ test('TOOL_TASK_SUPPORT marks qoder as native with agent name map', () => {
   assert.equal(QODER_AGENT_NAMES.review, 'code-reviewer');
   assert.equal(QODER_AGENT_NAMES.security, 'security-auditor');
   assert.equal(QODER_AGENT_NAMES.cleanup, 'cleanup-curator');
+});
+
+test('TOOL_TASK_SUPPORT marks trae as partial with agent name map', () => {
+  assert.equal(TOOL_TASK_SUPPORT.trae, 'partial');
+  assert.ok(TOOLS_WITH_PARTIAL_SUPPORT.includes('trae'));
+  assert.equal(TRAE_AGENT_NAMES.review, 'code-reviewer');
+  assert.equal(TRAE_AGENT_NAMES.errorHandling, 'silent-failure-hunter');
+  assert.equal(TRAE_AGENT_NAMES.cleanup, 'cleanup-curator');
 });

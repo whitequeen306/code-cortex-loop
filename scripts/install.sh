@@ -168,6 +168,10 @@ install_opencode() {
 
   cp "$ROOT/AGENTS.md" "$target/AGENTS.cortexloop.md"
 
+  node "$ROOT/scripts/patch-opencode-agents.mjs" "$target/agents"
+
+  cp "$ROOT/adapters/opencode/opencode.cortexloop.example.json" "$target/opencode.cortexloop.example.json" 2>/dev/null || true
+
   echo "  Restart OpenCode, then type /cortexloop in the TUI."
 
 }

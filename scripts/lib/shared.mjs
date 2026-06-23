@@ -142,14 +142,24 @@ export const PASS_KEYS = PASS_PIPELINE.map((p) => p.passKey);
 export const TOOL_TASK_SUPPORT = {
   cursor: 'full',
   claude: 'full',
+  opencode: 'full',
   qoder: 'native',
-  trae: 'fallback',
-  opencode: 'fallback',
+  trae: 'partial',
   codex: 'fallback',
 };
 
+/** passKey → agent name for Task-tool delegation (OpenCode uses same names; aligned with PASS_PIPELINE). */
+export const OPENCODE_AGENT_NAMES = Object.fromEntries(
+  PASS_PIPELINE.map((p) => [p.passKey, p.agent]),
+);
+
 /** passKey → agent name for Qoder Agent-tool delegation (aligned with PASS_PIPELINE). */
 export const QODER_AGENT_NAMES = Object.fromEntries(
+  PASS_PIPELINE.map((p) => [p.passKey, p.agent]),
+);
+
+/** passKey → agent name for Trae SOLO custom-agent delegation (same names as PASS_PIPELINE). */
+export const TRAE_AGENT_NAMES = Object.fromEntries(
   PASS_PIPELINE.map((p) => [p.passKey, p.agent]),
 );
 
@@ -159,6 +169,10 @@ export const TOOLS_WITH_FULL_TASK_SUPPORT = Object.entries(TOOL_TASK_SUPPORT)
 
 export const TOOLS_WITH_NATIVE_AGENT_SUPPORT = Object.entries(TOOL_TASK_SUPPORT)
   .filter(([, mode]) => mode === 'native')
+  .map(([tool]) => tool);
+
+export const TOOLS_WITH_PARTIAL_SUPPORT = Object.entries(TOOL_TASK_SUPPORT)
+  .filter(([, mode]) => mode === 'partial')
   .map(([tool]) => tool);
 
 export function getEnabledPipeline(passesConfig = {}) {

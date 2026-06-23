@@ -31,7 +31,17 @@ foreach ($key in $map.Keys) {
   Write-Host "  copied $key -> $dst"
 }
 
+$agentsDst = Join-Path $Target "agents"
+if (Test-Path $agentsDst) {
+  node (Join-Path $Root "scripts\patch-opencode-agents.mjs") $agentsDst
+  if ($LASTEXITCODE -ne 0) { throw "[cortexloop] patch-opencode-agents.mjs failed" }
+}
+
 Copy-Item (Join-Path $Root "AGENTS.md") (Join-Path $Target "AGENTS.cortexloop.md") -Force
+Copy-Item (Join-Path $Root "adapters\opencode\opencode.cortexloop.example.json") (Join-Path $Target "opencode.cortexloop.example.json") -Force -ErrorAction SilentlyContinue
+if (Test-Path (Join-Path $Root "adapters\opencode\opencode.cortexloop.example.json")) {
+  Write-Host "  copied opencode.cortexloop.example.json -> $Target"
+}
 Write-Host "  copied AGENTS.md -> $Target\AGENTS.cortexloop.md"
 
 Write-Host "[cortexloop] OpenCode install complete."

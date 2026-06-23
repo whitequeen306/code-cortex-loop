@@ -29,12 +29,16 @@
 |------|----------|------|
 | **Cursor** | Task 工具 | 7 个独立 Task 串行，领域隔离 |
 | **Claude Code** | Task / 子 agent | 同上 |
-| **Qoder** | **Agent 工具** + `~/.qoder/agents/` | 7 个自定义智能体串行委派，**独立上下文**（需主会话启用 Agent 工具） |
-| **Trae / OpenCode / Codex** | 退化 | 单会话按 pass 顺序自我分段，无真正子 agent 隔离 |
+| **OpenCode** | **Task 工具** + subagent | 与 Cursor 同流程；需 `permission.task` + `mode: subagent` |
+| **Qoder** | **Agent 工具** + `~/.qoder/agents/` | 7 个自定义智能体串行委派，**独立上下文** |
+| **Trae** | **SOLO 模式** + 自定义智能体 | SOLO Coder 串行委派；普通 IDE 聊天退化为单会话 |
+| **Codex** | 退化 | 单会话按 pass 顺序自我分段 |
 
-Orchestrator 在 Bootstrap 时会按 `TOOL_TASK_SUPPORT` 分支：Cursor/Claude → Task；Qoder → Agent 工具；其它 → `⚠️ Falling back to single-session mode`。
+Orchestrator 分支：Cursor/Claude/OpenCode → Task；Qoder → Agent；Trae → SOLO；Codex → fallback。
 
-Qoder 详情：[adapters/qoder/README.md](../adapters/qoder/README.md)
+Trae / Qoder / OpenCode 详情：[adapters/trae/README.md](../adapters/trae/README.md) · [adapters/qoder/README.md](../adapters/qoder/README.md) · [adapters/opencode/README.md](../adapters/opencode/README.md)
+
+> **ZCode**（智谱 Z.ai ADE）为独立产品，当前未适配。
 
 ## 命令
 
