@@ -365,7 +365,7 @@ jobs:
 commands/     # /cortexloop 系列 slash command
 passes/       # 七专家串行合约
 agents/       # 领域专家 persona
-skills/       # 深度 skill + reflect
+skills/       # cortexloop-expert-core（公共）+ 各领域 depth skill + reflect
 rules/        # workflow、learning-loop、refactor-safety …
 scripts/      # ci-gate、playbook、看板、showcase、安装脚本（零 npm 依赖）
 schemas/      # report、config、handoff JSON schema

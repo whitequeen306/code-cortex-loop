@@ -1,6 +1,6 @@
 ---
 name: performance-optimization
-description: Proof-based performance optimization. Use when analyzing or fixing slow code, N+1 queries, bundle size, React re-renders, memory leaks, or async bottlenecks. Requires before/after benchmarks — never present a change without proving improvement.
+description: Deep performance analysis for /cortexloop pass 5. Hot paths, complexity, measurement — go deep with proof; defer correctness and security to other passes.
 ---
 
 # Performance Optimization
@@ -156,9 +156,3 @@ In Report mode (no changes applied), use this table with projected improvements 
 3. **One change at a time** in Direct mode — benchmark after each
 4. **Prefer architectural fixes** over micro-optimizations (fix N+1 before tweaking loops)
 5. **Document trade-offs** — if a fix adds complexity, say so
-
-## Composition
-
-- **Invoke via:** `/cortexloop` (performance pass), or directly when user asks to optimize slow code
-- **Pairs with:** `code-reviewer` (performance axis), `simplify` skill (don't sacrifice clarity for speed)
-- **Do not invoke from other personas** — orchestration belongs to `/cortexloop`

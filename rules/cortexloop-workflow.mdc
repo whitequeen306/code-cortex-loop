@@ -82,13 +82,13 @@ Each expert writes category markdown + handoff JSON (`schemas/pass-handoff.schem
 
 | Pass | Depth skill / rule |
 |------|-------------------|
-| Review | `code-review`, `edge-case-and-state-analysis` |
-| Security | `security-review`, `security-hardening` |
-| Tests | `test-strategy`, `edge-case-and-state-analysis` |
-| Performance | `performance-optimization` |
-| Simplicity | `simplify` |
-| Error handling | `error-handling`, `edge-case-and-state-analysis` |
-| Cleanup | `dead-code-and-deps` |
+| Review | `cortexloop-expert-core`, `correctness-review`, `edge-case-and-state-analysis` |
+| Security | `cortexloop-expert-core`, `security-review`, `security-hardening` |
+| Tests | `cortexloop-expert-core`, `test-strategy`, `edge-case-and-state-analysis` |
+| Performance | `cortexloop-expert-core`, `performance-optimization` |
+| Simplicity | `cortexloop-expert-core`, `simplify` |
+| Error handling | `cortexloop-expert-core`, `error-handling`, `edge-case-and-state-analysis` |
+| Cleanup | `cortexloop-expert-core`, `dead-code-and-deps` |
 
 ### Breadth → Depth Gate
 

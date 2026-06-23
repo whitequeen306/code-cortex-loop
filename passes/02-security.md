@@ -6,7 +6,7 @@
 | **Pass key** | `security` |
 | **Category** | `security` |
 | **Agent** | `security-auditor` |
-| **Depth skills** | `security-review` |
+| **Depth skills** | `cortexloop-expert-core`, `security-review` |
 | **Rules** | `security-hardening` |
 | **Category report** | `docs/cortexloop/02-security.md` |
 | **Handoff** | `.cortexloop/handoff/02-security.json` |

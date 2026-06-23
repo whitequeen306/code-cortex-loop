@@ -6,7 +6,7 @@
 | **Pass key** | `review` |
 | **Category** | `correctness` |
 | **Agent** | `code-reviewer` |
-| **Depth skills** | `code-review`, `edge-case-and-state-analysis` |
+| **Depth skills** | `cortexloop-expert-core`, `correctness-review`, `edge-case-and-state-analysis` |
 | **Category report** | `docs/cortexloop/01-correctness.md` |
 | **Handoff** | `.cortexloop/handoff/01-correctness.json` |
 
@@ -47,7 +47,7 @@ Do **not** produce security or performance findings — flag them for the approp
 ## Procedure
 
 1. **Breadth** (agent persona) — scan scope for correctness and architecture risks
-2. **Depth gate** (`code-review` + `edge-case-and-state-analysis`) — confirm each candidate has concrete evidence
+2. **Depth gate** (`correctness-review` + `edge-case-and-state-analysis`) — confirm each candidate has concrete evidence
 3. Drop or downgrade items without proof; low-confidence → `openQuestions` only
 4. Write category report markdown
 5. Write handoff JSON per [schemas/pass-handoff.schema.json](../schemas/pass-handoff.schema.json)

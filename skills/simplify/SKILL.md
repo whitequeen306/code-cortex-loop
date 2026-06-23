@@ -1,6 +1,6 @@
 ---
 name: code-simplification
-description: Simplifies code for clarity. Use when refactoring code for clarity without changing behavior. Use when code works but is harder to read, maintain, or extend than it should be. Use when reviewing code that has accumulated unnecessary complexity.
+description: Deep simplicity analysis for /cortexloop pass 6. Clarity and maintainability without behavior change — go deep on readability; defer dead-code removal to pass 7.
 ---
 
 # Code Simplification

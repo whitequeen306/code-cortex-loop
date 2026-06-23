@@ -6,7 +6,7 @@
 | **Pass key** | `errorHandling` |
 | **Category** | `errorHandling` |
 | **Agent** | `silent-failure-hunter` |
-| **Depth skills** | `error-handling`, `edge-case-and-state-analysis` |
+| **Depth skills** | `cortexloop-expert-core`, `error-handling`, `edge-case-and-state-analysis` |
 | **Category report** | `docs/cortexloop/06-error-handling.md` |
 | **Handoff** | `.cortexloop/handoff/04-error-handling.json` |
 

@@ -6,7 +6,7 @@
 | **Pass key** | `tests` |
 | **Category** | `tests` |
 | **Agent** | `test-engineer` |
-| **Depth skills** | `test-strategy`, `edge-case-and-state-analysis` |
+| **Depth skills** | `cortexloop-expert-core`, `test-strategy`, `edge-case-and-state-analysis` |
 | **Category report** | `docs/cortexloop/05-tests.md` |
 | **Handoff** | `.cortexloop/handoff/03-tests.json` |
 

@@ -6,7 +6,7 @@
 | **Pass key** | `cleanup` |
 | **Category** | `cleanup` |
 | **Agent** | `cleanup-curator` |
-| **Depth skills** | `dead-code-and-deps` |
+| **Depth skills** | `cortexloop-expert-core`, `dead-code-and-deps` |
 | **Category report** | `docs/cortexloop/07-cleanup.md` |
 | **Handoff** | `.cortexloop/handoff/07-cleanup.json` |
 

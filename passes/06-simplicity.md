@@ -6,7 +6,7 @@
 | **Pass key** | `simplicity` |
 | **Category** | `simplicity` |
 | **Agent** | `code-simplifier` |
-| **Depth skills** | `simplify` |
+| **Depth skills** | `cortexloop-expert-core`, `simplify` |
 | **Category report** | `docs/cortexloop/04-simplicity.md` |
 | **Handoff** | `.cortexloop/handoff/06-simplicity.json` |
 

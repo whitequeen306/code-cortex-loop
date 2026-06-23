@@ -31,6 +31,8 @@ test('each pipeline step has contract paths', () => {
     assert.match(step.categoryReport, /^docs\/cortexloop\//);
     assert.match(step.handoffFile, /^\.cortexloop\/handoff\//);
     assert.equal(step.agent, step.expert);
+    assert.ok(Array.isArray(step.skills) && step.skills.length >= 1);
+    assert.equal(step.skills[0], 'cortexloop-expert-core', `${step.passKey} must load shared core first`);
   }
 });
 

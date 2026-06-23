@@ -1,11 +1,13 @@
 ---
 name: security-and-hardening
-description: Hardens code against vulnerabilities. Use when handling user input, authentication, data storage, or external integrations. Use when building any feature that accepts untrusted data, manages user sessions, or interacts with third-party services.
+description: Deep security analysis for /cortexloop pass 2. Threat modeling, exploit paths, hardening — go deep here; defer logic bugs and test gaps via handoff.
 ---
 
 # Security and Hardening
 
-## Overview
+Depth skill for **pass 2 (`security`)** only. Pair with `cortexloop-expert-core`. Rule: `security-hardening`.
+
+**Go deep on security.** The OWASP sections below are your depth material — trace exploit paths, don't skim checklists. Logic bugs without exploit → defer `review`.
 
 Security-first development practices for web applications. Treat every external input as hostile, every secret as sacred, and every authorization check as mandatory. Security isn't a phase — it's a constraint on every line of code that touches user data, authentication, or external systems.
 

@@ -6,7 +6,7 @@
 | **Pass key** | `performance` |
 | **Category** | `performance` |
 | **Agent** | `performance-analyst` |
-| **Depth skills** | `performance-optimization` |
+| **Depth skills** | `cortexloop-expert-core`, `performance-optimization` |
 | **Category report** | `docs/cortexloop/03-performance.md` |
 | **Handoff** | `.cortexloop/handoff/05-performance.json` |
 

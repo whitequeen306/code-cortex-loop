@@ -200,7 +200,8 @@ Scope files: {scopeFileList}
 Prior handoffs (read all): {priorHandoffPaths or "none"}
 Playbook (this category only): run playbook.mjs query --category={category} --lang={lang} --global-merge
 
-Load your agent persona and depth skill(s) per the pass contract.
+Load skills in order: `cortexloop-expert-core` first, then domain depth skill(s) listed in the pass contract. Do not load other passes' domain skills.
+
 Analyze ONLY your domain. Defer cross-domain signals via deferToLaterPasses — do not analyze other categories.
 
 Deliverables (required before you finish):

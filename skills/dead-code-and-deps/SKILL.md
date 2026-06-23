@@ -1,6 +1,6 @@
 ---
 name: dead-code-and-deps
-description: Detects dead code, unused exports, orphaned files, and dependency issues (unused, outdated, vulnerable). Use during cleanup passes. Always ask before deleting — never silently remove code or dependencies.
+description: Deep cleanup analysis for /cortexloop pass 7. Dead code and dependency proof — go deep on evidence before removal.
 ---
 
 # Dead Code and Dependency Cleanup
@@ -143,9 +143,3 @@ ASK BEFORE REMOVING:
 - [ ] Bundle size unchanged or smaller (if frontend)
 - [ ] No broken imports (grep for removed symbols)
 ```
-
-## Composition
-
-- **Invoke via:** `/cortexloop` (cleanup pass), or when user asks to clean up dead code or audit dependencies
-- **Pairs with:** `simplify` skill (don't remove abstractions that simplify the codebase)
-- **Do not invoke from other personas** — orchestration belongs to `/cortexloop`
