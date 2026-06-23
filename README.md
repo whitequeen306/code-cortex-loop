@@ -1,6 +1,13 @@
 # CodeCortexLoop
 
+![CodeCortexLoop on chokidar — real report: health score + findings](docs/assets/chokidar-launch-preview.png)
+
+<details>
+<summary>Animated demo (optional)</summary>
+
 ![Demo: health score 58 → 82 after Direct mode](docs/assets/cortexloop-demo.gif)
+
+</details>
 
 **One command. Seven domain experts. Self-improving playbook.**
 
@@ -113,6 +120,7 @@ Post-processing scripts: **~416ms** median (measured, zero LLM).
 | [docs/GUIDE.md](docs/GUIDE.md) | Full feature guide, CI, config, Playbook |
 | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | Performance budget methodology |
 | [docs/LAUNCH.md](docs/LAUNCH.md) | Community announcement drafts |
+| [docs/LAUNCH-zh.md](docs/LAUNCH-zh.md) | 推广文案（中文） |
 | [examples/case-studies/](examples/case-studies/) | Real repo analysis outputs |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |

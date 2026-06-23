@@ -1,11 +1,19 @@
 # Launch materials — CodeCortexLoop v2.2.0
 
-Use these drafts when posting to communities. **Lead with the GIF and one case study**, not a feature list.
+Use these drafts when posting to communities. **Lead with the GIF and one case study**, not a feature list. 中文版：[LAUNCH-zh.md](LAUNCH-zh.md)
 
-Assets:
-- GIF: `docs/assets/cortexloop-demo.gif`
-- Case study dashboard: `examples/case-studies/chokidar/docs/cortexloop/report.html`
-- Demo dashboard: `examples/demo-app/docs/cortexloop/report.html`
+Assets (prefer **real case study screenshots** over the demo GIF):
+
+| Asset | Path | Use for |
+|-------|------|---------|
+| **Launch composite (recommended)** | `docs/assets/chokidar-launch-preview.png` | Reddit, Release, README |
+| Hero (score + categories) | `docs/assets/chokidar-report-hero.png` | Twitter, thumbnails |
+| Findings table | `docs/assets/chokidar-report-findings.png` | Second image in thread |
+| Full page | `docs/assets/chokidar-report-full.png` | GitHub Release |
+| Per-case full PNG | `examples/case-studies/<repo>/docs/cortexloop/report-dashboard.png` | Case study README |
+| Demo GIF (optional) | `docs/assets/cortexloop-demo.gif` | Animated fallback only |
+
+Regenerate: `python scripts/capture-dashboard-screenshot.py --case all --launch-assets`
 
 ---
 
