@@ -149,25 +149,19 @@ export const TOOL_TASK_SUPPORT = {
   codex: 'partial',
 };
 
-/** passKey → agent name for Task-tool delegation (OpenCode uses same names; aligned with PASS_PIPELINE). */
-export const OPENCODE_AGENT_NAMES = Object.fromEntries(
+/** passKey → agent name for Task/Agent/SOLO/spawn delegation (aligned with PASS_PIPELINE). */
+export const PASS_AGENT_NAMES = Object.fromEntries(
   PASS_PIPELINE.map((p) => [p.passKey, p.agent]),
 );
 
-/** passKey → agent name for Qoder Agent-tool delegation (aligned with PASS_PIPELINE). */
-export const QODER_AGENT_NAMES = Object.fromEntries(
-  PASS_PIPELINE.map((p) => [p.passKey, p.agent]),
-);
-
-/** passKey → agent name for Trae SOLO custom-agent delegation (same names as PASS_PIPELINE). */
-export const TRAE_AGENT_NAMES = Object.fromEntries(
-  PASS_PIPELINE.map((p) => [p.passKey, p.agent]),
-);
-
-/** passKey → agent name for Codex explicit subagent spawn (TOML agents; aligned with PASS_PIPELINE). */
-export const CODEX_AGENT_NAMES = Object.fromEntries(
-  PASS_PIPELINE.map((p) => [p.passKey, p.agent]),
-);
+/** @deprecated Use PASS_AGENT_NAMES — kept for doc/tool compatibility */
+export const OPENCODE_AGENT_NAMES = PASS_AGENT_NAMES;
+/** @deprecated Use PASS_AGENT_NAMES */
+export const QODER_AGENT_NAMES = PASS_AGENT_NAMES;
+/** @deprecated Use PASS_AGENT_NAMES */
+export const TRAE_AGENT_NAMES = PASS_AGENT_NAMES;
+/** @deprecated Use PASS_AGENT_NAMES */
+export const CODEX_AGENT_NAMES = PASS_AGENT_NAMES;
 
 export const TOOLS_WITH_FULL_TASK_SUPPORT = Object.entries(TOOL_TASK_SUPPORT)
   .filter(([, mode]) => mode === 'full')
@@ -386,7 +380,7 @@ export function validateCrossValidation({
   };
 }
 
-const HANDOFF_SEVERITIES = ['Critical', 'High', 'Medium', 'Low', 'Info'];
+export const VALID_SEVERITIES = ['Critical', 'High', 'Medium', 'Low', 'Info'];
 const HANDOFF_CONFIDENCE = ['high', 'medium'];
 
 export function validatePassHandoff(handoff) {
@@ -397,7 +391,7 @@ export function validatePassHandoff(handoff) {
   if (!handoff.summary || typeof handoff.summary !== 'string') return 'summary is required';
   if (!Array.isArray(handoff.findings)) return 'findings must be an array';
   for (const f of handoff.findings) {
-    if (!f.severity || !HANDOFF_SEVERITIES.includes(f.severity)) return `invalid severity: ${f.severity}`;
+    if (!f.severity || !VALID_SEVERITIES.includes(f.severity)) return `invalid severity: ${f.severity}`;
     if (!f.location || !f.problem) return 'finding missing location or problem';
     if (!f.evidence) return 'finding missing evidence';
     if (!f.confidence || !HANDOFF_CONFIDENCE.includes(f.confidence)) return `invalid confidence: ${f.confidence}`;
@@ -459,10 +453,6 @@ export function resolveWithinWorkspace(filePath, workspaceRoot = process.cwd()) 
   return abs;
 }
 
-export function readJsonWithinWorkspace(filePath, workspaceRoot = process.cwd()) {
-  return readJson(resolveWithinWorkspace(filePath, workspaceRoot));
-}
-
 export function ensureDirFor(filePath) {
   mkdirSync(dirname(filePath), { recursive: true });
 }
@@ -506,24 +496,6 @@ export function scoreColor(score) {
   return '#dc2626';
 }
 
-export function normalizeLocation(location = '') {
-  return String(location)
-    .replace(/\\/g, '/')
-    .replace(/:\d+:\d+$/, '')
-    .replace(/:\d+$/, '')
-    .toLowerCase()
-    .trim();
-}
-
-export function normalizeProblem(problem = '') {
-  return String(problem)
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[`"'"]/g, '')
-    .trim()
-    .slice(0, 120);
-}
-
 /** Location for baseline fingerprint — keeps line numbers to avoid same-file collisions. */
 export function fingerprintLocation(location = '') {
   return String(location).replace(/\\/g, '/').toLowerCase().trim();
@@ -554,7 +526,24 @@ export function findingFingerprint(finding) {
   return djb2Hex(payload);
 }
 
-export const VALID_SEVERITIES = ['Critical', 'High', 'Medium', 'Low', 'Info'];
+/** Load cortexloop.config.json; returns null when file missing. Throws on invalid JSON. */
+export function loadConfig(configPath = 'cortexloop.config.json') {
+  if (!existsSync(configPath)) return null;
+  return readJson(configPath);
+}
+
+export function loadPassesConfig(configPath = 'cortexloop.config.json') {
+  const cfg = loadConfig(configPath);
+  if (!cfg) return {};
+  return cfg.passes ?? {};
+}
+
+/** Default true when crossValidation.enabled is omitted. */
+export function isCrossValidationEnabled(configPath = 'cortexloop.config.json') {
+  const cfg = loadConfig(configPath);
+  if (!cfg) return true;
+  return cfg.crossValidation?.enabled !== false;
+}
 
 /** Ensure report.json was produced by CodeCortexLoop, not hand-edited for CI bypass. */
 export function validateReport(report) {

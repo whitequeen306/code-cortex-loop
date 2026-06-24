@@ -11,6 +11,8 @@ import {
   DEFAULT_HANDOFF_DIR,
   DEFAULT_ORPHAN_DEFERS,
   validateCrossValidation,
+  isCrossValidationEnabled,
+  loadPassesConfig,
   readJson,
 } from './lib/shared.mjs';
 
@@ -39,11 +41,9 @@ function parseArgs(argv) {
   return opts;
 }
 
-function loadPassesConfig(configPath) {
-  if (!existsSync(configPath)) return {};
+function readPassesConfigCli(configPath) {
   try {
-    const cfg = readJson(configPath);
-    return cfg.passes ?? {};
+    return loadPassesConfig(configPath);
   } catch (err) {
     console.error(`Failed to read config ${configPath}: ${err.message}`);
     process.exit(2);
@@ -63,7 +63,15 @@ function loadOrphans(path) {
 
 function main() {
   const opts = parseArgs(process.argv.slice(2));
-  const passesConfig = loadPassesConfig(opts.configPath);
+
+  if (!isCrossValidationEnabled(opts.configPath)) {
+    if (!opts.quiet) {
+      console.log('[cortexloop] Cross-validation disabled in config — skip validation');
+    }
+    process.exit(0);
+  }
+
+  const passesConfig = readPassesConfigCli(opts.configPath);
   const orphans = loadOrphans(opts.orphansPath);
 
   const result = validateCrossValidation({

@@ -6,12 +6,12 @@
  *   node scripts/collect-orphan-defers.mjs [--handoff-dir=DIR] [--config=PATH] [--out=FILE] [--json]
  * Exit: 0 always when run succeeds (orphans may be > 0)
  */
-import { existsSync } from 'node:fs';
 import {
   DEFAULT_HANDOFF_DIR,
   DEFAULT_ORPHAN_DEFERS,
   collectOrphanDefers,
-  readJson,
+  isCrossValidationEnabled,
+  loadPassesConfig,
   writeJson,
 } from './lib/shared.mjs';
 
@@ -42,11 +42,9 @@ function parseArgs(argv) {
   return opts;
 }
 
-function loadPassesConfig(configPath) {
-  if (!existsSync(configPath)) return {};
+function readPassesConfigCli(configPath) {
   try {
-    const cfg = readJson(configPath);
-    return cfg.passes ?? {};
+    return loadPassesConfig(configPath);
   } catch (err) {
     console.error(`Failed to read config ${configPath}: ${err.message}`);
     process.exit(2);
@@ -54,7 +52,20 @@ function loadPassesConfig(configPath) {
 }
 
 export function runCollectOrphanDefers(opts) {
-  const passesConfig = loadPassesConfig(opts.configPath);
+  if (!isCrossValidationEnabled(opts.configPath)) {
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      orphanCount: 0,
+      orphans: [],
+      byTarget: {},
+      warnings: ['crossValidation.enabled is false — orphan collection skipped'],
+      disabled: true,
+    };
+    writeJson(opts.out, payload);
+    return { orphanCount: 0, orphans: [], byTarget: {}, warnings: payload.warnings, payload, outPath: opts.out };
+  }
+
+  const passesConfig = readPassesConfigCli(opts.configPath);
   const result = collectOrphanDefers({ handoffDir: opts.handoffDir, passesConfig });
   const payload = {
     generatedAt: new Date().toISOString(),
@@ -74,11 +85,15 @@ function main() {
   if (opts.json) {
     console.log(JSON.stringify(result.payload, null, 2));
   } else if (!opts.quiet) {
-    console.log(`[cortexloop] Orphan defers: ${result.orphanCount} → ${opts.out}`);
-    for (const w of result.warnings) console.warn(`  warn: ${w}`);
-    if (result.orphanCount > 0) {
-      for (const [target, items] of Object.entries(result.byTarget)) {
-        console.log(`  ${target}: ${items.length} item(s) → re-delegate ${items[0].targetExpert}`);
+    if (result.payload?.disabled) {
+      console.log('[cortexloop] Cross-validation disabled in config — orphan defers skipped');
+    } else {
+      console.log(`[cortexloop] Orphan defers: ${result.orphanCount} → ${opts.out}`);
+      for (const w of result.warnings) console.warn(`  warn: ${w}`);
+      if (result.orphanCount > 0) {
+        for (const [target, items] of Object.entries(result.byTarget)) {
+          console.log(`  ${target}: ${items.length} item(s) → re-delegate ${items[0].targetExpert}`);
+        }
       }
     }
   }

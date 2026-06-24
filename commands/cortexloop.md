@@ -395,13 +395,9 @@ Collect findings from all handoff JSON files (including cross-validation additio
 
 ## Step 4 — Aggregate + Score
 
-1. **Validate cross-validation** (when Step 3.5 ran):
+Prerequisite: Step 3.5c cross-validation passed (`validate-cross-validation.mjs` exit 0) when orphans were collected.
 
-```bash
-node scripts/validate-cross-validation.mjs
-```
-
-2. **Validate handoffs** (fail-fast before scoring):
+1. **Validate handoffs** (fail-fast before scoring):
 
 ```bash
 node scripts/validate-handoffs.mjs
@@ -409,11 +405,11 @@ node scripts/validate-handoffs.mjs
 
 Exit code 1 = missing or invalid handoff — re-run failed pass (Task, Agent, SOLO/spawn delegation, or fallback persona). In CI mode, exit 3.
 
-3. Merge `findings` from all `.cortexloop/handoff/*.json` files for enabled passes
-4. Assign IDs `CL-001`…
-5. Deduplicate same file:line + issue
-6. Compute **health scores** (before)
-7. Write `docs/cortexloop/report.json` always (include `"generatedBy": "cortexloop"` for CI provenance)
+2. Merge `findings` from all `.cortexloop/handoff/*.json` files for enabled passes
+3. Assign IDs `CL-001`…
+4. Deduplicate same file:line + issue
+5. Compute **health scores** (before)
+6. Write `docs/cortexloop/report.json` always (include `"generatedBy": "cortexloop"` for CI provenance)
 
 ## Step 5 — Output
 

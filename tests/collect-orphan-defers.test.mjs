@@ -145,23 +145,3 @@ test('validateCrossValidationEntry requires rejectReason when rejected', () => {
     /rejectReason/,
   );
 });
-
-test('validatePassHandoff accepts crossValidation array', () => {
-  const err = validatePassHandoff({
-    pass: 'review',
-    category: 'correctness',
-    expert: 'code-reviewer',
-    summary: 'ok',
-    findings: [],
-    crossValidation: [
-      {
-        orphanId: 'review←performance:race',
-        discoveredByPass: 'performance',
-        note: 'race',
-        status: 'rejected',
-        rejectReason: 'Already covered in finding CL-001',
-      },
-    ],
-  });
-  assert.equal(err, null);
-});

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { validateHandoffs } from '../scripts/validate-handoffs.mjs';
 import { summarizeRun } from '../scripts/run-summary.mjs';
-import { TOOL_TASK_SUPPORT, TOOLS_WITH_FULL_TASK_SUPPORT, TOOLS_WITH_NATIVE_AGENT_SUPPORT, TOOLS_WITH_PARTIAL_SUPPORT, OPENCODE_AGENT_NAMES, QODER_AGENT_NAMES, TRAE_AGENT_NAMES, CODEX_AGENT_NAMES } from '../scripts/lib/shared.mjs';
+import { TOOL_TASK_SUPPORT, TOOLS_WITH_FULL_TASK_SUPPORT, TOOLS_WITH_NATIVE_AGENT_SUPPORT, TOOLS_WITH_PARTIAL_SUPPORT, PASS_AGENT_NAMES, OPENCODE_AGENT_NAMES } from '../scripts/lib/shared.mjs';
 
 test('validateHandoffs passes when all enabled handoffs exist and valid', () => {
   const dir = join(tmpdir(), `cortexloop-vh-${Date.now()}`);
@@ -74,32 +74,23 @@ test('TOOL_TASK_SUPPORT marks cursor and claude as full', () => {
   assert.ok(!TOOLS_WITH_FULL_TASK_SUPPORT.includes('codex'));
 });
 
-test('OPENCODE_AGENT_NAMES aligns with pipeline experts', () => {
-  assert.equal(OPENCODE_AGENT_NAMES.review, 'code-reviewer');
-  assert.equal(OPENCODE_AGENT_NAMES.performance, 'performance-analyst');
+test('PASS_AGENT_NAMES aligns with pipeline experts', () => {
+  assert.equal(PASS_AGENT_NAMES.review, 'code-reviewer');
+  assert.equal(PASS_AGENT_NAMES.performance, 'performance-analyst');
+  assert.equal(PASS_AGENT_NAMES.security, 'security-auditor');
+  assert.equal(PASS_AGENT_NAMES.cleanup, 'cleanup-curator');
+  assert.equal(OPENCODE_AGENT_NAMES.review, PASS_AGENT_NAMES.review);
 });
 
-test('TOOL_TASK_SUPPORT marks qoder as native with agent name map', () => {
+test('TOOL_TASK_SUPPORT marks qoder as native', () => {
   assert.equal(TOOL_TASK_SUPPORT.qoder, 'native');
   assert.ok(TOOLS_WITH_NATIVE_AGENT_SUPPORT.includes('qoder'));
-  assert.equal(QODER_AGENT_NAMES.review, 'code-reviewer');
-  assert.equal(QODER_AGENT_NAMES.security, 'security-auditor');
-  assert.equal(QODER_AGENT_NAMES.cleanup, 'cleanup-curator');
 });
 
-test('TOOL_TASK_SUPPORT marks trae as partial with agent name map', () => {
+test('TOOL_TASK_SUPPORT marks trae and codex as partial', () => {
   assert.equal(TOOL_TASK_SUPPORT.trae, 'partial');
-  assert.ok(TOOLS_WITH_PARTIAL_SUPPORT.includes('trae'));
-  assert.equal(TRAE_AGENT_NAMES.review, 'code-reviewer');
-  assert.equal(TRAE_AGENT_NAMES.errorHandling, 'silent-failure-hunter');
-  assert.equal(TRAE_AGENT_NAMES.cleanup, 'cleanup-curator');
-});
-
-test('TOOL_TASK_SUPPORT marks codex as partial with agent name map', () => {
   assert.equal(TOOL_TASK_SUPPORT.codex, 'partial');
+  assert.ok(TOOLS_WITH_PARTIAL_SUPPORT.includes('trae'));
   assert.ok(TOOLS_WITH_PARTIAL_SUPPORT.includes('codex'));
   assert.ok(!TOOLS_WITH_FULL_TASK_SUPPORT.includes('codex'));
-  assert.equal(CODEX_AGENT_NAMES.review, 'code-reviewer');
-  assert.equal(CODEX_AGENT_NAMES.security, 'security-auditor');
-  assert.equal(CODEX_AGENT_NAMES.cleanup, 'cleanup-curator');
 });

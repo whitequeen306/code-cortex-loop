@@ -13,7 +13,7 @@ import {
   DEFAULT_HANDOFF_DIR,
   getEnabledPipeline,
   validatePassHandoff,
-  readJson,
+  loadPassesConfig,
 } from './lib/shared.mjs';
 
 function parseArgs(argv) {
@@ -37,11 +37,9 @@ function parseArgs(argv) {
   return opts;
 }
 
-function loadPassesConfig(configPath) {
-  if (!existsSync(configPath)) return {};
+function loadPassesConfigFromOpts(configPath) {
   try {
-    const cfg = readJson(configPath);
-    return cfg.passes ?? {};
+    return loadPassesConfig(configPath);
   } catch (err) {
     console.error(`Failed to read config ${configPath}: ${err.message}`);
     process.exit(2);
@@ -140,7 +138,7 @@ export function validateHandoffs({ handoffDir = DEFAULT_HANDOFF_DIR, passesConfi
 
 function main() {
   const opts = parseArgs(process.argv.slice(2));
-  const passesConfig = loadPassesConfig(opts.configPath);
+  const passesConfig = loadPassesConfigFromOpts(opts.configPath);
   const result = validateHandoffs({ handoffDir: opts.handoffDir, passesConfig });
 
   if (!opts.quiet) {

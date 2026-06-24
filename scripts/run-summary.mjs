@@ -11,7 +11,7 @@ import { dirname, basename, join } from 'node:path';
 import {
   DEFAULT_HANDOFF_DIR,
   getEnabledPipeline,
-  readJson,
+  loadPassesConfig,
 } from './lib/shared.mjs';
 
 /** Rough chars-per-token estimate for English/JSON mixed content. */
@@ -39,11 +39,9 @@ function parseArgs(argv) {
   return opts;
 }
 
-function loadPassesConfig(configPath) {
-  if (!existsSync(configPath)) return {};
+function readPassesConfigLenient(configPath) {
   try {
-    const cfg = readJson(configPath);
-    return cfg.passes ?? {};
+    return loadPassesConfig(configPath);
   } catch {
     return {};
   }
@@ -184,7 +182,7 @@ function renderMarkdown(summary) {
 
 function main() {
   const opts = parseArgs(process.argv.slice(2));
-  const passesConfig = loadPassesConfig(opts.configPath);
+  const passesConfig = readPassesConfigLenient(opts.configPath);
   const summary = summarizeRun({ handoffDir: opts.handoffDir, passesConfig });
 
   const md = renderMarkdown(summary);

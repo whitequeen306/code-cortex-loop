@@ -40,6 +40,7 @@ import {
   savePlaybook,
   savePlaybookZh,
   playbookZhPathFrom,
+  nextPlaybookId,
 } from './lib/shared.mjs';
 
 const { positional, flags, getFlagValue } = parseArgs();
@@ -142,10 +143,6 @@ function recordSelfVerified(playbook, reflectionEntries) {
   let updated = 0;
   const now = new Date().toISOString();
   const bySig = new Map((playbook.entries || []).map((e) => [e.signature, e]));
-  let nextNum = (playbook.entries || []).reduce((max, e) => {
-    const m = /^PB-(\d+)$/.exec(e.id || '');
-    return m ? Math.max(max, Number(m[1])) : max;
-  }, 0);
 
   for (const raw of reflectionEntries) {
     const signature = playbookSignature(raw);
@@ -162,9 +159,8 @@ function recordSelfVerified(playbook, reflectionEntries) {
       applyOutcome(entry, 'self_verified', { context, now });
       updated++;
     } else {
-      nextNum += 1;
       entry = {
-        id: `PB-${String(nextNum).padStart(3, '0')}`,
+        id: nextPlaybookId(playbook.entries),
         signature,
         category: raw.category || 'unknown',
         language: raw.language || 'any',
