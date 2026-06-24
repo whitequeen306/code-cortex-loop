@@ -46,6 +46,12 @@
       "items": { "type": "string" },
       "default": []
     },
+    "crossValidation": {
+      "type": "array",
+      "description": "Step 3.5 defer recycle resolutions — one entry per orphan defer assigned to this pass",
+      "items": { "$ref": "#/$defs/crossValidationEntry" },
+      "default": []
+    },
     "generatedAt": {
       "type": "string",
       "format": "date-time",
@@ -88,6 +94,24 @@
       "properties": {
         "pass": { "type": "string" },
         "note": { "type": "string" }
+      }
+    },
+    "crossValidationEntry": {
+      "type": "object",
+      "required": ["orphanId", "discoveredByPass", "note", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "orphanId": {
+          "type": "string",
+          "description": "From collect-orphan-defers.mjs (stable id)"
+        },
+        "discoveredByPass": { "type": "string" },
+        "discoveredByExpert": { "type": "string" },
+        "note": { "type": "string" },
+        "status": { "type": "string", "enum": ["verified", "rejected"] },
+        "rejectReason": { "type": "string" },
+        "findingLocation": { "type": "string" },
+        "findingProblem": { "type": "string" }
       }
     }
   }

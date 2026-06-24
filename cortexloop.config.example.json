@@ -27,6 +27,9 @@
     "depsOnly": false,
     "askBeforeDelete": true
   },
+  "crossValidation": {
+    "enabled": true
+  },
   "ci": {
     "enabled": false,
     "sarif": true,

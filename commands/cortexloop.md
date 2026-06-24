@@ -309,11 +309,99 @@ If TOML agents or spawn API are unavailable, warn the user — fallback to perso
 
 ### After all passes
 
-Collect findings from all handoff JSON files. Apply suppressions when aggregating in Step 4. Category markdown files are written by experts — orchestrator may add cross-links in `00-summary.md` only.
+Proceed to **Step 3.5 — Cross-validation (defer recycle)** before aggregation.
+
+## Step 3.5 — Cross-validation (defer recycle)
+
+Orchestrator **supervisor** step: recover backward defers so downstream discoveries are not lost. **Do not** analyze code inline — re-delegate to the **target pass expert** only.
+
+### When this runs
+
+After Step 3 completes for all enabled passes. Also after Direct-mode **re-verify** (full Step 3 + 3.5 on same scope).
+
+Skip dispatch when orphan count is 0. Respect `config.crossValidation.enabled` (default `true`).
+
+### 3.5a — Collect orphan defers
+
+```bash
+node scripts/collect-orphan-defers.mjs
+```
+
+Writes `.cortexloop/orphan-defers.json`. An **orphan** is a `deferToLaterPasses` entry whose target pass **already ran** (backward defer).
+
+Print to user when orphans > 0:
+
+```
+⚡ Cross-validation — {N} backward defer(s) need target expert re-run (orchestrator dispatch, not inline analysis).
+```
+
+### 3.5b — Re-delegate by target pass (mandatory when orphans > 0)
+
+Group orphans by `targetPass` (see `byTarget` in manifest). For **each target group**, launch **one** Task / Agent / SOLO / spawn to the **target expert** (same agent as original pass — domain 专权 unchanged).
+
+**Cross-validation delegation prompt:**
+
+```
+CodeCortexLoop cross-validation (defer recycle) — targeted re-run for pass {targetOrder}/7.
+You are {targetExpert}. Domain category: {targetCategory} ONLY.
+
+Read your pass contract: {targetPassContract}
+Scope files: {scopeFileList}
+Prior handoffs: {allHandoffPaths}
+
+Orphan defer items assigned to YOU (from later passes — verify each, do not re-scan whole scope):
+
+{orphanItemsJson}
+
+For EACH orphan item:
+1. Investigate the cited context in scope (narrow focus).
+2. If valid for YOUR category:
+   - Append a scored finding to findings[] in your existing handoff (merge in place).
+   - Update your category markdown report with the new finding.
+   - Append crossValidation[] entry: status "verified", orphanId, findingLocation and/or findingProblem.
+3. If invalid or outside your category:
+   - Append crossValidation[] entry: status "rejected", orphanId, rejectReason (required).
+   - Do NOT score in another category.
+
+Update IN PLACE (do not replace prior findings):
+- Handoff: {targetHandoffFile}
+- Report: {targetCategoryReport}
+
+Load skills: cortexloop-expert-core + your domain depth skills. This supplements Step 3; prior findings stay unless amended with evidence.
+```
+
+Wait for target expert to finish before the next target group. Re-run failed group once.
+
+### 3.5c — Validate resolutions
+
+```bash
+node scripts/validate-cross-validation.mjs
+```
+
+Exit code 1 = orphan without matching `crossValidation` entry on target handoff — re-run that target expert group. CI mode: exit 3.
+
+Then continue to Step 4.
+
+### Orchestrator rules (Step 3.5)
+
+- **Never** score orphan items yourself — dispatch only (Supervisor pattern).
+- **Never** spawn a new “cross-validator” agent — use existing pipeline experts.
+- One target expert may resolve multiple orphans in one invocation.
+- Forward defers (pass 1 → security) are not orphans — handled in normal Step 3 order.
+
+---
+
+Collect findings from all handoff JSON files (including cross-validation additions). Apply suppressions when aggregating in Step 4. Category markdown files are written by experts — orchestrator may add cross-links in `00-summary.md` only.
 
 ## Step 4 — Aggregate + Score
 
-1. **Validate handoffs** (fail-fast before scoring):
+1. **Validate cross-validation** (when Step 3.5 ran):
+
+```bash
+node scripts/validate-cross-validation.mjs
+```
+
+2. **Validate handoffs** (fail-fast before scoring):
 
 ```bash
 node scripts/validate-handoffs.mjs
@@ -321,11 +409,11 @@ node scripts/validate-handoffs.mjs
 
 Exit code 1 = missing or invalid handoff — re-run failed pass (Task, Agent, SOLO/spawn delegation, or fallback persona). In CI mode, exit 3.
 
-2. Merge `findings` from all `.cortexloop/handoff/*.json` files for enabled passes
-3. Assign IDs `CL-001`…
-4. Deduplicate same file:line + issue
-5. Compute **health scores** (before)
-6. Write `docs/cortexloop/report.json` always (include `"generatedBy": "cortexloop"` for CI provenance)
+3. Merge `findings` from all `.cortexloop/handoff/*.json` files for enabled passes
+4. Assign IDs `CL-001`…
+5. Deduplicate same file:line + issue
+6. Compute **health scores** (before)
+7. Write `docs/cortexloop/report.json` always (include `"generatedBy": "cortexloop"` for CI provenance)
 
 ## Step 5 — Output
 
@@ -362,7 +450,7 @@ node scripts/ci-gate.mjs docs/cortexloop/report.json --baseline
 
 Apply per workflow apply-order. After all groups:
 
-1. **Re-verify**: re-run **Step 3 sequential expert pipeline** (read-only) on same scope — mandatory delegation per pass (Task, Agent, or SOLO), not orchestrator inline analysis
+1. **Re-verify**: re-run **Step 3 + Step 3.5** sequential expert pipeline (read-only) on same scope — mandatory delegation per pass (Task, Agent, or SOLO), not orchestrator inline analysis
 2. Write updated `report.json`
 3. Re-run post-processing (history, badge, dashboard)
 4. Output final summary with before→after scores
@@ -401,8 +489,9 @@ node scripts/playbook.mjs feedback --signature=<sig> --outcome=external_verified
 Before Step 4, confirm handoff files exist for each enabled pass:
 
 - `.cortexloop/handoff/01-correctness.json` … through enabled steps (see `passes/README.md`)
+- If Step 3.5 ran: `.cortexloop/orphan-defers.json` and all orphans resolved (`validate-cross-validation.mjs` exit 0)
 
-List handoff paths in the final summary.
+List handoff paths and cross-validation count in the final summary.
 
 Promotion to **verified** tier requires diverse evidence (`verifiedCount >= 2`, `distinctContexts >= 2`, `confidence >= 0.7`). External signals (`external_verified`) outweigh self-report.
 

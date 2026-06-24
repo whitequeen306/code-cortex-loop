@@ -72,3 +72,11 @@ Also write the category markdown report path from your pass contract.
 2. Never inflate severity to create work
 3. Never skip handoff files — orchestrator runs `validate-handoffs.mjs` before scoring
 4. Depth skills tell you **how to go deep inside your domain** — they must not expand which category you score (defer other domains instead)
+
+## Cross-validation (Step 3.5)
+
+If a **later** pass deferred an issue to **your** pass (you already ran in Step 3), orchestrator may re-delegate a **targeted** catch-up. Then:
+
+- Verify only the listed orphan items — do not full-rescan scope
+- Append `crossValidation[]` on your handoff with `orphanId` + `verified` or `rejected`
+- If `verified`, append a scored finding in **your category** and update category markdown

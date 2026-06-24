@@ -57,6 +57,10 @@ Schema: [schemas/pass-handoff.schema.json](../schemas/pass-handoff.schema.json)
 
 Downstream experts read **all prior handoff JSON files** plus scope files. They may incorporate defer notes but must not re-run upstream analysis.
 
+## Cross-validation (Step 3.5)
+
+When pass N defers to pass M where **M < N** (target already ran), orchestrator collects orphans and **re-delegates to the target expert** — not a new role. Target expert appends `crossValidation[]` and any new `findings[]` to their existing handoff. See `commands/cortexloop.md` Step 3.5.
+
 ## Single source of truth
 
 Pass order and paths are defined in `scripts/lib/shared.mjs` → `PASS_PIPELINE`. Keep contracts aligned with that constant.

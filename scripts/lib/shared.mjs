@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
-import { dirname, join, resolve, relative } from 'node:path';
+import { dirname, join, resolve, relative, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 
@@ -15,6 +15,7 @@ export const DEFAULT_PLAYBOOK = '.cortexloop/playbook.json';
 export const DEFAULT_PLAYBOOK_ZH = '.cortexloop/playbook-zh.md';
 export const DEFAULT_REFLECTION = '.cortexloop/reflection.json';
 export const DEFAULT_HANDOFF_DIR = '.cortexloop/handoff';
+export const DEFAULT_ORPHAN_DEFERS = '.cortexloop/orphan-defers.json';
 export const GLOBAL_PLAYBOOK = join(homedir(), '.cortexloop', 'playbook.json');
 export const GLOBAL_PLAYBOOK_ZH = join(homedir(), '.cortexloop', 'playbook-zh.md');
 
@@ -184,8 +185,205 @@ export function getEnabledPipeline(passesConfig = {}) {
   return PASS_PIPELINE.filter((p) => passesConfig[p.passKey] !== false);
 }
 
+export function getPipelineStepByPassKey(passKey) {
+  return PASS_PIPELINE.find((p) => p.passKey === passKey) ?? null;
+}
+
 export function priorHandoffFiles(pipelineStep) {
   return PASS_PIPELINE.filter((p) => p.order < pipelineStep.order).map((p) => p.handoffFile);
+}
+
+/** Stable id for orphan defer recycling (orchestrator Step 3.5). */
+export function orphanDeferId({ targetPass, discoveredByPass, note }) {
+  const slug = String(note ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .slice(0, 48);
+  return `${targetPass}←${discoveredByPass}:${slug || 'defer'}`;
+}
+
+/**
+ * Collect backward defers: a later pass deferred to an earlier pass that already finished.
+ * Forward defers (pass 1 → security) are not orphans.
+ */
+export function collectOrphanDefers({
+  handoffDir = DEFAULT_HANDOFF_DIR,
+  passesConfig = {},
+} = {}) {
+  const enabled = getEnabledPipeline(passesConfig);
+  const enabledKeys = new Set(enabled.map((p) => p.passKey));
+  const orphans = [];
+  const warnings = [];
+  const seen = new Set();
+
+  for (const step of enabled) {
+    const filePath = join(handoffDir, basename(step.handoffFile));
+    if (!existsSync(filePath)) continue;
+
+    let handoff;
+    try {
+      handoff = JSON.parse(readFileSync(filePath, 'utf8'));
+    } catch (err) {
+      warnings.push(`Could not parse ${filePath}: ${err.message}`);
+      continue;
+    }
+
+    const defers = handoff.deferToLaterPasses ?? [];
+    for (const defer of defers) {
+      const targetKey = defer?.pass;
+      const note = defer?.note ?? '';
+      if (!targetKey || !note.trim()) {
+        warnings.push(`${basename(filePath)}: defer missing pass or note`);
+        continue;
+      }
+
+      const targetStep = getPipelineStepByPassKey(targetKey);
+      if (!targetStep) {
+        warnings.push(`${basename(filePath)}: unknown defer target pass "${targetKey}"`);
+        continue;
+      }
+
+      if (!enabledKeys.has(targetKey)) {
+        warnings.push(
+          `${basename(filePath)}: defer to disabled pass "${targetKey}" — enable pass or remove defer`,
+        );
+        continue;
+      }
+
+      // Backward defer: target pass ran before discoverer
+      if (targetStep.order >= step.order) continue;
+
+      const id = orphanDeferId({ targetPass: targetKey, discoveredByPass: step.passKey, note });
+      if (seen.has(id)) continue;
+      seen.add(id);
+
+      orphans.push({
+        id,
+        targetPass: targetKey,
+        targetExpert: targetStep.expert,
+        targetOrder: targetStep.order,
+        targetHandoffFile: targetStep.handoffFile,
+        targetCategoryReport: targetStep.categoryReport,
+        targetPassContract: targetStep.passContract,
+        discoveredByPass: step.passKey,
+        discoveredByExpert: step.expert,
+        discoveredOrder: step.order,
+        sourceHandoffFile: step.handoffFile,
+        note: note.trim(),
+      });
+    }
+  }
+
+  const byTarget = {};
+  for (const o of orphans) {
+    if (!byTarget[o.targetPass]) byTarget[o.targetPass] = [];
+    byTarget[o.targetPass].push(o);
+  }
+
+  return {
+    orphanCount: orphans.length,
+    orphans,
+    byTarget,
+    warnings,
+    enabledPassCount: enabled.length,
+  };
+}
+
+const CROSS_VALIDATION_STATUSES = ['verified', 'rejected'];
+
+export function validateCrossValidationEntry(entry) {
+  if (!entry || typeof entry !== 'object') return 'crossValidation entry must be an object';
+  if (!entry.orphanId || typeof entry.orphanId !== 'string') return 'orphanId is required';
+  if (!entry.discoveredByPass || typeof entry.discoveredByPass !== 'string') {
+    return 'discoveredByPass is required';
+  }
+  if (!entry.note || typeof entry.note !== 'string') return 'note is required';
+  if (!entry.status || !CROSS_VALIDATION_STATUSES.includes(entry.status)) {
+    return `invalid crossValidation status: ${entry.status}`;
+  }
+  if (entry.status === 'rejected' && !entry.rejectReason) {
+    return 'rejectReason required when status is rejected';
+  }
+  if (entry.status === 'verified' && !entry.findingLocation && !entry.findingProblem) {
+    return 'verified entry needs findingLocation or findingProblem';
+  }
+  return null;
+}
+
+/** Ensure every orphan defer has a matching crossValidation resolution on the target handoff. */
+export function validateCrossValidation({
+  handoffDir = DEFAULT_HANDOFF_DIR,
+  passesConfig = {},
+  orphans = null,
+} = {}) {
+  const collected = orphans ?? collectOrphanDefers({ handoffDir, passesConfig }).orphans;
+  const errors = [];
+  const warnings = [];
+
+  if (collected.length === 0) {
+    return { ok: true, orphanCount: 0, resolvedCount: 0, errors, warnings };
+  }
+
+  const handoffsByPass = new Map();
+  for (const step of getEnabledPipeline(passesConfig)) {
+    const filePath = join(handoffDir, basename(step.handoffFile));
+    if (!existsSync(filePath)) continue;
+    try {
+      handoffsByPass.set(step.passKey, JSON.parse(readFileSync(filePath, 'utf8')));
+    } catch (err) {
+      errors.push(`Invalid JSON: ${filePath} (${err.message})`);
+    }
+  }
+
+  let resolvedCount = 0;
+  for (const orphan of collected) {
+    const target = handoffsByPass.get(orphan.targetPass);
+    if (!target) {
+      errors.push(`Orphan ${orphan.id}: missing target handoff for pass ${orphan.targetPass}`);
+      continue;
+    }
+
+    const entries = target.crossValidation ?? [];
+    const match = entries.find((e) => e.orphanId === orphan.id);
+    if (!match) {
+      const notePreview =
+        orphan.note.length > 80 ? `${orphan.note.slice(0, 80)}…` : orphan.note;
+      errors.push(
+        `Orphan ${orphan.id} unresolved: ${orphan.discoveredByExpert} → ${orphan.targetExpert} ("${notePreview}")`,
+      );
+      continue;
+    }
+
+    const entryErr = validateCrossValidationEntry(match);
+    if (entryErr) {
+      errors.push(`Orphan ${orphan.id}: ${entryErr}`);
+      continue;
+    }
+
+    if (match.status === 'verified') {
+      const hasFinding = (target.findings ?? []).some(
+        (f) =>
+          (match.findingLocation && f.location === match.findingLocation) ||
+          (match.findingProblem && f.problem === match.findingProblem),
+      );
+      if (!hasFinding) {
+        warnings.push(
+          `Orphan ${orphan.id} verified but no matching finding in ${orphan.targetHandoffFile} — check findings[]`,
+        );
+      }
+    }
+
+    resolvedCount += 1;
+  }
+
+  return {
+    ok: errors.length === 0,
+    orphanCount: collected.length,
+    resolvedCount,
+    errors,
+    warnings,
+  };
 }
 
 const HANDOFF_SEVERITIES = ['Critical', 'High', 'Medium', 'Low', 'Info'];
@@ -210,6 +408,13 @@ export function validatePassHandoff(handoff) {
   }
   if (handoff.openQuestions != null && !Array.isArray(handoff.openQuestions)) {
     return 'openQuestions must be an array';
+  }
+  if (handoff.crossValidation != null) {
+    if (!Array.isArray(handoff.crossValidation)) return 'crossValidation must be an array';
+    for (const entry of handoff.crossValidation) {
+      const cvErr = validateCrossValidationEntry(entry);
+      if (cvErr) return `crossValidation: ${cvErr}`;
+    }
   }
   return null;
 }

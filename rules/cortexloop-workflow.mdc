@@ -72,7 +72,17 @@ Category reports live under `docs/cortexloop/`. Presets disable passes via `conf
 | **partial** | Trae, Codex | Trae: SOLO Coder delegation · Codex: explicit sequential TOML subagent spawn |
 | **fallback** | Unknown / misconfigured | Single session; print fallback warning; still write handoffs in order |
 
-Before scoring, run `node scripts/validate-handoffs.mjs` (fail-fast if passes incomplete).
+Before scoring, run:
+
+```bash
+node scripts/collect-orphan-defers.mjs          # Step 3.5a
+node scripts/validate-cross-validation.mjs      # Step 3.5c (skip dispatch when 0 orphans)
+node scripts/validate-handoffs.mjs              # Step 4
+```
+
+### Cross-validation (Step 3.5 — orchestrator supervisor)
+
+After serial passes, **backward defers** are orphans. Orchestrator re-delegates to the **target expert** (domain 专权 unchanged). Expert merges `crossValidation[]` + new `findings[]` into existing handoff. Config: `crossValidation.enabled` (default true).
 
 ### Handoff protocol
 
@@ -212,7 +222,7 @@ After **each logical group**: run tests + lint; revert group on failure.
 
 ## Re-Verify (Direct mode only, after all fixes)
 
-1. Re-run **sequential expert pipeline** (Step 3) read-only on same scope — mandatory Task per enabled pass
+1. Re-run **sequential expert pipeline + cross-validation** (Step 3 + 3.5) read-only on same scope — mandatory Task per enabled pass
 2. Recompute health scores → **after** scores
 3. Confirm fixed IDs no longer appear (or marked resolved)
 4. Report regressions if new Critical/High findings appear
