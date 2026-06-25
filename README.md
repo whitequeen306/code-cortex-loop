@@ -6,68 +6,30 @@
 
 [![健康分徽章](examples/demo-app/.cortexloop/health-badge.svg)](examples/demo-app/docs/cortexloop/report.html)
 
-## 全流程（自建索引 → MAP → Pass 1–7 → 自进化）
+## 它怎么跑完一整圈？
 
-在聊天里输入 `/cortexloop` 后，Orchestrator 按固定步骤执行。**磁盘是接力总线**，聊天窗口只做调度；大项目也不会在 Pass 1 之后断链。
+你在聊天里输入 `/cortexloop`，相当于请来一位**调度员**，后面跟着七位**分工明确的审查专家**（正确性、安全、测试、错误处理、性能、精简、清理）。调度员自己不读你的全部代码，而是负责排期、收报告、算健康分；真正看代码的是七位专家，各干各的领域，按顺序接力。
 
-```mermaid
-flowchart TB
-  subgraph prep [准备]
-    Q["Step 0 选模式 Report/Direct + scope"]
-    P0["Step 0.5 playbook query 召回已验证模式"]
-    R1["Step 1 init-run 按运行时间建 run 目录"]
-  end
+**第一次跑某个项目**，建议先用 **Report 模式**：只诊断、不改代码，你看完分数和报告再决定要不要修。
 
-  subgraph index [自建文件索引]
-    M1["Step 2a build-scope-manifest scope 落盘"]
-    M2["Step 2b CortexScope Index MAP 热点图"]
-  end
+**整个流程可以概括成五段：**
 
-  subgraph depth [七专家深扫]
-    P["Step 3 Pass 1–7 子 agent 串行"]
-    CV["Step 3.5 跨 pass defer 回收"]
-  end
+**① 记住这次运行**  
+每次执行都会按**本地时间**新建一份运行记录（例如「2026年6月25日 14:30」），报告放在独立文件夹里，不会盖掉你上次的结论。
 
-  subgraph out [产出]
-    AGG["Step 4–5 聚合 report + runs 归档"]
-    SYNC["Step 5b sync-run-latest 看板/CI 快照"]
-  end
+**② 先建「该看哪里」的索引**  
+工具先用 Git 弄清本次要审查哪些文件。项目很大（超过大约一百个文件）时，会再多做一步 **MAP**：像地图一样标出改动多、被大量引用、容易出问题的区域，让后面的专家**先盯重点**，而不是四百个文件盲目乱翻。索引和地图都写在磁盘上，不会把文件名塞进聊天窗口把 AI 撑爆。
 
-  subgraph direct [Direct 可选]
-    FIX["分组修复 + 每步测试"]
-    RV["re-verify 再跑 Pass 1–7"]
-  end
+**③ 七轮专家审查**  
+七位专家依次上岗，每人只在独立会话里工作，读完前面专家的简要交接，再深入自己负责的那一类问题。大项目里会优先看 MAP 标出的热点，也会抽样扫一些「冷门」目录，避免只查热门文件夹。
 
-  subgraph evolve [自进化]
-    REF["Step 6 reflect 追加 08-reflection"]
-    PB["playbook record 写入 playbook.json"]
-  end
+**④ 出报告**  
+汇总成健康分、分类说明和可打开的 HTML 看板。若选 **Direct 模式**，会按严重程度分批改代码、跑测试，改完再**重新审查一遍**确认没修坏、没漏修。
 
-  NEXT["下次 /cortexloop → Step 0.5 优先 recall"]
+**⑤ 自进化，供下次使用**  
+Direct 且复验通过后，工具会把**可复用的修复经验**写进项目内的 Playbook。下次再跑 `/cortexloop`，会**先翻翻以前验证过的套路**，再重新建索引、做 MAP、走七轮审查——形成「越用越懂这个项目」的闭环。给人看的进化笔记追加在同一份日志里，不会每次清空。
 
-  Q --> P0 --> R1 --> M1 --> M2 --> P --> CV --> AGG --> SYNC
-  AGG --> FIX --> RV --> REF --> PB --> NEXT
-  P0 -.->|"verified 模式"| P
-  NEXT -.-> P0
-```
-
-| 阶段 | 做什么 | 关键产物 |
-|------|--------|----------|
-| **0. 启动** | 选 Report / Direct / CI，选 recent / whole | 用户意图 |
-| **0.5 召回** | 从 Playbook 查**已验证**修复模式（候选默认不可见） | 调查优先级提示 |
-| **1. Run 归档** | `init-run.mjs` 创建 `docs/cortexloop/runs/2026-06-25_14-30/`，**运行时间可读**（如 `2026年6月25日 14:30`） | `.cortexloop/run-meta.json` |
-| **2a. Scope 索引** | Git 收集 scope，**路径落盘不进 prompt** | `scope-manifest.json` · `scope-paths.json` |
-| **2b. MAP** | **CortexScope Index** 秒级建热点图（churn · import 图 · pattern · 入口启发式）；>100 文件自动启用 | `scope-map.json` |
-| **3. Pass 1–7** | 7 路专家**子 agent 串行**；优先 hotspot + mustReview + longTailSample；handoff 落盘 | `{runDir}/01–07*.md` · `.cortexloop/handoff/*.json` |
-| **3.5** | 回收跨 pass 孤儿 defer | 补全 handoff |
-| **4–5. 报告** | 健康分、findings、HTML 看板；**不覆盖历史 run** | `{runDir}/report.json` · `00-summary.md` |
-| **5b. 同步** | 最新 run 复制到 `docs/cortexloop/` 供 CI/徽章 | `report.json`（latest） |
-| **Direct** | 按 severity 分组修复 → 测试 → **re-verify** 再扫一遍 | 修复前 → 修复后分数 |
-| **6. 自进化** | reflect → **追加** `08-reflection.md` → `playbook record` | `.cortexloop/playbook.json`（下次 Step 0.5 用） |
-
-**闭环一句话：** 自建 scope/MAP 索引告诉专家「先查哪」→ 七 pass 深扫并归档 → Direct 修完复验 → Playbook 记住模式 → **下次运行先 recall，再索引、再 MAP、再 Pass**。
-
-推荐首次使用：**Report 看分与报告 → 认可后再 Direct**。
+**一句话：** 先建索引、画地图 → 七专家按领域深查 → 报告归档 →（可选）自动修复并复验 → 经验写入 Playbook → 下次带着记忆再来。
 
 ---
 
