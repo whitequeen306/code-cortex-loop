@@ -1,7 +1,18 @@
 {
   "$schema": "./schemas/cortexloop-config.schema.json",
   "preset": "default",
-  "scope": "recent",
+  "scope": {
+    "mode": "recent",
+    "mapThreshold": 100,
+    "mapEnrichThreshold": 0.7,
+    "longTailSampleCount": 20,
+    "mapWeights": {
+      "churn": 0.3,
+      "importHub": 0.3,
+      "density": 0.2,
+      "patterns": 0.2
+    }
+  },
   "passes": {
     "review": true,
     "security": true,
