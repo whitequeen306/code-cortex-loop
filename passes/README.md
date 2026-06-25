@@ -38,6 +38,15 @@ Each expert writes:
 
 Schema: [schemas/pass-handoff.schema.json](../schemas/pass-handoff.schema.json)
 
+## Context management (large projects)
+
+- Scope paths live in `.cortexloop/scope-paths.json` — never inline in orchestrator prompts
+- Orchestrator reads `.cortexloop/handoff-summary.json` — not full handoff JSON
+- Experts read prior handoffs **in their own subagent session** from disk
+- Experts return **PASS_COMPLETE block only** to orchestrator after writing artifacts
+
+See `commands/cortexloop.md` Step 2 / Step 2.5 and `rules/cortexloop-workflow.mdc`.
+
 ```json
 {
   "pass": "security",

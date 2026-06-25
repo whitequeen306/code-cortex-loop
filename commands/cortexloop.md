@@ -17,6 +17,7 @@ You are the **CodeCortexLoop orchestrator** — conductor only. You bootstrap, s
 5. Experts are launched per tool (Step 0.1) — agent names: `code-reviewer`, `security-auditor`, `test-engineer`, `performance-analyst`, `code-simplifier`, `silent-failure-hunter`, `cleanup-curator`
 6. Read `.cortexloopignore` if present
 7. Ensure `.cortexloop/handoff/` exists (experts write handoff JSON here)
+8. Ensure `.cortexloop/` exists for scope manifest, run-state, context-anchor (Step 2)
 
 ### Step 0.1 — Detect tool subagent support
 
@@ -163,9 +164,98 @@ Use output as **where to investigate first** during Step 3. Each expert runs its
 
 - **Recent changes** | **Whole project**
 
-## Step 2 — Scope Files
+## Step 2 — Scope Files (Context-Safe)
 
-Use git commands from `cortexloop-workflow.mdc`. Apply `config.exclude` and `.cortexloopignore`.
+Use git scope rules from `cortexloop-workflow.mdc`. Apply `config.exclude` and `.cortexloopignore`.
+
+**Never inline file paths in orchestrator messages or Task prompts.** Large scopes (100+ files) must use disk artifacts.
+
+### 2a — Build scope manifest
+
+```bash
+node scripts/build-scope-manifest.mjs --mode=recent
+# or whole project:
+node scripts/build-scope-manifest.mjs --mode=whole
+```
+
+Writes:
+- `.cortexloop/scope-manifest.json` — fileCount, byDirectory, pathsFile pointer
+- `.cortexloop/scope-paths.json` — full path list (experts read on disk)
+
+Print to user: **fileCount + scopeMode only** — not the path list.
+
+Initialize run state + context anchor:
+
+```bash
+node scripts/compact-context.mjs --init --mode=<report|direct> --scope-manifest=.cortexloop/scope-manifest.json
+```
+
+Orchestrator: read `.cortexloop/context-anchor.md` and `.cortexloop/run-state.json` at Step 3 start — **not** prior chat history.
+
+### 2b — Map phase (when `requiresMap: true` in manifest, default threshold 100 files)
+
+When scope is large, run **Map before Depth** — do not send 7 experts to blindly scan every file.
+
+Launch one **explore** or lightweight Task with this prompt:
+
+```
+CodeCortexLoop MAP phase — repository risk map only (no category findings yet).
+Read: .cortexloop/scope-manifest.json and .cortexloop/scope-paths.json
+Use directory aggregation + grep/codegraph to identify hotspots (auth, API boundaries, data layer, recent churn).
+Write: .cortexloop/scope-map.json
+
+Schema:
+{
+  "version": "2.2",
+  "generatedAt": "<ISO>",
+  "fileCount": <n>,
+  "hotspots": [
+    { "path": "<dir or file glob>", "reason": "...", "riskLevel": "high|medium|low", "priority": 1 }
+  ],
+  "recentChangeFocus": ["<paths>"],
+  "mapMode": true
+}
+
+Do NOT write handoff JSON or category reports — map only.
+Return to orchestrator: hotspot count + 1-2 sentence summary only.
+```
+
+After map exists, depth passes (Step 3) prioritize **hotspots + recentChangeFocus** from scope-map; use manifest pathsFile for on-demand fetches only.
+
+Update run state:
+
+```bash
+node scripts/compact-context.mjs --pass=0 --next-pass=1 --scope-map=.cortexloop/scope-map.json
+```
+
+## Step 2.5 — Thin Orchestrator Context Budget
+
+Orchestrator session MUST stay thin — disk is the relay bus.
+
+### ALLOWED in orchestrator context
+
+- `.cortexloop/context-anchor.md` (structured anchor)
+- `.cortexloop/run-state.json` (nextPass, completedPasses)
+- `.cortexloop/handoff-summary.json` (compact pass summaries)
+- Pass/file existence checks (Test-Path, list dir) — **not** Read of full reports
+
+### FORBIDDEN in orchestrator context
+
+- Pasting subagent return text, category markdown, or handoff JSON
+- Inline `{scopeFileList}` or enumerating hundreds of paths
+- Summarizing Pass N findings in prose — use `handoff-summary.mjs` instead
+- Announcing "starting Pass N+1" **without** launching Task in the **same turn**
+
+### One pass per turn (mandatory)
+
+After each pass completes:
+
+1. Verify disk artifacts exist (handoff JSON + category md)
+2. `node scripts/handoff-summary.mjs --through={N}`
+3. `node scripts/compact-context.mjs --pass={N} --next-pass={N+1}`
+4. **Immediately** launch Task for pass N+1 — no end-of-turn until Task is invoked
+
+If context feels heavy (~70% budget): re-read `.cortexloop/context-anchor.md` only; do not reload expert outputs.
 
 ## Step 3 — Sequential Expert Pipeline (Read-Only)
 
@@ -173,7 +263,9 @@ Use git commands from `cortexloop-workflow.mdc`. Apply `config.exclude` and `.co
 
 - Do **not** inline any pass analysis (no reading source to produce findings yourself)
 - Do **not** skip expert delegation because a preset is small or scope is narrow
-- Do **not** parallelize passes — order is fixed; each expert reads prior handoffs
+- Do **not** parallelize passes — order is fixed; each expert reads prior handoffs from **disk**
+- Do **not** paste expert outputs into this session — verify artifacts + read `handoff-summary.json` only
+- Do **not** end a turn after pass N without Task for pass N+1 when more passes remain
 
 ### Pipeline order
 
@@ -191,14 +283,20 @@ Run enabled passes in this order (see `passes/README.md` and `passes/01-correctn
 
 ### Expert delegation prompt (shared by Task and Agent)
 
-Use this body for every pass (fill placeholders from the pass contract and pipeline table):
+Use this body for every pass (fill placeholders from the pass contract and pipeline table).
+**Never substitute inline path lists** — always reference manifest + map on disk.
 
 ```
 You are CodeCortexLoop pass {N}/7 — {ExpertTitle}.
 Read and follow: {passContractPath}
-Scope files: {scopeFileList}
-Prior handoffs (read all): {priorHandoffPaths or "none"}
-Playbook (this category only): run playbook.mjs query --category={category} --lang={lang} --global-merge
+
+Scope (read on disk — on-demand retrieval only):
+- Manifest: .cortexloop/scope-manifest.json
+- Paths list: .cortexloop/scope-paths.json (read slices as needed; use grep/glob/codegraph)
+- Scope map (if present): .cortexloop/scope-map.json — prioritize hotspots + recentChangeFocus
+
+Prior handoffs (read from disk in YOUR subagent session): {priorHandoffPaths or "none"}
+Playbook (this category only): node scripts/playbook.mjs query --category={category} --lang={lang} --global-merge
 
 Load skills in order: `cortexloop-expert-core` first, then domain depth skill(s) listed in the pass contract. Do not load other passes' domain skills.
 
@@ -209,17 +307,34 @@ Deliverables (required before you finish):
 2. {handoffFilePath} — JSON per schemas/pass-handoff.schema.json
 
 Every scored finding: Evidence + Confidence (high|medium). Apply breadth→depth gate from cortexloop-workflow.mdc.
+
+Return to orchestrator (ONLY this block — no full report paste):
+PASS_COMPLETE
+pass: {N}
+findingCount: <n>
+deferCount: <n>
+summary: <1-3 sentences max>
+handoffPath: {handoffFilePath}
+reportPath: {categoryReportPath}
 ```
 
 ### Per-pass procedure (Task — Cursor / Claude Code / OpenCode)
 
 For each enabled pass, **must** launch Task and wait for completion before the next pass:
 
-1. Read the pass contract (`passes/XX-*.md`)
-2. Launch Task with matching subagent name (e.g. `code-reviewer` for pass 1). Cursor/Claude: use `subagent_type`. OpenCode: use the Task tool with the same agent id (must exist in `~/.config/opencode/agents/` with `mode: subagent`).
-3. Pass the shared delegation prompt above. Cursor: prefer `run_in_background: false`.
-4. Verify expert wrote **both** category markdown and handoff JSON (paths in pass contract)
-5. If handoff missing or invalid, re-run that pass Task once; then fail the run with analysis error (CI exit 3)
+1. Read `.cortexloop/run-state.json` → confirm `nextPass` matches current pass
+2. Read the pass contract (`passes/XX-*.md`) — orchestrator may skim; expert loads full contract in subagent
+3. Launch Task with matching subagent name (e.g. `code-reviewer` for pass 1). Cursor/Claude: use `subagent_type`. OpenCode: use the Task tool with the same agent id (must exist in `~/.config/opencode/agents/` with `mode: subagent`).
+4. Pass the shared delegation prompt above. Cursor: prefer `run_in_background: false`.
+5. On Task return: accept **PASS_COMPLETE block only** — do NOT Read full handoff/report into orchestrator session
+6. Verify expert wrote **both** category markdown and handoff JSON (existence check or `validate-handoffs.mjs` partial)
+7. Run context compaction:
+   ```bash
+   node scripts/handoff-summary.mjs --through={N}
+   node scripts/compact-context.mjs --pass={N} --next-pass={N+1}
+   ```
+8. If more passes remain: **immediately** launch Task for pass N+1 in the **same turn** — forbidden to stop after prose-only "starting next pass"
+9. If handoff missing or invalid, re-run that pass Task once; then fail the run with analysis error (CI exit 3)
 
 **OpenCode manual fallback:** `@code-reviewer` then `@security-auditor` … with the same prompt body if Task is denied by permissions.
 
@@ -346,8 +461,11 @@ CodeCortexLoop cross-validation (defer recycle) — targeted re-run for pass {ta
 You are {targetExpert}. Domain category: {targetCategory} ONLY.
 
 Read your pass contract: {targetPassContract}
-Scope files: {scopeFileList}
-Prior handoffs: {allHandoffPaths}
+Scope (read on disk):
+- Manifest: .cortexloop/scope-manifest.json
+- Paths: .cortexloop/scope-paths.json
+- Scope map (if present): .cortexloop/scope-map.json
+Prior handoffs (read from disk): {allHandoffPaths}
 
 Orphan defer items assigned to YOU (from later passes — verify each, do not re-scan whole scope):
 

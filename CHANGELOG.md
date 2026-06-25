@@ -2,6 +2,23 @@
 
 All notable changes to CodeCortexLoop are documented here.
 
+## [2.2.1] - 2026-06-25
+
+### Added
+- **Large-project context engineering** — disk-as-relay-bus for 7-pass pipeline on 600+ file scopes
+- `scripts/build-scope-manifest.mjs` — scope paths on disk; never inline in orchestrator prompts
+- `scripts/handoff-summary.mjs` — compact pass summaries for thin orchestrator
+- `scripts/compact-context.mjs` — structured `context-anchor.md` + `run-state.json` after each pass
+- Map → Depth phase when `fileCount > scope.mapThreshold` (default 100)
+- `PASS_COMPLETE` return protocol — experts write full artifacts; orchestrator receives status only
+
+### Changed
+- `commands/cortexloop.md` — Step 2/2.5 context-safe scope, one-pass-per-turn Task chain
+- `rules/cortexloop-workflow.mdc` — scope manifest, map phase, compaction hooks
+- `passes/*.md` + `cortexloop-expert-core` — ephemeral subagent context + on-demand retrieval
+- `scripts/lib/shared.mjs` — scope/context path constants + handoff summary helpers
+- README — documents borrowed methods (CodeDelegator, Magistrate, CAT, Cursor Subagents) and problems solved
+
 ## [2.2.0] - 2026-06-23
 
 ### Added

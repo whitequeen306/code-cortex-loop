@@ -16,6 +16,13 @@ export const DEFAULT_PLAYBOOK_ZH = '.cortexloop/playbook-zh.md';
 export const DEFAULT_REFLECTION = '.cortexloop/reflection.json';
 export const DEFAULT_HANDOFF_DIR = '.cortexloop/handoff';
 export const DEFAULT_ORPHAN_DEFERS = '.cortexloop/orphan-defers.json';
+export const DEFAULT_SCOPE_MANIFEST = '.cortexloop/scope-manifest.json';
+export const DEFAULT_SCOPE_PATHS = '.cortexloop/scope-paths.json';
+export const DEFAULT_SCOPE_MAP = '.cortexloop/scope-map.json';
+export const DEFAULT_RUN_STATE = '.cortexloop/run-state.json';
+export const DEFAULT_CONTEXT_ANCHOR = '.cortexloop/context-anchor.md';
+export const DEFAULT_HANDOFF_SUMMARY = '.cortexloop/handoff-summary.json';
+export const DEFAULT_MAP_THRESHOLD = 100;
 export const GLOBAL_PLAYBOOK = join(homedir(), '.cortexloop', 'playbook.json');
 export const GLOBAL_PLAYBOOK_ZH = join(homedir(), '.cortexloop', 'playbook-zh.md');
 
@@ -866,4 +873,61 @@ export function nextPlaybookId(entries) {
     if (m) max = Math.max(max, Number(m[1]));
   }
   return `PB-${String(max + 1).padStart(3, '0')}`;
+}
+
+/** Scope / context management defaults (override via cortexloop.config.json → scope). */
+export function loadScopeConfig(configPath = 'cortexloop.config.json') {
+  const cfg = loadConfig(configPath);
+  const scope = cfg?.scope ?? {};
+  return {
+    mapThreshold: scope.mapThreshold ?? DEFAULT_MAP_THRESHOLD,
+    exclude: scope.exclude ?? [],
+    mode: scope.mode ?? null,
+  };
+}
+
+export function aggregatePathsByDirectory(paths, depth = 2) {
+  const counts = {};
+  for (const raw of paths) {
+    const normalized = String(raw).replace(/\\/g, '/');
+    const parts = normalized.split('/').filter(Boolean);
+    const key = parts.slice(0, depth).join('/') || '.';
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return Object.entries(counts)
+    .map(([dir, count]) => ({ dir, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export function summarizeHandoffFile(handoffPath) {
+  if (!existsSync(handoffPath)) {
+    return { path: handoffPath, ok: false, error: 'missing' };
+  }
+  try {
+    const handoff = JSON.parse(readFileSync(handoffPath, 'utf8'));
+    return {
+      path: handoffPath,
+      ok: true,
+      pass: handoff.pass ?? null,
+      category: handoff.category ?? null,
+      expert: handoff.expert ?? null,
+      summary: String(handoff.summary ?? '').slice(0, 280),
+      findingCount: Array.isArray(handoff.findings) ? handoff.findings.length : 0,
+      deferCount: Array.isArray(handoff.deferToLaterPasses) ? handoff.deferToLaterPasses.length : 0,
+      openQuestionCount: Array.isArray(handoff.openQuestions) ? handoff.openQuestions.length : 0,
+    };
+  } catch (err) {
+    return { path: handoffPath, ok: false, error: err.message };
+  }
+}
+
+export function summarizeHandoffsThrough({
+  handoffDir = DEFAULT_HANDOFF_DIR,
+  throughOrder = 7,
+  passesConfig = {},
+} = {}) {
+  const enabled = getEnabledPipeline(passesConfig).filter((p) => p.order <= throughOrder);
+  return enabled.map((step) =>
+    summarizeHandoffFile(join(handoffDir, basename(step.handoffFile))),
+  );
 }

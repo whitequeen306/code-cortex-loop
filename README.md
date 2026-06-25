@@ -15,6 +15,74 @@
 | **三种模式** | Report（只诊断）· Direct（修复+复验）· CI（门禁） |
 | **Playbook** | 项目内学习修复模式（候选/已验证，防幻觉） |
 | **零依赖脚本** | 看板、徽章、history、ci-gate 纯 Node，无 npm 依赖 |
+| **大项目上下文工程** | 磁盘接力 + Map→Depth + 结构化压缩；600+ 文件 scope 下 7 pass 不断链 |
+
+---
+
+## 大项目上下文工程
+
+> 借鉴 SWE-Agent 长程上下文管理、CodeDelegator 角色分离、Magistrate/RepoReviewer 分层审查、Cursor Subagents 隔离上下文等思路，解决 **「Pass 1 跑完、Pass 2 起不来」** 的真实痛点——不是压缩分析质量，而是让 orchestrator **永远保持瘦身**。
+
+### 要解决的难题
+
+| 症状 | 根因 |
+|------|------|
+| Pass 1 完成后主会话说「启动 Pass 2」却不 Task | orchestrator 上下文被 Pass 1 全文撑爆 |
+| 607 个文件 inline 进 prompt | scope 列表占满 token，调度层先于分析层崩溃 |
+| 用户发「继续」后长时间无响应 | 接近满的上下文 + 二次规划 → Cursor 超时 |
+
+**旧模式**：聊天窗口 = 接力总线 → 大项目必断。  
+**新模式**：**磁盘 = 接力总线**，聊天窗口只做调度。
+
+### 借鉴的方法 → CodeCortexLoop 落地
+
+| 思路 | 业界参考 | 我们怎么做 |
+|------|----------|------------|
+| **Thin Orchestrator** | CodeDelegator、agent-review-orchestrator | 主会话只读 anchor/summary；禁止粘贴专家报告 |
+| **Artifact-driven Handoff** | Cursor Subagents 文档 | 全量 handoff/report 落盘；orchestrator 只收 `PASS_COMPLETE` |
+| **On-demand Retrieval** | Claude Code、Confucius SDK | `scope-manifest.json` + `scope-paths.json`；专家 grep/codegraph 按需读 |
+| **Map → Depth** | Magistrate、RepoReviewer、LLM Map-Reduce | `fileCount > 100` 先 map hotspots，再 7 pass 定点深扫 |
+| **Structured Compaction** | CAT (ACL 2026 Findings)、Zylos Research | 每 pass 后写 `context-anchor.md` + `handoff-summary.json` |
+
+### 架构：磁盘即接力总线
+
+```mermaid
+flowchart TB
+  subgraph disk ["磁盘 — 唯一真相源"]
+    SM["scope-manifest.json"]
+    SP["scope-paths.json"]
+    MAP["scope-map.json"]
+    H["handoff/*.json"]
+    RPT["docs/cortexloop/*.md"]
+    ANCHOR["context-anchor.md"]
+  end
+
+  ORCH["Orchestrator 极瘦上下文"] -->|"Task 委派"| EX["Expert 子 agent 新上下文"]
+  EX -->|"Read 按需"| SM
+  EX -->|"Read 按需"| SP
+  EX -->|"Write 全量"| H
+  EX -->|"PASS_COMPLETE 仅"| ORCH
+  ORCH -->|"compact 每 pass"| ANCHOR
+  ORCH -->|"Step 4 全量 merge"| H
+```
+
+### 新增脚本（零 npm 依赖）
+
+```bash
+node scripts/build-scope-manifest.mjs --mode=whole    # scope 落盘，不进 prompt
+node scripts/compact-context.mjs --init --mode=direct   # 初始化 context anchor
+node scripts/handoff-summary.mjs --through=3            # 压缩摘要给 orchestrator
+node scripts/compact-context.mjs --pass=3 --next-pass=4 # 每 pass 后结构化压缩
+```
+
+### 质量不会降的原因
+
+- **压缩的是 orchestrator 聊天上下文**，不是 expert 分析证据链
+- 7 个专家仍在**独立子上下文**中读完整 prior handoffs + 按需拉代码
+- Step 4 仍从磁盘 **全量 handoff JSON** 聚合 findings；Evidence + Confidence 规则不变
+- Step 3.5 跨 pass defer 回收机制不变
+
+大 scope 唯一 trade-off：**Map 阶段可能漏扫非 hotspot 目录**——建议整库 deep scan 先用 Report 验收 `scope-map.json`；小 scope（<100 文件）不触发 Map，行为与优化前一致。
 
 ---
 
@@ -140,6 +208,10 @@ flowchart LR
 | **HTML 看板** | `docs/cortexloop/report.html` | 浏览器直接打开，含分数环、类别条、问题表 |
 | 运行统计 | `docs/cortexloop/run-summary.md` | pass 数、耗时、估算 token |
 | Handoff | `.cortexloop/handoff/*.json` | 每 pass 结构化交接 |
+| Scope 清单 | `.cortexloop/scope-manifest.json`、`.cortexloop/scope-paths.json` | 大 scope 按需读取，不进 prompt |
+| 风险地图 | `.cortexloop/scope-map.json` | Map→Depth 热点（>100 文件时） |
+| 上下文锚点 | `.cortexloop/context-anchor.md`、`.cortexloop/run-state.json` | orchestrator 瘦身调度 |
+| Handoff 摘要 | `.cortexloop/handoff-summary.json` | 每 pass 压缩摘要 |
 | 趋势 / 徽章 | `.cortexloop/history.json`、`.cortexloop/health-badge.svg` | README 可嵌入徽章 |
 | Playbook | `.cortexloop/playbook.json` | 英文，**仅模型 query** |
 | Playbook 中文 | `.cortexloop/playbook-zh.md` | 人类阅读，模型不读 |
@@ -367,7 +439,7 @@ passes/       # 七专家串行合约
 agents/       # 领域专家 persona
 skills/       # cortexloop-expert-core（公共）+ 各领域 depth skill + reflect
 rules/        # workflow、learning-loop、refactor-safety …
-scripts/      # ci-gate、playbook、看板、showcase、安装脚本（零 npm 依赖）
+scripts/      # ci-gate、playbook、scope-manifest、compact-context、看板、安装脚本（零 npm 依赖）
 schemas/      # report、config、handoff JSON schema
 examples/     # demo-app + lianyu-pc（真实大项目 Report）
 action.yml    # GitHub 复合 Action

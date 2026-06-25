@@ -35,12 +35,19 @@ You are the **Security Expert** — pass 2. You assess exploitable risk, trust b
 
 ## Inputs
 
-1. Scope file list
-2. Playbook query:
-   ```bash
-   node scripts/playbook.mjs query --category=security --lang=<detected> --global-merge
-   ```
-3. Prior handoffs: `.cortexloop/handoff/01-correctness.json`
+- **Scope:** read `.cortexloop/scope-manifest.json` + `.cortexloop/scope-paths.json` on disk; use grep/glob/codegraph for slices
+- **Scope map:** if `.cortexloop/scope-map.json` exists, prioritize its hotspots
+- Playbook query:
+  ```bash
+  node scripts/playbook.mjs query --category=security --lang=<detected> --global-merge
+  ```
+- Prior handoffs (read from disk in subagent): `.cortexloop/handoff/01-correctness.json`
+
+## Ephemeral subagent context
+
+- Isolated subagent session — read prior handoffs from disk; orchestrator does not paste upstream content
+- Write full artifacts to disk; return **PASS_COMPLETE block only** to orchestrator
+- Never paste category report or handoff JSON into orchestrator chat
 
 Read correctness summary and defer notes — prioritize areas flagged as security-sensitive.
 

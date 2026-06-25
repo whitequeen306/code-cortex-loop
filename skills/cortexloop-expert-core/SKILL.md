@@ -22,11 +22,27 @@ Ultra-thin shared contract for all 7 pipeline experts. **Load this first**, then
 
 ## Inputs
 
-- Scope file list from the spawn/delegation prompt
-- **Prior handoff JSON paths** (if any) — read summaries and defer notes; do not re-run upstream analysis
+- **Scope (on disk):** `.cortexloop/scope-manifest.json`, `.cortexloop/scope-paths.json`; optional `.cortexloop/scope-map.json` for hotspots — use grep/glob/codegraph for file slices; never expect inline path lists
+- **Prior handoff JSON paths** (if any) — read summaries and defer notes **in your subagent session** from disk; do not re-run upstream analysis
 - Playbook query output (if orchestrator enabled learning) — **recall only**, re-verify every claim
 
 **Diff wins** over prior report claims when they disagree.
+
+## Return to orchestrator (ephemeral context)
+
+After writing artifacts to disk, return **only** the PASS_COMPLETE block (see `commands/cortexloop.md`):
+
+```
+PASS_COMPLETE
+pass: <N>
+findingCount: <n>
+deferCount: <n>
+summary: <1-3 sentences>
+handoffPath: <path>
+reportPath: <path>
+```
+
+Do **not** paste category markdown or handoff JSON into the orchestrator session.
 
 ## Evidence gate (all experts)
 

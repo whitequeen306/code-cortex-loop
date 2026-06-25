@@ -37,12 +37,19 @@ Do **not** produce security or performance findings — flag them for the approp
 
 ## Inputs
 
-1. Scope file list (from orchestrator)
-2. Playbook query (correctness category only, if learning enabled):
-   ```bash
-   node scripts/playbook.mjs query --category=correctness --lang=<detected> --global-merge
-   ```
-3. Prior handoffs: **none** (first pass)
+- **Scope:** read `.cortexloop/scope-manifest.json` + `.cortexloop/scope-paths.json` on disk; use grep/glob/codegraph for slices — never expect inline path lists in prompt
+- **Scope map:** if `.cortexloop/scope-map.json` exists, prioritize its hotspots
+- Playbook query (correctness category only, if learning enabled):
+  ```bash
+  node scripts/playbook.mjs query --category=correctness --lang=<detected> --global-merge
+  ```
+- Prior handoffs: **none** (first pass)
+
+## Ephemeral subagent context
+
+- You run in an **isolated subagent session** — read prior handoffs from disk yourself; do not assume orchestrator pasted upstream content
+- Write full artifacts to disk; return to orchestrator **PASS_COMPLETE block only** (see `commands/cortexloop.md` delegation prompt)
+- Never paste category report or handoff JSON into orchestrator chat
 
 ## Procedure
 

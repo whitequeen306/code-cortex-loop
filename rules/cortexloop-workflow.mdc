@@ -47,6 +47,35 @@ Config file overrides preset defaults. See `cortexloop.config.example.json`.
 
 **Whole project:** all source files respecting `.gitignore` + config `exclude`.
 
+### Scope manifest (required — never inline paths)
+
+After detecting scope mode, always build disk artifacts:
+
+```bash
+node scripts/build-scope-manifest.mjs --mode=recent   # or --mode=whole
+```
+
+| Artifact | Purpose |
+|----------|---------|
+| `.cortexloop/scope-manifest.json` | fileCount, byDirectory, mapThreshold, pathsFile pointer |
+| `.cortexloop/scope-paths.json` | full path list — **experts read on disk**, not orchestrator prompt |
+| `.cortexloop/scope-map.json` | hotspots (when fileCount > threshold, default 100) |
+| `.cortexloop/context-anchor.md` | structured orchestrator anchor (compact-context.mjs) |
+| `.cortexloop/run-state.json` | nextPass, completedPasses |
+| `.cortexloop/handoff-summary.json` | compact pass summaries for thin orchestrator |
+
+**On-demand retrieval:** experts use grep/glob/codegraph to load file slices. Orchestrator NEVER pastes path lists or expert reports into its session.
+
+### Map → Depth (large scope)
+
+When `scope-manifest.json` has `requiresMap: true`:
+
+1. Run MAP phase (explore Task) → write `scope-map.json` with hotspots
+2. Seven experts prioritize hotspots + recentChangeFocus — not blind full-repo scan
+3. Full paths remain in `scope-paths.json` for targeted fetches
+
+Config override: `cortexloop.config.json` → `scope.mapThreshold` (default 100).
+
 ## Analysis Phase (Read-Only, Sequential Experts)
 
 Seven domain experts run in **fixed order**. Each pass is one **mandatory Task subagent** — the orchestrator does not analyze code inline. See `passes/README.md` for contracts.
@@ -86,7 +115,18 @@ After serial passes, **backward defers** are orphans. Orchestrator re-delegates 
 
 ### Handoff protocol
 
-Each expert writes category markdown + handoff JSON (`schemas/pass-handoff.schema.json`). Downstream experts read **all prior handoff files**. Cross-domain concerns use `deferToLaterPasses` — no upstream expert analyzes another domain.
+Each expert writes category markdown + handoff JSON (`schemas/pass-handoff.schema.json`). Downstream experts read **prior handoff files from disk in their own subagent session**. Cross-domain concerns use `deferToLaterPasses` — no upstream expert analyzes another domain.
+
+**Thin orchestrator rule:** parent session reads `.cortexloop/handoff-summary.json` only — never full handoff JSON or category reports unless debugging a failed pass.
+
+### Context compaction (after each pass)
+
+```bash
+node scripts/handoff-summary.mjs --through={N}
+node scripts/compact-context.mjs --pass={N} --next-pass={N+1}
+```
+
+Re-read `.cortexloop/context-anchor.md` when orchestrator context exceeds ~70% budget — do not reload expert outputs.
 
 ### Depth skills (loaded by experts, not orchestrator)
 

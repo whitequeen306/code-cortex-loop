@@ -37,12 +37,19 @@ Check upstream defer notes — e.g. bcrypt on every request flagged from securit
 
 ## Inputs
 
-1. Scope file list
-2. Playbook query:
-   ```bash
-   node scripts/playbook.mjs query --category=performance --lang=<detected> --global-merge
-   ```
-3. Prior handoffs: `01` through `04` in `.cortexloop/handoff/`
+- **Scope:** read `.cortexloop/scope-manifest.json` + `.cortexloop/scope-paths.json` on disk; use grep/glob/codegraph for slices
+- **Scope map:** if `.cortexloop/scope-map.json` exists, prioritize its hotspots
+- Playbook query:
+  ```bash
+  node scripts/playbook.mjs query --category=performance --lang=<detected> --global-merge
+  ```
+- Prior handoffs (read from disk): `01` through `04` in `.cortexloop/handoff/`
+
+## Ephemeral subagent context
+
+- Isolated subagent session — read prior handoffs from disk; orchestrator does not paste upstream content
+- Write full artifacts to disk; return **PASS_COMPLETE block only** to orchestrator
+- Never paste category report or handoff JSON into orchestrator chat
 
 ## Procedure
 

@@ -28,12 +28,19 @@ All functional issues — correctness, security, tests, errors, perf, simplify. 
 
 ## Inputs
 
-1. Scope file list
-2. Playbook query:
-   ```bash
-   node scripts/playbook.mjs query --category=cleanup --lang=<detected> --global-merge
-   ```
-3. Prior handoffs: all `01`–`06` in `.cortexloop/handoff/`
+- **Scope:** read `.cortexloop/scope-manifest.json` + `.cortexloop/scope-paths.json` on disk; use grep/glob/codegraph for slices
+- **Scope map:** if `.cortexloop/scope-map.json` exists, prioritize its hotspots
+- Playbook query:
+  ```bash
+  node scripts/playbook.mjs query --category=cleanup --lang=<detected> --global-merge
+  ```
+- Prior handoffs (read from disk): all `01`–`06` in `.cortexloop/handoff/`
+
+## Ephemeral subagent context
+
+- Isolated subagent session — read prior handoffs from disk; orchestrator does not paste upstream content
+- Write full artifacts to disk; return **PASS_COMPLETE block only** to orchestrator
+- Never paste category report or handoff JSON into orchestrator chat
 
 Do not recommend deleting symbols referenced in upstream findings or defer notes.
 
