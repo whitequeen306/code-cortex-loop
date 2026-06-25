@@ -11,6 +11,8 @@ Seven **domain experts** run in a fixed **sequential pipeline**. Each expert is 
 
 ## Pipeline order
 
+Paths below are **legacy defaults**. At runtime read `.cortexloop/run-meta.json` → `reports.categoryReports` and write under `{runDir}/`.
+
 | Step | Pass key | Expert | Contract | Category report | Handoff |
 |------|----------|--------|----------|-----------------|---------|
 | 1 | `review` | `code-reviewer` | [01-correctness.md](01-correctness.md) | `docs/cortexloop/01-correctness.md` | `.cortexloop/handoff/01-correctness.json` |

@@ -97,33 +97,39 @@ Signature and tier mechanics live in `learning-loop.mdc` — do not re-derive th
 
 ## Outputs
 
-### 1. Human retrospective — `docs/cortexloop/08-reflection.md`
+### 1. Human evolution log — `docs/cortexloop/08-reflection.md` (**append only**)
 
-Structure:
+**Do not overwrite** prior runs. Append after `---` with **运行时间** from run-meta (e.g. `2026年6月25日 14:30` — not raw ISO in titles).
 
 ```markdown
-# CodeCortexLoop Reflection — <ISO date>
+---
+## 运行记录 · 2026年6月25日 14:30
 
-## Summary
+> Run: `docs/cortexloop/runs/2026-06-25_14-30` · mode: direct
+
+### Summary
 What was fixed, overall score delta, test status.
 
-## Effective fixes
+### Effective fixes
 Bullet list of what worked and why.
 
-## Pitfalls / false starts
+### Pitfalls / false starts
 What did not work or required rework.
 
-## Next time
+### Next time
 Concrete reminders for similar codebases.
 ```
 
-Keep it concise (1–2 screens). Focus on **patterns**, not line-by-line diffs.
+Orchestrator may run: `node scripts/append-reflection.mjs --file=.cortexloop/reflection-section.md`
+
+Keep each section concise (1–2 screens). Focus on **patterns**, not line-by-line diffs.
 
 ### 2. Structured reflection — `.cortexloop/reflection.json`
 
 ```json
 {
-  "runTimestamp": "2026-06-16T12:00:00.000Z",
+  "runDisplayTime": "2026年6月25日 14:30",
+  "runId": "2026-06-25_14-30",
   "mode": "direct",
   "entries": [
     {

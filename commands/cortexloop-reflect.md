@@ -31,7 +31,7 @@ Read:
 
 ### 2. Produce outputs
 
-1. **`docs/cortexloop/08-reflection.md`** — human-readable retrospective
+1. **Append** section to `docs/cortexloop/08-reflection.md` (incremental log — use **运行时间** from run-meta, not ISO)
 2. **`.cortexloop/reflection.json`** — structured entries (max 3–5 generalizable patterns)
 
 Follow curation rules in the reflect skill: methods not diffs, patterns not one-offs.

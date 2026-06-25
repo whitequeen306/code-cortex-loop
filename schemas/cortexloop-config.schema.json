@@ -7,7 +7,33 @@
     "preset": {
       "enum": ["default", "quick", "deep", "security", "pre-pr"]
     },
-    "scope": { "enum": ["recent", "whole"] },
+    "scope": {
+      "oneOf": [
+        { "enum": ["recent", "whole"], "description": "Legacy shorthand for scope mode" },
+        {
+          "type": "object",
+          "properties": {
+            "mode": { "enum": ["recent", "whole"] },
+            "mapThreshold": { "type": "integer", "minimum": 1, "default": 100 },
+            "mapEnrichThreshold": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.7 },
+            "longTailSampleCount": { "type": "integer", "minimum": 1, "default": 20 },
+            "mapWeights": {
+              "type": "object",
+              "properties": {
+                "churn": { "type": "number" },
+                "importHub": { "type": "number" },
+                "density": { "type": "number" },
+                "patterns": { "type": "number" }
+              }
+            },
+            "exclude": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      ]
+    },
     "passes": {
       "type": "object",
       "properties": {

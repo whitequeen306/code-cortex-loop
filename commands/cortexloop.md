@@ -164,6 +164,31 @@ Use output as **where to investigate first** during Step 3. Each expert runs its
 
 - **Recent changes** | **Whole project**
 
+## Step 1 — Initialize run archive (every invocation)
+
+Before scope or analysis, create a **new run folder** keyed by **human-readable local time** (not raw ISO in UI):
+
+```bash
+node scripts/init-run.mjs --mode=<report|direct> --preset=<preset> --scope=<recent|whole>
+```
+
+Writes:
+
+- `.cortexloop/run-meta.json` — `runDisplayTime` (e.g. `2026年6月25日 14:30`), `runDir`, report paths
+- `docs/cortexloop/runs/2026-06-25_14-30/` — this run's expert reports + `report.json` (folder uses local clock, readable)
+- `docs/cortexloop/runs/.../RUN.md` — human summary with **运行时间**
+
+**Never overwrite prior runs.** Experts write only under `run-meta.reports.*`. Root `docs/cortexloop/report.json` is a **latest snapshot** (synced in Step 5b).
+
+Each category markdown report **must** begin with:
+
+```markdown
+**运行时间:** <runDisplayTime from run-meta>
+**Run 目录:** `<runDir>`
+```
+
+Resolve paths: read `.cortexloop/run-meta.json` → `reports.categoryReports`, `reports.summary`, `reports.reportJson`.
+
 ## Step 2 — Scope Files (Context-Safe)
 
 Use git scope rules from `cortexloop-workflow.mdc`. Apply `config.exclude` and `.cortexloopignore`.
@@ -192,41 +217,48 @@ node scripts/compact-context.mjs --init --mode=<report|direct> --scope-manifest=
 
 Orchestrator: read `.cortexloop/context-anchor.md` and `.cortexloop/run-state.json` at Step 3 start — **not** prior chat history.
 
-### 2b — Map phase (when `requiresMap: true` in manifest, default threshold 100 files)
+### 2b — CortexScope Index MAP (when `requiresMap: true`, default threshold 100 files)
 
-When scope is large, run **Map before Depth** — do not send 7 experts to blindly scan every file.
+When scope is large, run **deterministic Map before Depth** — do not send 7 experts to blindly scan every file.
 
-Launch one **explore** or lightweight Task with this prompt:
+`build-scope-manifest.mjs` auto-runs the index when `requiresMap` (unless `--skip-map`). Or run explicitly:
 
-```
-CodeCortexLoop MAP phase — repository risk map only (no category findings yet).
-Read: .cortexloop/scope-manifest.json and .cortexloop/scope-paths.json
-Use directory aggregation + grep/codegraph to identify hotspots (auth, API boundaries, data layer, recent churn).
-Write: .cortexloop/scope-map.json
-
-Schema:
-{
-  "version": "2.2",
-  "generatedAt": "<ISO>",
-  "fileCount": <n>,
-  "hotspots": [
-    { "path": "<dir or file glob>", "reason": "...", "riskLevel": "high|medium|low", "priority": 1 }
-  ],
-  "recentChangeFocus": ["<paths>"],
-  "mapMode": true
-}
-
-Do NOT write handoff JSON or category reports — map only.
-Return to orchestrator: hotspot count + 1-2 sentence summary only.
+```bash
+node scripts/build-scope-map.mjs --manifest=.cortexloop/scope-manifest.json
 ```
 
-After map exists, depth passes (Step 3) prioritize **hotspots + recentChangeFocus** from scope-map; use manifest pathsFile for on-demand fetches only.
+**CortexScope Index** (zero npm deps) writes `.cortexloop/scope-map.json` v2.3 using: git churn, regex import graph, entry-point heuristics, pass-category pattern buckets, directory density scoring.
+
+Orchestrator reads **only**: hotspot count, confidence, `mapEnrichRecommended` flag — not full scope-map body.
+
+Print to user: `N hotspots, confidence=X.XX` (+ enrich hint if needed).
 
 Update run state:
 
 ```bash
 node scripts/compact-context.mjs --pass=0 --next-pass=1 --scope-map=.cortexloop/scope-map.json
 ```
+
+### 2b-enrich — Optional LLM enrich (when `mapEnrichRecommended: true`, confidence < threshold default 0.7)
+
+Only when deterministic index confidence is low. Launch one lightweight **explore** Task:
+
+```
+CodeCortexLoop MAP enrich — supplement scope-map only (no category findings).
+Read: .cortexloop/scope-map.json and .cortexloop/scope-manifest.json
+Add at most 5 new hotspots for architectural blind spots the index missed.
+Merge into scope-map.json in place; set mapMode to "llm-enriched".
+Do NOT rewrite handoff JSON or rescan all files.
+Return: added hotspot count + 1 sentence only.
+```
+
+Skip enrich when confidence >= `scope.mapEnrichThreshold`.
+
+After map exists, depth passes (Step 3) use **coveragePolicy: prioritize-with-sampling**:
+
+- **Prioritize:** hotspots + recentChangeFocus + mustReview + patternHits[category]
+- **Also sample:** longTailSample.paths (never treat non-hotspot as out-of-scope)
+- Full paths remain in scope-paths.json for on-demand fetches
 
 ## Step 2.5 — Thin Orchestrator Context Budget
 
@@ -291,9 +323,12 @@ You are CodeCortexLoop pass {N}/7 — {ExpertTitle}.
 Read and follow: {passContractPath}
 
 Scope (read on disk — on-demand retrieval only):
+- Run meta: .cortexloop/run-meta.json → write category report to reports.categoryReports[your file]
 - Manifest: .cortexloop/scope-manifest.json
 - Paths list: .cortexloop/scope-paths.json (read slices as needed; use grep/glob/codegraph)
-- Scope map (if present): .cortexloop/scope-map.json — prioritize hotspots + recentChangeFocus
+- Scope map (if present): .cortexloop/scope-map.json — prioritize hotspots, mustReview, patternHits[{category}], longTailSample.paths; never treat non-hotspot as out-of-scope
+
+Report header (required): **运行时间:** {runDisplayTime} · **Run 目录:** {runDir}
 
 Prior handoffs (read from disk in YOUR subagent session): {priorHandoffPaths or "none"}
 Playbook (this category only): node scripts/playbook.mjs query --category={category} --lang={lang} --global-merge
@@ -464,7 +499,7 @@ Read your pass contract: {targetPassContract}
 Scope (read on disk):
 - Manifest: .cortexloop/scope-manifest.json
 - Paths: .cortexloop/scope-paths.json
-- Scope map (if present): .cortexloop/scope-map.json
+- Scope map (if present): .cortexloop/scope-map.json — prioritize hotspots + mustReview + patternHits[{targetCategory}]
 Prior handoffs (read from disk): {allHandoffPaths}
 
 Orphan defer items assigned to YOU (from later passes — verify each, do not re-scan whole scope):
@@ -527,25 +562,28 @@ Exit code 1 = missing or invalid handoff — re-run failed pass (Task, Agent, SO
 3. Assign IDs `CL-001`…
 4. Deduplicate same file:line + issue
 5. Compute **health scores** (before)
-6. Write `docs/cortexloop/report.json` always (include `"generatedBy": "cortexloop"` for CI provenance)
+6. Write `report.json` to **run archive** (`run-meta.reports.reportJson`) and include `"generatedBy": "cortexloop"`, plus `runId`, `runDisplayTime`, `runDir` from run-meta
 
 ## Step 5 — Output
 
 ### Report / CI
 
-Write markdown reports + `report.json` (+ `report.sarif` if enabled). Include health scores in `00-summary.md`.
+Write markdown reports under **current runDir** (`run-meta.reports.*`) + `report.json` in runDir. Include health scores in run's `00-summary.md`.
 
-### Step 5b — Post-Processing (always after report.json exists)
+### Step 5b — Post-Processing (always after report.json exists in runDir)
 
-Run from project root (respect config paths if set):
+Run from project root:
 
 ```bash
+node scripts/sync-run-latest.mjs
 node scripts/record-history.mjs docs/cortexloop/report.json
 node scripts/make-badge.mjs docs/cortexloop/report.json
 node scripts/make-dashboard.mjs docs/cortexloop/report.json
 node scripts/pr-comment.mjs docs/cortexloop/report.json
 node scripts/run-summary.mjs --out=docs/cortexloop/run-summary.md
 ```
+
+`sync-run-latest` copies this run → `docs/cortexloop/` for CI, badge, and dashboard.
 
 If baseline enabled: `node scripts/baseline.mjs diff` before CI gate.
 
@@ -574,8 +612,22 @@ Apply per workflow apply-order. After all groups:
 After successful re-verification:
 
 1. Load `skills/reflect/SKILL.md`
-2. Write `docs/cortexloop/08-reflection.md` and `.cortexloop/reflection.json` (3–5 generalizable patterns max)
-3. Record to playbook (applies `self_verified`; **new entries start as candidate**, not auto-trusted). This also writes `.cortexloop/playbook-zh.md` for Chinese readers (model still uses English `playbook.json` only):
+2. Write `.cortexloop/reflection.json` (3–5 generalizable patterns max)
+3. **Append** to `docs/cortexloop/08-reflection.md` (single incremental evolution log — do **not** replace prior sections). Use human **运行时间** from run-meta as section title:
+
+```bash
+node scripts/append-reflection.mjs --file=.cortexloop/reflection-section.md
+```
+
+Or append manually:
+
+```markdown
+---
+## 运行记录 · 2026年6月25日 14:30
+> Run: `docs/cortexloop/runs/...` · mode: direct
+```
+
+4. Record to playbook:
 
 ```bash
 node scripts/playbook.mjs record .cortexloop/reflection.json
@@ -585,7 +637,7 @@ node scripts/playbook.mjs record .cortexloop/reflection.json
 
 Reflection entries must include **English** (`problemPattern`, `fixMethod`) for model recall and **Chinese** (`problemPatternZh`, `fixMethodZh`) for the human zh export.
 
-4. **Optional feedback hooks** (external oracle + negative signals):
+5. **Optional feedback hooks** (external oracle + negative signals):
 
 ```bash
 # Fix applied then tests failed / reverted

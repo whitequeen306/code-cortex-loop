@@ -23,6 +23,14 @@ export const DEFAULT_RUN_STATE = '.cortexloop/run-state.json';
 export const DEFAULT_CONTEXT_ANCHOR = '.cortexloop/context-anchor.md';
 export const DEFAULT_HANDOFF_SUMMARY = '.cortexloop/handoff-summary.json';
 export const DEFAULT_MAP_THRESHOLD = 100;
+export const DEFAULT_MAP_ENRICH_THRESHOLD = 0.7;
+export const DEFAULT_LONG_TAIL_SAMPLE_COUNT = 20;
+export const DEFAULT_MAP_WEIGHTS = {
+  churn: 0.3,
+  importHub: 0.3,
+  density: 0.2,
+  patterns: 0.2,
+};
 export const GLOBAL_PLAYBOOK = join(homedir(), '.cortexloop', 'playbook.json');
 export const GLOBAL_PLAYBOOK_ZH = join(homedir(), '.cortexloop', 'playbook-zh.md');
 
@@ -878,11 +886,21 @@ export function nextPlaybookId(entries) {
 /** Scope / context management defaults (override via cortexloop.config.json → scope). */
 export function loadScopeConfig(configPath = 'cortexloop.config.json') {
   const cfg = loadConfig(configPath);
-  const scope = cfg?.scope ?? {};
+  const rawScope = cfg?.scope;
+  const scope =
+    typeof rawScope === 'string'
+      ? { mode: rawScope }
+      : rawScope && typeof rawScope === 'object'
+        ? rawScope
+        : {};
+  const topExclude = Array.isArray(cfg?.exclude) ? cfg.exclude : [];
   return {
     mapThreshold: scope.mapThreshold ?? DEFAULT_MAP_THRESHOLD,
-    exclude: scope.exclude ?? [],
-    mode: scope.mode ?? null,
+    exclude: [...topExclude, ...(scope.exclude ?? [])],
+    mode: scope.mode ?? (typeof rawScope === 'string' ? rawScope : null),
+    mapEnrichThreshold: scope.mapEnrichThreshold ?? DEFAULT_MAP_ENRICH_THRESHOLD,
+    longTailSampleCount: scope.longTailSampleCount ?? DEFAULT_LONG_TAIL_SAMPLE_COUNT,
+    mapWeights: { ...DEFAULT_MAP_WEIGHTS, ...(scope.mapWeights ?? {}) },
   };
 }
 

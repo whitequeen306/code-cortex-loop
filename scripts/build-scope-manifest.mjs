@@ -8,8 +8,10 @@
  */
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import { buildScopeMap } from './lib/scope-index.mjs';
 import {
   DEFAULT_SCOPE_MANIFEST,
+  DEFAULT_SCOPE_MAP,
   DEFAULT_SCOPE_PATHS,
   aggregatePathsByDirectory,
   loadScopeConfig,
@@ -34,10 +36,14 @@ function parseArgs(argv) {
     pathsOut: DEFAULT_SCOPE_PATHS,
     json: false,
     quiet: false,
+    skipMap: false,
+    mapOut: DEFAULT_SCOPE_MAP,
   };
   for (const arg of argv) {
     if (arg === '--json') opts.json = true;
     else if (arg === '--quiet') opts.quiet = true;
+    else if (arg === '--skip-map') opts.skipMap = true;
+    else if (arg.startsWith('--map-out=')) opts.mapOut = arg.slice('--map-out='.length);
     else if (arg.startsWith('--mode=')) opts.mode = arg.slice('--mode='.length);
     else if (arg.startsWith('--config=')) opts.configPath = arg.slice('--config='.length);
     else if (arg.startsWith('--out=')) opts.out = arg.slice('--out='.length);
@@ -136,7 +142,7 @@ export function buildScopeManifest(opts) {
 
   const byDirectory = aggregatePathsByDirectory(paths, 2);
   const manifest = {
-    version: '2.2',
+    version: '2.3',
     generatedAt: new Date().toISOString(),
     generatedBy: 'cortexloop',
     scopeMode: opts.mode,
@@ -144,11 +150,12 @@ export function buildScopeManifest(opts) {
     gitCommit: tryGitCommit(),
     gitBranch: tryGitBranch(),
     pathsFile: opts.pathsOut,
+    scopeMapFile: opts.mapOut,
     byDirectory: byDirectory.slice(0, 40),
     mapThreshold: scopeCfg.mapThreshold,
     requiresMap: paths.length > scopeCfg.mapThreshold,
     instructions:
-      'Experts: Read pathsFile on disk. Use grep/glob/codegraph for slices. Never require full inline path list in prompts.',
+      'Experts: Read pathsFile on disk. Prioritize scope-map hotspots + mustReview + longTailSample. Never require full inline path list in prompts.',
   };
 
   writeJson(opts.pathsOut, {
@@ -159,7 +166,19 @@ export function buildScopeManifest(opts) {
   });
   writeJson(opts.out, manifest);
 
-  return { manifest, paths, outPath: opts.out, pathsOut: opts.pathsOut };
+  let scopeMap = null;
+  if (manifest.requiresMap && !opts.skipMap) {
+    scopeMap = buildScopeMap({
+      manifestPath: opts.out,
+      pathsPath: opts.pathsOut,
+      configPath: opts.configPath,
+      out: opts.mapOut,
+      scopeCfg,
+    });
+    writeJson(opts.mapOut, scopeMap);
+  }
+
+  return { manifest, paths, scopeMap, outPath: opts.out, pathsOut: opts.pathsOut, mapOut: opts.mapOut };
 }
 
 function main() {
@@ -170,9 +189,18 @@ function main() {
       `[cortexloop] scope manifest: ${result.manifest.fileCount} files (${result.manifest.scopeMode}) → ${result.outPath}`,
     );
     if (result.manifest.requiresMap) {
-      console.log(
-        `[cortexloop] map phase recommended (fileCount > ${result.manifest.mapThreshold}) — run Step 2.5 before Step 3`,
-      );
+      if (result.scopeMap) {
+        console.log(
+          `[cortexloop] scope-map: ${result.scopeMap.hotspots.length} hotspots, confidence=${result.scopeMap.confidence} → ${result.mapOut}`,
+        );
+        if (result.scopeMap.mapEnrichRecommended) {
+          console.log('[cortexloop] LLM enrich recommended — run Step 2b-enrich before Step 3');
+        }
+      } else {
+        console.log(
+          `[cortexloop] map phase recommended (fileCount > ${result.manifest.mapThreshold}) — run build-scope-map.mjs`,
+        );
+      }
     }
   }
   if (opts.json) console.log(JSON.stringify(result.manifest, null, 2));

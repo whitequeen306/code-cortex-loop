@@ -21,6 +21,7 @@ import {
   summarizeHandoffsThrough,
   writeJson,
 } from './lib/shared.mjs';
+import { loadRunMeta } from './lib/run-artifacts.mjs';
 
 function parseArgs(argv) {
   const opts = {
@@ -90,7 +91,7 @@ function buildHandoffSummaryPayload(through, configPath) {
   };
 }
 
-function buildAnchor({ intent, mode, manifestPath, scopeMapPath, summaryPayload, completedPasses, nextPass, status }) {
+function buildAnchor({ intent, mode, manifestPath, scopeMapPath, summaryPayload, completedPasses, nextPass, status, runMeta }) {
   const { fileCount, requiresMap } = readManifestSummary(manifestPath);
   const lines = [
     '# CodeCortexLoop Context Anchor',
@@ -101,6 +102,11 @@ function buildAnchor({ intent, mode, manifestPath, scopeMapPath, summaryPayload,
     '## Run Mode',
     mode,
     '',
+  ];
+  if (runMeta?.runDisplayTime) {
+    lines.push('## Run Archive', `- **运行时间:** ${runMeta.runDisplayTime}`, `- runDir: \`${runMeta.runDir}\``, '');
+  }
+  lines.push(
     '## Scope',
     `- manifest: \`${manifestPath}\`${fileCount != null ? ` (${fileCount} files)` : ''}`,
     `- scope-map: \`${existsSync(scopeMapPath) ? scopeMapPath : 'none'}\``,
@@ -149,9 +155,12 @@ export function runCompactContext(opts) {
   let runState = existsSync(opts.stateOut) ? readJson(opts.stateOut) : null;
 
   if (opts.init) {
+    const runMeta = loadRunMeta();
     runState = {
-      runId: randomBytes(8).toString('hex'),
-      startedAt: new Date().toISOString(),
+      runId: runMeta?.runId ?? randomBytes(8).toString('hex'),
+      runDisplayTime: runMeta?.runDisplayTime ?? null,
+      runDir: runMeta?.runDir ?? null,
+      startedAt: runMeta?.startedAt ?? new Date().toISOString(),
       mode: opts.mode,
       status: 'running',
       scopeManifest: opts.scopeManifest,
@@ -198,6 +207,7 @@ export function runCompactContext(opts) {
     completedPasses: runState.completedPasses,
     nextPass: runState.nextPass,
     status: runState.status,
+    runMeta: loadRunMeta(),
   });
 
   writeJson(opts.stateOut, runState);

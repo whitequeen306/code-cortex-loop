@@ -57,24 +57,25 @@ node scripts/build-scope-manifest.mjs --mode=recent   # or --mode=whole
 
 | Artifact | Purpose |
 |----------|---------|
-| `.cortexloop/scope-manifest.json` | fileCount, byDirectory, mapThreshold, pathsFile pointer |
+| `.cortexloop/scope-manifest.json` | fileCount, byDirectory, mapThreshold, pathsFile, scopeMapFile pointers |
 | `.cortexloop/scope-paths.json` | full path list — **experts read on disk**, not orchestrator prompt |
-| `.cortexloop/scope-map.json` | hotspots (when fileCount > threshold, default 100) |
+| `.cortexloop/scope-map.json` | CortexScope Index hotspots (when fileCount > threshold, default 100) |
 | `.cortexloop/context-anchor.md` | structured orchestrator anchor (compact-context.mjs) |
 | `.cortexloop/run-state.json` | nextPass, completedPasses |
 | `.cortexloop/handoff-summary.json` | compact pass summaries for thin orchestrator |
 
-**On-demand retrieval:** experts use grep/glob/codegraph to load file slices. Orchestrator NEVER pastes path lists or expert reports into its session.
+**On-demand retrieval:** experts prioritize scope-map then grep/glob (codegraph MCP optional). Orchestrator NEVER pastes path lists or expert reports into its session.
 
 ### Map → Depth (large scope)
 
 When `scope-manifest.json` has `requiresMap: true`:
 
-1. Run MAP phase (explore Task) → write `scope-map.json` with hotspots
-2. Seven experts prioritize hotspots + recentChangeFocus — not blind full-repo scan
-3. Full paths remain in `scope-paths.json` for targeted fetches
+1. Run **CortexScope Index**: `node scripts/build-scope-map.mjs` (auto from manifest unless `--skip-map`)
+2. If `mapEnrichRecommended`: optional Step 2b-enrich (lightweight LLM, max 5 hotspots)
+3. Seven experts: **prioritize** hotspots + mustReview + patternHits + **sample** longTailSample.paths
+4. Full paths remain in `scope-paths.json` — non-hotspot is NOT out-of-scope
 
-Config override: `cortexloop.config.json` → `scope.mapThreshold` (default 100).
+Config: `cortexloop.config.json` → `scope.mapThreshold` (100), `scope.mapEnrichThreshold` (0.7), `scope.longTailSampleCount` (20), `scope.mapWeights`.
 
 ## Analysis Phase (Read-Only, Sequential Experts)
 
@@ -202,15 +203,27 @@ Include in `00-summary.md` and machine-readable report:
 
 ## Report Mode Output
 
-Write to `docs/cortexloop/`:
+Each `/cortexloop` invocation creates a **new run folder** (`node scripts/init-run.mjs`):
+
+| Artifact | Location |
+|----------|----------|
+| Run meta | `.cortexloop/run-meta.json` — includes **runDisplayTime** (human-readable) |
+| Run archive | `docs/cortexloop/runs/{YYYY-MM-DD_HH-mm}/` + `RUN.md` |
+| Category reports | `{runDir}/01-correctness.md` … `{runDir}/07-cleanup.md` |
+| Summary | `{runDir}/00-summary.md` |
+| Machine report | `{runDir}/report.json` |
+
+**Latest snapshot** (CI, badge, dashboard) — synced via `sync-run-latest.mjs`:
 
 | File | Contents |
 |------|----------|
-| `00-summary.md` | Scores, counts, prioritized actions |
-| `01-correctness.md` … `07-cleanup.md` | Per-category findings |
+| `00-summary.md` | Latest run scores, counts |
+| `01-correctness.md` … `07-cleanup.md` | Latest category findings |
 | `report.json` | Machine-readable full report (always) |
 | `report.html` | Self-contained visual dashboard (via `make-dashboard.mjs`) |
 | `report.sarif` | SARIF 2.1.0 (when `config.ci.sarif: true`) |
+| `08-reflection.md` | **Single append-only evolution log** (all Direct runs) |
+| `latest-run.json` | Pointer to current run archive |
 
 ### Post-processing artifacts
 
@@ -226,8 +239,8 @@ Write to `docs/cortexloop/`:
 | `.cortexloop/playbook-zh.md` | auto on record/feedback/prune | Chinese human-readable playbook (not fed to model) |
 | `.cortexloop/handoff/*.json` | sequential expert passes | Per-pass findings + brief for downstream experts |
 | `docs/cortexloop/run-summary.md` | `run-summary.mjs` | Pass count, duration, est. tokens |
-| `.cortexloop/reflection.json` | reflect skill | Latest reflection (record input) |
-| `docs/cortexloop/08-reflection.md` | reflect skill | Human retrospective |
+| `.cortexloop/reflection.json` | reflect skill | Latest reflection (record input; overwritten each reflect) |
+| `docs/cortexloop/08-reflection.md` | reflect skill + `append-reflection.mjs` | Append-only human evolution log |
 
 Run post-processing after every `report.json` write. See `commands/cortexloop.md` Step 5b.
 

@@ -29,7 +29,7 @@ All functional issues — correctness, security, tests, errors, perf, simplify. 
 ## Inputs
 
 - **Scope:** read `.cortexloop/scope-manifest.json` + `.cortexloop/scope-paths.json` on disk; use grep/glob/codegraph for slices
-- **Scope map:** if `.cortexloop/scope-map.json` exists, prioritize its hotspots
+- **Scope map:** if `.cortexloop/scope-map.json` exists: prioritize hotspots, mustReview, patternHits for your category, sample longTailSample.paths — never treat non-hotspot as out-of-scope
 - Playbook query:
   ```bash
   node scripts/playbook.mjs query --category=cleanup --lang=<detected> --global-merge

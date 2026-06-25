@@ -19,6 +19,7 @@ import {
   tryGitCommit,
   writeJson,
 } from './lib/shared.mjs';
+import { loadRunMeta } from './lib/run-artifacts.mjs';
 
 const { positional, getFlagValue } = parseArgs();
 const reportPath = positional[0] || DEFAULT_REPORT;
@@ -32,9 +33,13 @@ if (!existsSync(reportPath)) {
 const report = readJson(reportPath);
 const findings = report.findings || [];
 const counts = countFindings(findings);
+const runMeta = loadRunMeta();
 
 const entry = {
   timestamp: report.timestamp || new Date().toISOString(),
+  runId: report.runId ?? runMeta?.runId ?? null,
+  runDisplayTime: report.runDisplayTime ?? runMeta?.runDisplayTime ?? null,
+  runDir: report.runDir ?? runMeta?.runDir ?? null,
   preset: report.preset || 'unknown',
   scope: report.scope || 'recent',
   mode: report.mode || 'report',

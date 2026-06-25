@@ -2,6 +2,36 @@
 
 All notable changes to CodeCortexLoop are documented here.
 
+## [2.4.0] - 2026-06-25
+
+### Added
+- **Per-run archive** — `init-run.mjs` creates `docs/cortexloop/runs/{YYYY-MM-DD_HH-mm}/` with human-readable **运行时间** (not ISO in UI)
+- `sync-run-latest.mjs` — copies current run to `docs/cortexloop/` for CI/dashboard latest snapshot
+- `append-reflection.mjs` — append-only `08-reflection.md` evolution log
+- `tests/run-artifacts.test.mjs`
+
+### Changed
+- Each `/cortexloop` invocation gets new run folder; expert reports no longer overwrite prior runs
+- `08-reflection.md` is single incremental file for Direct evolution (playbook.json remains model memory)
+- `record-history.mjs` stores `runId`, `runDisplayTime`, `runDir`
+- Step 1 init-run + Step 5b sync documented in orchestrator workflow
+
+## [2.3.0] - 2026-06-25
+
+### Added
+- **CortexScope Index** — deterministic MAP pre-index for large scopes (zero npm deps)
+- `scripts/build-scope-map.mjs` + `scripts/lib/scope-index.mjs` + `scripts/lib/scope-patterns.mjs`
+- Git churn, regex import graph, entry-point heuristics, pass-category pattern buckets
+- `scope-map.json` v2.3: hotspots, mustReview, longTailSample, confidence, indexQuality
+- Optional Step 2b-enrich when `confidence < scope.mapEnrichThreshold` (default 0.7)
+- `schemas/scope-map.schema.json` + `tests/scope-index.test.mjs`
+
+### Changed
+- MAP phase: LLM explore replaced by deterministic index (auto from `build-scope-manifest.mjs`)
+- `coveragePolicy: prioritize-with-sampling` — experts must sample longTailSample; non-hotspot not out-of-scope
+- `loadScopeConfig` + config schema: `scope` object with mapWeights, mapEnrichThreshold, longTailSampleCount
+- `commands/cortexloop.md`, `cortexloop-workflow.mdc`, passes, expert-core updated for CortexScope Index
+
 ## [2.2.1] - 2026-06-25
 
 ### Added

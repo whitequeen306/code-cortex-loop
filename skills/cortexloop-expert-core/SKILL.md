@@ -22,7 +22,14 @@ Ultra-thin shared contract for all 7 pipeline experts. **Load this first**, then
 
 ## Inputs
 
-- **Scope (on disk):** `.cortexloop/scope-manifest.json`, `.cortexloop/scope-paths.json`; optional `.cortexloop/scope-map.json` for hotspots — use grep/glob/codegraph for file slices; never expect inline path lists
+- **Run archive:** read `.cortexloop/run-meta.json` first — write category report to `reports.categoryReports[...]` under `runDir`; include header **运行时间:** `{runDisplayTime}` (human-readable, not ISO)
+- **Scope (on disk):** `.cortexloop/scope-manifest.json`, `.cortexloop/scope-paths.json`
+- **Scope map (large scope):** if `.cortexloop/scope-map.json` exists, read in this order:
+  1. `hotspots` + `entryFiles` — prioritize depth here first
+  2. `mustReview` + `patternHits[<your category>]` — mandatory review
+  3. `longTailSample.paths` — sample at least a few non-hotspot files per pass
+  4. `recentChangeFocus` — git-changed files
+- **Coverage rule:** MAP is prioritization, not exclusion. Never treat non-hotspot paths as out-of-scope; use grep/glob for slices (codegraph MCP optional).
 - **Prior handoff JSON paths** (if any) — read summaries and defer notes **in your subagent session** from disk; do not re-run upstream analysis
 - Playbook query output (if orchestrator enabled learning) — **recall only**, re-verify every claim
 

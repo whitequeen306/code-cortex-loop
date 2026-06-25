@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CodeCortexLoop Scope Map (CortexScope Index)",
+  "type": "object",
+  "required": ["version", "generatedBy", "fileCount", "hotspots", "coveragePolicy"],
+  "properties": {
+    "version": { "const": "2.3" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "generatedBy": { "const": "cortexloop-scope-index" },
+    "mapMode": { "enum": ["deterministic", "llm-enriched"] },
+    "fileCount": { "type": "integer", "minimum": 0 },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "mapEnrichRecommended": { "type": "boolean" },
+    "mapEnrichThreshold": { "type": "number" },
+    "coveragePolicy": { "const": "prioritize-with-sampling" },
+    "hotspots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "score", "riskLevel", "priority"],
+        "properties": {
+          "path": { "type": "string" },
+          "score": { "type": "number" },
+          "riskLevel": { "enum": ["high", "medium", "low"] },
+          "priority": { "type": "integer", "minimum": 1 },
+          "signals": { "type": "array", "items": { "type": "string" } },
+          "reason": { "type": "string" },
+          "entryFiles": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "recentChangeFocus": { "type": "array", "items": { "type": "string" } },
+    "importHubs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "inboundCount": { "type": "integer" },
+          "outboundCount": { "type": "integer" }
+        }
+      }
+    },
+    "patternHits": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } },
+    "mustReview": { "type": "array", "items": { "type": "string" } },
+    "longTailSample": {
+      "type": "object",
+      "properties": {
+        "count": { "type": "integer" },
+        "strategy": { "type": "string" },
+        "paths": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "indexQuality": { "type": "object" }
+  }
+}
