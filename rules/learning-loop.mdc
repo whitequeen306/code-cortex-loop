@@ -193,13 +193,10 @@ Human-readable Chinese export (not used by `query`):
 See `cortexloop.config.json` → `learning`:
 
 - `enabled` — toggle learning loop
-- `playbookPath` — default `.cortexloop/playbook.json`
-- `global` — also record to `~/.cortexloop/playbook.json`
+- `playbookPath` — default `.cortexloop/playbook.json` (CLI: `--playbook`)
+- `global` — also record to `~/.cortexloop/playbook.json` (CLI: `--global` / `--global-merge`)
 - `reflectOn` — `"direct"` (default)
-- `queryVerifiedOnly` — Step 0.5 verified-only (default true)
-- `tiers` — promotion/demotion/quarantine thresholds
-- `decay.perDay` — trust decay rate
-- `outcomeWeights` — signed deltas (must match script defaults)
-- `prune` — thresholds including `dropQuarantined`
+- `queryVerifiedOnly` — Step 0.5 verified-only (default true; CLI: `--include-candidates` inverts)
+- `prune` — thresholds including `dropQuarantined` (CLI: `--min-confidence` / `--max-age-days` / `--max-entries` / `--drop-quarantined`)
 
-Scripts use CLI flags and built-in defaults; they do **not** read config files.
+Tier promotion thresholds, `decay.perDay`, and `outcomeWeights` are **script-internal defaults** (`PLAYBOOK_DEFAULTS`, `OUTCOME_DELTAS` in `scripts/lib/shared.mjs`) — they are NOT read from config. The values are documented inline above (Two tiers, Outcome signals). Do not add them to your config; the scripts would silently ignore them.

@@ -137,41 +137,13 @@
     },
     "learning": {
       "type": "object",
+      "description": "Learning-loop config. Scripts honor ONLY keys with CLI flag equivalents: playbookPath (--playbook), global (--global / --global-merge), queryVerifiedOnly (--include-candidates inverts), prune.* (--min-confidence / --max-age-days / --max-entries / --drop-quarantined). Tier promotion, decay, and outcome deltas are script-internal defaults (PLAYBOOK_DEFAULTS, OUTCOME_DELTAS in scripts/lib/shared.mjs) and are NOT configurable here — documenting them invited users to set values the scripts would silently ignore.",
       "properties": {
         "enabled": { "type": "boolean", "default": true },
         "playbookPath": { "type": "string", "default": ".cortexloop/playbook.json" },
         "global": { "type": "boolean", "default": false },
         "reflectOn": { "enum": ["direct"], "default": "direct" },
         "queryVerifiedOnly": { "type": "boolean", "default": true, "description": "Step 0.5 surfaces only verified-tier patterns; candidates need --include-candidates" },
-        "tiers": {
-          "type": "object",
-          "description": "Two-tier trust model thresholds (anti-hallucination)",
-          "properties": {
-            "newConfidence": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.3 },
-            "promoteConfidence": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.7 },
-            "demoteConfidence": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.4 },
-            "quarantineConfidence": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.2 },
-            "minVerified": { "type": "integer", "minimum": 1, "default": 2 },
-            "minDistinctContexts": { "type": "integer", "minimum": 1, "default": 2 }
-          }
-        },
-        "decay": {
-          "type": "object",
-          "description": "Trust decays until re-validated by a verified outcome",
-          "properties": {
-            "perDay": { "type": "number", "minimum": 0, "default": 0.01 }
-          }
-        },
-        "outcomeWeights": {
-          "type": "object",
-          "description": "Signed confidence deltas per outcome; external oracle > self-report, negatives stronger than positives",
-          "properties": {
-            "external_verified": { "type": "number", "default": 0.2 },
-            "self_verified": { "type": "number", "default": 0.1 },
-            "rejected": { "type": "number", "default": -0.1 },
-            "failed": { "type": "number", "default": -0.4 }
-          }
-        },
         "prune": {
           "type": "object",
           "properties": {
