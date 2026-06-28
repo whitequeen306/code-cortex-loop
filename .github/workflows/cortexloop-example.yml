@@ -7,6 +7,12 @@
 #   run: |
 #     # cursor / claude / your-tool --command "/cortexloop-pre-pr --ci"
 #     test -f docs/cortexloop/report.json
+#
+# Why the "no report" guard below: a PR that has not run CortexLoop has no report.json
+# on disk. Without this guard, ci-gate would exit 3 (report missing) and turn the PR
+# red for a reason that has nothing to do with code quality. The gate only has
+# authority over PRs that actually ran CortexLoop. PRs without a report skip the gate
+# and pass through.
 
 name: CodeCortexLoop
 
@@ -30,7 +36,22 @@ jobs:
       #     # cursor / claude / your-tool --command "/cortexloop-pre-pr --ci"
       #     test -f docs/cortexloop/report.json
 
+      # Skip the gate when no report.json exists. CortexLoop's gate only has
+      # authority over PRs that actually ran CortexLoop analysis. A PR without a
+      # report has nothing for ci-gate to read — turning it red would be a false
+      # failure. This guard exits 0 (green/skip) instead of exit 3 (red/missing).
+      - name: Skip gate when no report.json
+        shell: bash
+        run: |
+          REPORT_PATH="docs/cortexloop/report.json"
+          if [ ! -f "$REPORT_PATH" ]; then
+            echo "[cortexloop] No report.json at $REPORT_PATH — skipping gate (PR did not run CortexLoop analysis)."
+            echo "GATE_SKIP=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
       - name: CodeCortexLoop gate (badge + dashboard + PR comment)
+        if: env.GATE_SKIP != '1'
         uses: ./
         with:
           report-path: docs/cortexloop/report.json

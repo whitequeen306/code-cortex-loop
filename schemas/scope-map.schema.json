@@ -51,6 +51,18 @@
         "paths": { "type": "array", "items": { "type": "string" } }
       }
     },
+    "hotspotSymbolHints": {
+      "type": "array",
+      "description": "Lightweight export-name hints on hotspot entry files (regex, not AST)",
+      "items": {
+        "type": "object",
+        "required": ["file", "symbols"],
+        "properties": {
+          "file": { "type": "string" },
+          "symbols": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
     "indexQuality": { "type": "object" }
   }
 }

@@ -254,6 +254,35 @@ Return: added hotspot count + 1 sentence only.
 
 Skip enrich when confidence >= `scope.mapEnrichThreshold`.
 
+### 2c — Optional codegraph deep index (before Pass 1, interactive only)
+
+**Skip in CI mode** (`--ci` or config `ci.enabled`) — always continue L1 + grep.
+
+After Step 2a/2b, check whether to offer install + init:
+
+```bash
+node scripts/ensure-codegraph-index.mjs --check --json
+```
+
+Offer when JSON has `"offer": true` — typically: `indexStrategy.optionalDeepIndex.suggested` **and** no `.codegraph/` in project root.  
+Detection uses **project** `.codegraph/` (index built), not only CLI on PATH (`cliAvailable` is reported separately).
+
+**Orchestrator MUST ask the user** (one question, before Step 3 Pass 1):
+
+> 当前项目较大 / 索引置信度偏低，尚未建立 codegraph 细索引（`.codegraph/`）。  
+> 是否现在安装并初始化 codegraph？（可改善跨文件调用链分析；拒绝则继续 L1 scope-map + grep）
+
+| User answer | Action |
+|-------------|--------|
+| **Yes** | `node scripts/ensure-codegraph-index.mjs --install-and-init --yes` then continue Step 3 |
+| **No** | `node scripts/ensure-codegraph-index.mjs --record=decline` then continue Step 3 with L1 + grep |
+
+Install uses bundled helper (`scripts/lib/codegraph-install.mjs`): `npm install -g @colbymchenry/codegraph` if CLI missing, then `codegraph init -i` in project root. **Never** run install without explicit user consent.
+
+Record choice in `.cortexloop/deep-index-choice.json`; manifest `indexStrategy.optionalDeepIndex.userDecision` updates on record.
+
+Config: `scope.deepIndexOffer: false` disables the prompt (default **true**).
+
 After map exists, depth passes (Step 3) use **coveragePolicy: prioritize-with-sampling**:
 
 - **Prioritize:** hotspots + recentChangeFocus + mustReview + patternHits[category]
