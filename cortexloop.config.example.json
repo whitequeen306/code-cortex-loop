@@ -4,6 +4,11 @@
   "scope": {
     "mode": "recent",
     "mapThreshold": 100,
+    "smallScopeThreshold": 50,
+    "deepIndexFileThreshold": 300,
+    "deepIndexTopHotspots": 15,
+    "hotspotSymbolHintFiles": 8,
+    "deepIndexOffer": true,
     "mapEnrichThreshold": 0.7,
     "longTailSampleCount": 20,
     "mapWeights": {

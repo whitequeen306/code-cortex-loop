@@ -23,6 +23,10 @@ export const DEFAULT_RUN_STATE = '.cortexloop/run-state.json';
 export const DEFAULT_CONTEXT_ANCHOR = '.cortexloop/context-anchor.md';
 export const DEFAULT_HANDOFF_SUMMARY = '.cortexloop/handoff-summary.json';
 export const DEFAULT_MAP_THRESHOLD = 100;
+export const DEFAULT_SMALL_SCOPE_THRESHOLD = 50;
+export const DEFAULT_DEEP_INDEX_FILE_THRESHOLD = 300;
+export const DEFAULT_DEEP_INDEX_TOP_HOTSPOTS = 15;
+export const DEFAULT_HOTSPOT_SYMBOL_HINT_FILES = 8;
 export const DEFAULT_MAP_ENRICH_THRESHOLD = 0.7;
 export const DEFAULT_LONG_TAIL_SAMPLE_COUNT = 20;
 export const DEFAULT_MAP_WEIGHTS = {
@@ -896,11 +900,98 @@ export function loadScopeConfig(configPath = 'cortexloop.config.json') {
   const topExclude = Array.isArray(cfg?.exclude) ? cfg.exclude : [];
   return {
     mapThreshold: scope.mapThreshold ?? DEFAULT_MAP_THRESHOLD,
+    smallScopeThreshold: scope.smallScopeThreshold ?? DEFAULT_SMALL_SCOPE_THRESHOLD,
+    deepIndexFileThreshold: scope.deepIndexFileThreshold ?? DEFAULT_DEEP_INDEX_FILE_THRESHOLD,
+    deepIndexTopHotspots: scope.deepIndexTopHotspots ?? DEFAULT_DEEP_INDEX_TOP_HOTSPOTS,
+    hotspotSymbolHintFiles: scope.hotspotSymbolHintFiles ?? DEFAULT_HOTSPOT_SYMBOL_HINT_FILES,
+    deepIndexOffer: scope.deepIndexOffer !== false,
     exclude: [...topExclude, ...(scope.exclude ?? [])],
     mode: scope.mode ?? (typeof rawScope === 'string' ? rawScope : null),
     mapEnrichThreshold: scope.mapEnrichThreshold ?? DEFAULT_MAP_ENRICH_THRESHOLD,
     longTailSampleCount: scope.longTailSampleCount ?? DEFAULT_LONG_TAIL_SAMPLE_COUNT,
     mapWeights: { ...DEFAULT_MAP_WEIGHTS, ...(scope.mapWeights ?? {}) },
+  };
+}
+
+/**
+ * CortexLoop index tiers (built-in only — never hard-requires codegraph).
+ * L0: scope-paths + grep. L1: + scope-map. Optional deep index is external (codegraph MCP).
+ *
+ * @param {object} opts
+ * @param {number} opts.fileCount
+ * @param {ReturnType<typeof loadScopeConfig>} opts.scopeCfg
+ * @param {object|null} opts.scopeMap
+ * @param {string} opts.pathsOut
+ * @param {string} opts.mapOut
+ * @param {string} [opts.rootDir]
+ * @param {boolean} [opts.cliAvailable]
+ * @param {string|null} [opts.userDecision]
+ */
+export function buildIndexStrategy(opts) {
+  const { fileCount, scopeCfg, scopeMap, pathsOut, mapOut, rootDir = '.', cliAvailable = false, userDecision = null } =
+    opts;
+  const requiresMap = fileCount > scopeCfg.mapThreshold;
+  const tier = requiresMap ? 'L1' : 'L0';
+
+  const deepIndexTargets =
+    scopeMap?.hotspots?.slice(0, scopeCfg.deepIndexTopHotspots).map((h) => h.path) ?? [];
+
+  const suggestOptionalDeepIndex = Boolean(
+    scopeMap &&
+      (fileCount >= scopeCfg.deepIndexFileThreshold ||
+        scopeMap.mapEnrichRecommended ||
+        scopeMap.confidence < scopeCfg.mapEnrichThreshold),
+  );
+
+  const codegraphPresent = existsSync(resolve(rootDir, '.codegraph'));
+
+  return {
+    version: '1.0',
+    tier,
+    tierMax: 'L1',
+    note: 'CortexLoop guarantees L0/L1 only. Deep symbol/call graphs are optional via external codegraph MCP.',
+    guaranteed: {
+      L0: { pathsFile: pathsOut },
+      ...(requiresMap && scopeMap
+        ? {
+            L1: {
+              scopeMapFile: mapOut,
+              confidence: scopeMap.confidence,
+              mapEnrichRecommended: scopeMap.mapEnrichRecommended,
+            },
+          }
+        : {}),
+    },
+    optionalDeepIndex: {
+      engine: 'codegraph',
+      suggested: suggestOptionalDeepIndex,
+      required: false,
+      offerBeforePass1:
+        suggestOptionalDeepIndex &&
+        !codegraphPresent &&
+        scopeCfg.deepIndexOffer !== false &&
+        userDecision !== 'decline',
+      codegraphPresent,
+      cliAvailable,
+      userDecision,
+      deepIndexTargets,
+      useWhen: [
+        'cross-file call chain (A calls B)',
+        'impact radius before changing a symbol',
+        'entry point still unclear after scope-map + grep',
+      ],
+      fallbackWithout:
+        'grep/glob + Read; mark call-chain findings Confidence medium unless verified manually',
+      setupHint: codegraphPresent
+        ? 'Optional: run `codegraph sync` after large edits'
+        : 'Optional: run `codegraph init -i` in project root (external tool — not bundled with CortexLoop)',
+    },
+    retrievalOrder: [
+      'Read scope-manifest.json → indexStrategy',
+      'scope-map: hotspots → mustReview → patternHits[category] → longTailSample',
+      'grep/glob for file slices',
+      'codegraph MCP only when optionalDeepIndex.useWhen applies',
+    ],
   };
 }
 

@@ -8,12 +8,14 @@
  */
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { buildScopeMap } from './lib/scope-index.mjs';
+import { buildScopeMapFromPaths } from './lib/scope-index.mjs';
+import { detectCodegraphCli } from './lib/codegraph-install.mjs';
 import {
   DEFAULT_SCOPE_MANIFEST,
   DEFAULT_SCOPE_MAP,
   DEFAULT_SCOPE_PATHS,
   aggregatePathsByDirectory,
+  buildIndexStrategy,
   loadScopeConfig,
   tryGitBranch,
   tryGitCommit,
@@ -164,19 +166,33 @@ export function buildScopeManifest(opts) {
     scopeMode: opts.mode,
     paths,
   });
-  writeJson(opts.out, manifest);
-
   let scopeMap = null;
   if (manifest.requiresMap && !opts.skipMap) {
-    scopeMap = buildScopeMap({
-      manifestPath: opts.out,
-      pathsPath: opts.pathsOut,
-      configPath: opts.configPath,
-      out: opts.mapOut,
+    scopeMap = buildScopeMapFromPaths({
+      paths,
       scopeCfg,
+      out: opts.mapOut,
+      rootDir: '.',
     });
     writeJson(opts.mapOut, scopeMap);
   }
+
+  const priorChoice = existsSync('.cortexloop/deep-index-choice.json')
+    ? JSON.parse(readFileSync('.cortexloop/deep-index-choice.json', 'utf8'))
+    : null;
+
+  manifest.indexStrategy = buildIndexStrategy({
+    fileCount: paths.length,
+    scopeCfg,
+    scopeMap,
+    pathsOut: opts.pathsOut,
+    mapOut: opts.mapOut,
+    rootDir: '.',
+    cliAvailable: detectCodegraphCli(),
+    userDecision: priorChoice?.decision ?? null,
+  });
+
+  writeJson(opts.out, manifest);
 
   return { manifest, paths, scopeMap, outPath: opts.out, pathsOut: opts.pathsOut, mapOut: opts.mapOut };
 }
@@ -201,6 +217,16 @@ function main() {
           `[cortexloop] map phase recommended (fileCount > ${result.manifest.mapThreshold}) — run build-scope-map.mjs`,
         );
       }
+    }
+    if (result.manifest.indexStrategy?.optionalDeepIndex?.suggested) {
+      console.log(
+        '[cortexloop] optional deep index suggested (codegraph) — not required; see manifest.indexStrategy.optionalDeepIndex',
+      );
+    }
+    if (result.manifest.indexStrategy?.optionalDeepIndex?.offerBeforePass1) {
+      console.log(
+        '[cortexloop] offer deep index before Pass 1: node scripts/ensure-codegraph-index.mjs --check --json',
+      );
     }
   }
   if (opts.json) console.log(JSON.stringify(result.manifest, null, 2));

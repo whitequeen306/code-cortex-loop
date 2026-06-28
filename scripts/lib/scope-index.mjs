@@ -7,11 +7,15 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, normalize, relative, resolve } from 'node:path';
 import {
   aggregatePathsByDirectory,
+  DEFAULT_DEEP_INDEX_TOP_HOTSPOTS,
+  DEFAULT_HOTSPOT_SYMBOL_HINT_FILES,
   DEFAULT_LONG_TAIL_SAMPLE_COUNT,
   DEFAULT_MAP_ENRICH_THRESHOLD,
   DEFAULT_MAP_THRESHOLD,
   DEFAULT_MAP_WEIGHTS,
   DEFAULT_SCOPE_MAP,
+  DEFAULT_SMALL_SCOPE_THRESHOLD,
+  DEFAULT_DEEP_INDEX_FILE_THRESHOLD,
 } from './shared.mjs';
 import { isEntryPoint, PASS_CATEGORIES, scanFileForPatterns } from './scope-patterns.mjs';
 
@@ -31,12 +35,16 @@ const IMPORT_RE = [
 
 /**
  * @param {unknown} scope
- * @returns {{ mapThreshold: number, exclude: string[], mode: string|null, mapWeights: typeof DEFAULT_MAP_WEIGHTS, mapEnrichThreshold: number, longTailSampleCount: number }}
+ * @returns {{ mapThreshold: number, smallScopeThreshold: number, deepIndexFileThreshold: number, deepIndexTopHotspots: number, hotspotSymbolHintFiles: number, exclude: string[], mode: string|null, mapWeights: typeof DEFAULT_MAP_WEIGHTS, mapEnrichThreshold: number, longTailSampleCount: number }}
  */
 export function normalizeScopeConfig(scope) {
   if (typeof scope === 'string') {
     return {
       mapThreshold: DEFAULT_MAP_THRESHOLD,
+      smallScopeThreshold: DEFAULT_SMALL_SCOPE_THRESHOLD,
+      deepIndexFileThreshold: DEFAULT_DEEP_INDEX_FILE_THRESHOLD,
+      deepIndexTopHotspots: DEFAULT_DEEP_INDEX_TOP_HOTSPOTS,
+      hotspotSymbolHintFiles: DEFAULT_HOTSPOT_SYMBOL_HINT_FILES,
       exclude: [],
       mode: scope,
       mapWeights: { ...DEFAULT_MAP_WEIGHTS },
@@ -47,12 +55,84 @@ export function normalizeScopeConfig(scope) {
   const s = scope && typeof scope === 'object' ? scope : {};
   return {
     mapThreshold: s.mapThreshold ?? DEFAULT_MAP_THRESHOLD,
+    smallScopeThreshold: s.smallScopeThreshold ?? DEFAULT_SMALL_SCOPE_THRESHOLD,
+    deepIndexFileThreshold: s.deepIndexFileThreshold ?? DEFAULT_DEEP_INDEX_FILE_THRESHOLD,
+    deepIndexTopHotspots: s.deepIndexTopHotspots ?? DEFAULT_DEEP_INDEX_TOP_HOTSPOTS,
+    hotspotSymbolHintFiles: s.hotspotSymbolHintFiles ?? DEFAULT_HOTSPOT_SYMBOL_HINT_FILES,
     exclude: s.exclude ?? [],
     mode: s.mode ?? null,
     mapWeights: { ...DEFAULT_MAP_WEIGHTS, ...(s.mapWeights ?? {}) },
     mapEnrichThreshold: s.mapEnrichThreshold ?? DEFAULT_MAP_ENRICH_THRESHOLD,
     longTailSampleCount: s.longTailSampleCount ?? DEFAULT_LONG_TAIL_SAMPLE_COUNT,
   };
+}
+
+const SYMBOL_HINT_RES = [
+  /export\s+(?:async\s+)?function\s+(\w+)/g,
+  /export\s+(?:default\s+)?(?:abstract\s+)?class\s+(\w+)/g,
+  /export\s+(?:const|let|var)\s+(\w+)\s*=/g,
+  /export\s+default\s+function\s+(\w+)/g,
+];
+
+/**
+ * Lightweight export-name scan for hotspot entry files (L1 enhancement — not a call graph).
+ * @param {string} content
+ * @param {number} [maxSymbols]
+ */
+export function scanSymbolHints(content, maxSymbols = 12) {
+  const names = new Set();
+  for (const re of SYMBOL_HINT_RES) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(content)) !== null && names.size < maxSymbols) {
+      if (m[1]) names.add(m[1]);
+    }
+  }
+  return [...names].slice(0, maxSymbols);
+}
+
+/**
+ * @param {Array<{ path: string, entryFiles?: string[] }>} hotspots
+ * @param {string[]} normalizedPaths
+ * @param {Record<string, string>|undefined} fileContents
+ * @param {string} rootDir
+ * @param {number} maxFiles
+ */
+export function buildHotspotSymbolHints(hotspots, normalizedPaths, fileContents, rootDir, maxFiles = 8) {
+  /** @type {string[]} */
+  const files = [];
+  for (const h of hotspots) {
+    const candidates = [...(h.entryFiles || [])];
+    if (candidates.length === 0) {
+      candidates.push(
+        ...normalizedPaths.filter((p) => p.startsWith(`${h.path}/`) || p === h.path).slice(0, 2),
+      );
+    }
+    for (const f of candidates) {
+      if (files.includes(f)) continue;
+      files.push(f);
+      if (files.length >= maxFiles) break;
+    }
+    if (files.length >= maxFiles) break;
+  }
+
+  /** @type {Array<{ file: string, symbols: string[] }>} */
+  const hints = [];
+  for (const file of files) {
+    let content = fileContents?.[file];
+    if (content == null) {
+      const abs = resolve(rootDir, file);
+      if (!existsSync(abs)) continue;
+      try {
+        content = readFileSync(abs, 'utf8');
+      } catch {
+        continue;
+      }
+    }
+    const symbols = scanSymbolHints(content);
+    if (symbols.length > 0) hints.push({ file, symbols });
+  }
+  return hints;
 }
 
 function gitLines(cmd) {
@@ -380,6 +460,14 @@ export function buildScopeMapFromPaths(opts) {
   if (churn.recentChangeFocus.length === 0) confidence -= 0.1;
   confidence = Math.max(0.3, Math.min(1, Math.round(confidence * 100) / 100));
 
+  const hotspotSymbolHints = buildHotspotSymbolHints(
+    hotspots,
+    normalizedPaths,
+    fileContents,
+    rootDir,
+    scopeCfg.hotspotSymbolHintFiles,
+  );
+
   const scopeMap = {
     version: '2.3',
     generatedAt: new Date().toISOString(),
@@ -400,6 +488,7 @@ export function buildScopeMapFromPaths(opts) {
       strategy: 'one-per-dir-not-in-hotspot',
       paths: longTailPaths,
     },
+    hotspotSymbolHints,
     indexQuality: {
       filesScanned: normalizedPaths.length,
       importEdgesResolved: importGraph.edgesResolved,
