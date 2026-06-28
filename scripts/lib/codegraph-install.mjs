@@ -8,16 +8,23 @@ import { resolve } from 'node:path';
 
 export const CODEGRAPH_PACKAGE = '@colbymchenry/codegraph';
 
+// We invoke `codegraph --version` as a single string with shell:true rather than
+// passing an args array. On Windows the npm-global bin is a .cmd shim that needs
+// shell resolution; on posix Node resolves PATH directly. Using the string form
+// (no args array) avoids Node's DEP0190 deprecation while keeping .cmd resolution
+// intact. The command is a fixed literal, so there is no shell-injection surface.
+const SHELL_PLATFORM = process.platform === 'win32';
+
 /**
  * @returns {boolean}
  */
 export function detectCodegraphCli() {
   try {
-    const r = spawnSync('codegraph', ['--version'], {
+    const r = spawnSync('codegraph --version', {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
       timeout: 15000,
-      shell: process.platform === 'win32',
+      shell: SHELL_PLATFORM,
     });
     return r.status === 0 && Boolean(String(r.stdout || '').trim());
   } catch {
@@ -30,11 +37,11 @@ export function detectCodegraphCli() {
  */
 export function codegraphCliVersion() {
   try {
-    const r = spawnSync('codegraph', ['--version'], {
+    const r = spawnSync('codegraph --version', {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
       timeout: 15000,
-      shell: process.platform === 'win32',
+      shell: SHELL_PLATFORM,
     });
     if (r.status !== 0) return null;
     return String(r.stdout || '').trim() || null;
