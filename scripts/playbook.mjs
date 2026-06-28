@@ -89,9 +89,11 @@ function cmdQuery() {
   const globalMerge = flags.has('--global-merge');
   const includeCandidates = flags.has('--include-candidates');
 
+  const projectPbExists = existsSync(playbookPath);
   const projectPb = loadPlaybook(playbookPath);
   let entries = projectPb.entries;
-  if (globalMerge && existsSync(GLOBAL_PLAYBOOK)) {
+  const globalExists = globalMerge && existsSync(GLOBAL_PLAYBOOK);
+  if (globalExists) {
     entries = mergePlaybooks(projectPb, loadPlaybook(GLOBAL_PLAYBOOK));
   }
 
@@ -108,9 +110,23 @@ function cmdQuery() {
   }
 
   if (!verified.length && !(includeCandidates && candidates.length)) {
+    // First-run guidance: the playbook has no recallable entries yet. Tell the
+    // user how the memory loop closes instead of silently printing "no match".
+    const playbookEmpty = !projectPbExists && !globalExists;
     console.log('[cortexloop] Playbook: no trusted entries match (analysis proceeds normally).');
     if (candidates.length) {
       console.log(`  (${candidates.length} unconfirmed candidate(s) available via --include-candidates)`);
+    }
+    if (playbookEmpty) {
+      console.log('');
+      console.log('  ── First run? Your playbook is empty. ──');
+      console.log('  The memory loop fills like this:');
+      console.log('    1. Run /cortexloop in Direct mode (applies fixes with test-after-each-group).');
+      console.log('    2. Run /cortexloop-reflect — writes .cortexloop/reflection.json from what you fixed.');
+      console.log('    3. Run: node scripts/playbook.mjs record .cortexloop/reflection.json');
+      console.log('       (add --global to also record to ~/.cortexloop/playbook.json)');
+      console.log('  Next run, Step 0.5 query will surface verified patterns here.');
+      console.log('  Example playbook: examples/demo-app/.cortexloop/playbook.json');
     }
     return;
   }
