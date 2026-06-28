@@ -306,6 +306,19 @@ function cmdFeedback() {
 
   const beforeTier = entry.tier || 'candidate';
   const beforeConf = (entry.confidence ?? PLAYBOOK_DEFAULTS.newConfidence).toFixed(2);
+  // Tier-eligibility WARNING (not a hard block): feedback is meant for
+  // verified-tier entries that an external oracle or negative signal can
+  // move. Applying it to a candidate or quarantined entry is allowed — a
+  // candidate CAN be promoted by external_verified, and a quarantined entry
+  // being externally validated deserves rescue — but it is unusual enough to
+  // surface explicitly so the operator knows the trust state changed from a
+  // non-trusted baseline. We do NOT reject: that would sever the only path
+  // by which a candidate reaches verified via an external oracle.
+  if (beforeTier !== 'verified') {
+    console.warn(`[cortexloop] Note: entry is in '${beforeTier}' tier, not 'verified'.`);
+    console.warn(`  Feedback on a non-verified entry is allowed (it may promote/rescue it),`);
+    console.warn(`  but reconfirm the signature is the intended one before trusting this signal.`);
+  }
   applyOutcome(entry, outcome, { context, evidence });
   const zhPath = persistPlaybook(playbookPath, playbook);
 

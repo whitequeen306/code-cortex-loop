@@ -125,6 +125,24 @@ Alternative: `--category=... --problem=... --lang=...` instead of `--signature`.
 
 **Do not** wire `feedback` into `action.yml` automatically — CI cannot know which signatures were applied.
 
+### Feedback vs. record (boundary)
+
+| | `record` | `feedback` |
+|---|---|---|
+| **Outcome** | `self_verified` (+0.1) | `external_verified` / `rejected` / `failed` |
+| **Source** | Direct re-verify + local tests passed | External oracle (CI/human) or negative result |
+| **When** | After a successful Direct fix group | When CI/human judges a signature, or a fix failed/reverted |
+
+### Tier eligibility (warning, not block)
+
+`feedback` targets **verified-tier** entries by default — that is where an external oracle or negative signal meaningfully moves trust. Applying feedback to a **candidate** or **quarantined** entry is **allowed but unusual**:
+
+- A *candidate* receiving `external_verified` CAN be promoted — this is the legitimate path for an external oracle to vouch for a hypothesis early. Allowed.
+- A *quarantined* entry being externally validated deserves rescue. Allowed.
+- A *candidate* receiving `rejected`/`failed` pushes it toward quarantine. Allowed but redundant — candidates are already hidden from query.
+
+`cmdFeedback` prints a `Note: entry is in '<tier>' tier, not 'verified'` warning for non-verified targets so the operator reconfirms the signature. It does **not** hard-reject, because blocking would sever the only path by which a candidate reaches verified via an external oracle. The warning is the guard; the operator is the gate.
+
 ## Data model
 
 **Signature (dedup key):**

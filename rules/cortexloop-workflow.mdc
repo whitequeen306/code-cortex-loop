@@ -261,7 +261,7 @@ node scripts/playbook.mjs query --category=performance,simplicity,errorHandling 
 
 After Direct re-verify: reflect skill → `reflection.json` → `playbook.mjs record` (self_verified; new entries start as **candidate**).
 
-Feedback for external oracle / negative signals: `playbook.mjs feedback --outcome=external_verified|failed|rejected`.
+Feedback for external oracle / negative signals: `playbook.mjs feedback --outcome=external_verified|failed|rejected`. Targets verified-tier entries by default; applying to a candidate/quarantined entry prints a tier warning (allowed — it may promote/rescue — but reconfirm the signature). See `rules/learning-loop.mdc` § Tier eligibility.
 
 See `rules/learning-loop.mdc` — memory is **recall, not authority**; re-derive and verify every fix; record failures.
 
