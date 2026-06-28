@@ -13,6 +13,8 @@
       "category": "tests",
       "location": "src/b.js:2",
       "problem": "high issue",
+      "evidence": "missing test for the documented retry-on-conflict path",
+      "confidence": "medium",
       "status": "open"
     }
   ]

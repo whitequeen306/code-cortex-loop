@@ -17,6 +17,8 @@
       "category": "correctness",
       "location": "src/c.js:3",
       "problem": "new baseline finding",
+      "evidence": "appears in current report but absent from accepted baseline",
+      "confidence": "high",
       "status": "open"
     }
   ],

@@ -13,6 +13,8 @@
       "category": "security",
       "location": "src/a.js:1",
       "problem": "critical issue",
+      "evidence": "reproduced via crafted input triggering the vuln path",
+      "confidence": "high",
       "status": "open"
     }
   ]

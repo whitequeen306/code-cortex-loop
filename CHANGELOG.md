@@ -2,6 +2,19 @@
 
 All notable changes to CodeCortexLoop are documented here.
 
+## [Unreleased]
+
+### Added
+- **`aggregate-findings.mjs`** — machine-checked finding merge + dedup for Step 4. Uses the same `findingFingerprint` as `baseline.mjs` so aggregation and the baseline ratchet agree on what counts as "the same finding." Each aggregated finding carries `evidence` + `confidence` (required by the finding quality gate) and a `provenance` block (`pass`, `expert`, `orphanId` when from Step 3.5 recycle, `sources[]` listing other passes/experts that flagged the same fingerprint).
+- `aggregateFindings` + `DEFAULT_AGGREGATED_FINDINGS` exports in `shared.mjs`
+- `tests/aggregate-findings.test.mjs` — covers cross-domain dedup, distinct-fingerprint separation, orphanId attachment, missing-handoff tolerance, validateReport pass-through, and the aggregation↔baseline fingerprint invariant
+- `evidence` + optional `confidence` + `provenance` fields on the `finding` definition in `cortexloop-report.schema.json`
+
+### Changed
+- `validateReport` now rejects report findings missing `evidence` (finding quality gate enforcement at CI gate); invalid `confidence` enum also rejected. Pre-existing report fixtures updated to include evidence.
+- Step 4 in `commands/cortexloop.md` now invokes `aggregate-findings.mjs` instead of leaving merge/dedup to inline LLM work; CL-### numbering happens after suppression on the script's severity-first output
+- README "质量不会降的原因" updated to describe machine-checked aggregation
+
 ## [2.4.0] - 2026-06-25
 
 ### Added

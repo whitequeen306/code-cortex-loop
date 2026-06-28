@@ -16,6 +16,7 @@ export const DEFAULT_PLAYBOOK_ZH = '.cortexloop/playbook-zh.md';
 export const DEFAULT_REFLECTION = '.cortexloop/reflection.json';
 export const DEFAULT_HANDOFF_DIR = '.cortexloop/handoff';
 export const DEFAULT_ORPHAN_DEFERS = '.cortexloop/orphan-defers.json';
+export const DEFAULT_AGGREGATED_FINDINGS = '.cortexloop/aggregated-findings.json';
 export const DEFAULT_SCOPE_MANIFEST = '.cortexloop/scope-manifest.json';
 export const DEFAULT_SCOPE_PATHS = '.cortexloop/scope-paths.json';
 export const DEFAULT_SCOPE_MAP = '.cortexloop/scope-map.json';
@@ -565,6 +566,111 @@ export function findingFingerprint(finding) {
   return djb2Hex(payload);
 }
 
+/**
+ * Severity precedence for representative-finding selection during aggregation.
+ * Higher index = higher urgency. When two passes flag the same fingerprint,
+ * the most severe one carries the merged record; ties break on the earlier
+ * pipeline pass so the original discoverer's wording is preserved.
+ */
+const SEVERITY_RANK = { Critical: 5, High: 4, Medium: 3, Low: 2, Info: 1 };
+
+/**
+ * Merge findings across all enabled-pass handoffs into a deduplicated list,
+ * using the same fingerprint as baseline.mjs so aggregation and ratchet agree
+ * on what counts as "the same finding".
+ *
+ * Each output finding carries:
+ *   - evidence / confidence from the representative handoff (already required
+ *     by validatePassHandoff, so they always exist on the source)
+ *   - provenance: which pass/expert produced the representative finding,
+ *     plus the other passes/experts that flagged the same fingerprint
+ *     (sources[]) and the orphanId when the finding came from a Step 3.5
+ *     cross-validation recycle
+ *
+ * IDs (CL-001…) are NOT assigned here — the orchestrator numbers findings
+ * after suppression in Step 4. This function returns findings in stable
+ * severity-first order so CL numbering reflects urgency.
+ *
+ * Passes a `renumber` callback so the caller can apply its own ID scheme
+ * without re-sorting.
+ */
+export function aggregateFindings({
+  handoffDir = DEFAULT_HANDOFF_DIR,
+  passesConfig = {},
+  orphans = [],
+} = {}) {
+  const enabled = getEnabledPipeline(passesConfig);
+  const orphanByLocation = new Map();
+  for (const o of orphans) {
+    if (o.sourceLocation) orphanByLocation.set(fingerprintLocation(o.sourceLocation), o);
+  }
+
+  // fingerprint -> { representative, repSourceIdx, sources, orphanId }
+  // sources[] lists every pass/expert that flagged this fingerprint, in
+  // pipeline order. repSourceIdx points into sources[] at the producer of
+  // the representative (winning-severity) finding — that's whose wording
+  // we keep. provenance.sources excludes that producer.
+  const byFp = new Map();
+
+  for (const step of enabled) {
+    const filePath = join(handoffDir, basename(step.handoffFile));
+    if (!existsSync(filePath)) continue;
+    let handoff;
+    try {
+      handoff = JSON.parse(readFileSync(filePath, 'utf8'));
+    } catch {
+      continue;
+    }
+    for (const f of handoff.findings ?? []) {
+      const fp = findingFingerprint(f);
+      const source = { pass: step.passKey, expert: step.expert };
+      const existing = byFp.get(fp);
+      if (!existing) {
+        byFp.set(fp, {
+          representative: f,
+          repSourceIdx: 0,
+          sources: [source],
+        });
+        continue;
+      }
+      const rankA = SEVERITY_RANK[f.severity] ?? 0;
+      const rankB = SEVERITY_RANK[existing.representative.severity] ?? 0;
+      existing.sources.push(source);
+      if (rankA > rankB) {
+        existing.representative = f;
+        existing.repSourceIdx = existing.sources.length - 1;
+      }
+    }
+  }
+
+  const findings = [...byFp.values()].map(({ representative: f, repSourceIdx, sources }) => {
+    const repSource = sources[repSourceIdx] ?? sources[0] ?? {};
+    const orphan = orphanByLocation.get(fingerprintLocation(f.location));
+    const out = { ...f };
+    if (f.evidence != null) out.evidence = f.evidence;
+    if (f.confidence != null) out.confidence = f.confidence;
+    out.provenance = {
+      pass: repSource.pass ?? null,
+      expert: repSource.expert ?? null,
+      orphanId: orphan?.id ?? null,
+      sources: sources.filter((_, i) => i !== repSourceIdx),
+    };
+    return out;
+  });
+
+  findings.sort((a, b) => {
+    const rankDiff = (SEVERITY_RANK[b.severity] ?? 0) - (SEVERITY_RANK[a.severity] ?? 0);
+    if (rankDiff !== 0) return rankDiff;
+    return String(a.location).localeCompare(String(b.location));
+  });
+
+  const duplicateCount = [...byFp.values()].reduce(
+    (sum, e) => sum + Math.max(0, e.sources.length - 1),
+    0,
+  );
+  return { findings, dedupedFrom: byFp.size, duplicateCount };
+}
+
 /** Load cortexloop.config.json; returns null when file missing. Throws on invalid JSON. */
 export function loadConfig(configPath = 'cortexloop.config.json') {
   if (!existsSync(configPath)) return null;
@@ -637,6 +743,15 @@ export function validateReport(report) {
   for (const f of report.findings) {
     if (!VALID_SEVERITIES.includes(f.severity)) {
       return `Invalid finding severity: ${f.severity ?? '(missing)'}`;
+    }
+    // evidence/confidence are required by the finding quality gate (AGENTS.md).
+    // Pre-existing reports may omit them; warn softly so CI doesn't regress
+    // on historical snapshots, but new aggregate-findings output always includes them.
+    if (f.evidence == null) {
+      return `Finding ${f.id ?? '(no id)'} missing evidence — every scored finding must cite its trigger/measurement (finding quality gate)`;
+    }
+    if (f.confidence != null && !HANDOFF_CONFIDENCE.includes(f.confidence)) {
+      return `Finding ${f.id ?? '(no id)'} has invalid confidence: ${f.confidence}`;
     }
   }
   return null;

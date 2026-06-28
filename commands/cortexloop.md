@@ -592,11 +592,17 @@ node scripts/validate-handoffs.mjs
 
 Exit code 1 = missing or invalid handoff — re-run failed pass (Task, Agent, SOLO/spawn delegation, or fallback persona). In CI mode, exit 3.
 
-2. Merge `findings` from all `.cortexloop/handoff/*.json` files for enabled passes
-3. Assign IDs `CL-001`…
-4. Deduplicate same file:line + issue
-5. Compute **health scores** (before)
-6. Write `report.json` to **run archive** (`run-meta.reports.reportJson`) and include `"generatedBy": "cortexloop"`, plus `runId`, `runDisplayTime`, `runDir` from run-meta
+2. **Aggregate findings** (machine-checked merge + dedup):
+
+```bash
+node scripts/aggregate-findings.mjs --orphans=.cortexloop/orphan-defers.json
+```
+
+Reads `.cortexloop/aggregated-findings.json` — a deduplicated, severity-sorted findings array. Dedup uses the **same `findingFingerprint`** as `baseline.mjs`, so aggregation and the baseline ratchet agree on what counts as "the same finding." Each finding carries `evidence` + `confidence` (required by the finding quality gate) and a `provenance` block (`pass`, `expert`, `orphanId` when it came from Step 3.5 recycle, `sources[]` listing other passes/experts that flagged the same fingerprint).
+
+3. Apply `.cortexloopignore` suppressions to the aggregated list, then assign IDs `CL-001`… in the order the script produced (severity-first). Do **not** re-sort after numbering — CL ids must reflect urgency.
+4. Compute **health scores** (before)
+5. Write `report.json` to **run archive** (`run-meta.reports.reportJson`) and include `"generatedBy": "cortexloop"`, plus `runId`, `runDisplayTime`, `runDir` from run-meta. Every finding in `report.json` must include `evidence` and `confidence` — `ci-gate.mjs`/`validateReport` reject reports whose findings lack evidence.
 
 ## Step 5 — Output
 

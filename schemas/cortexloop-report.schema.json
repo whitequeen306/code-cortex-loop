@@ -55,6 +55,31 @@
         "location": { "type": "string" },
         "problem": { "type": "string" },
         "recommendation": { "type": "string" },
+        "evidence": {
+          "type": "string",
+          "description": "Trigger path, measurement, test gap, static proof, or audit output. Required by the finding quality gate; echoed here so report.json stays self-describing."
+        },
+        "confidence": { "type": "string", "enum": ["high", "medium"] },
+        "provenance": {
+          "type": "object",
+          "description": "Where this finding came from — populated by aggregate-findings.mjs so cross-domain duplicates stay traceable.",
+          "properties": {
+            "pass": { "type": "string", "description": "passKey of the expert that produced the representative finding" },
+            "expert": { "type": "string" },
+            "orphanId": { "type": "string", "description": "Set when the finding was added during Step 3.5 cross-validation recycle" },
+            "sources": {
+              "type": "array",
+              "description": "Other passes/experts that flagged the same fingerprint before dedup",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "pass": { "type": "string" },
+                  "expert": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
         "autoFixable": { "enum": ["yes", "no", "needs-confirmation"] },
         "status": { "enum": ["open", "fixed", "deferred", "suppressed"] }
       }
