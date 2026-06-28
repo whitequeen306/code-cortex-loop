@@ -63,7 +63,7 @@ See `commands/cortexloop.md` Step 2 / Step 2.5 and `rules/cortexloop-workflow.md
 
 - **summary** — max ~3 sentences; no raw diffs
 - **findings** — scored items only (passed depth gate); include Evidence + Confidence
-- **deferToLaterPasses** — flag cross-domain concerns without analyzing them
+- **deferToLaterPasses** — flag cross-domain concerns without analyzing them. `pass` accepts a passKey (`review`, `security`, …); the category alias (`correctness`) is also accepted and normalized to the canonical passKey, so either spelling resolves to the same orphan defer id
 - **openQuestions** — unresolved items; not scored findings
 
 Downstream experts read **all prior handoff JSON files** plus scope files. They may incorporate defer notes but must not re-run upstream analysis.

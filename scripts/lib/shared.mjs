@@ -202,6 +202,24 @@ export function getPipelineStepByPassKey(passKey) {
   return PASS_PIPELINE.find((p) => p.passKey === passKey) ?? null;
 }
 
+/**
+ * Resolve a defer.pass value to a canonical pipeline step.
+ * Tries passKey first; if no hit, falls back to category alias (only
+ * "correctness" → "review" today, the one passKey/category mismatch).
+ * Returns the canonical passKey so orphans and crossValidation ids stay
+ * stable regardless of which spelling an expert used in defer.pass.
+ */
+export function resolveDeferTarget(rawKey) {
+  if (!rawKey || typeof rawKey !== 'string') {
+    return { step: null, canonicalKey: null };
+  }
+  const byKey = PASS_PIPELINE.find((p) => p.passKey === rawKey);
+  if (byKey) return { step: byKey, canonicalKey: byKey.passKey };
+  const byCategory = PASS_PIPELINE.find((p) => p.category === rawKey);
+  if (byCategory) return { step: byCategory, canonicalKey: byCategory.passKey };
+  return { step: null, canonicalKey: null };
+}
+
 export function priorHandoffFiles(pipelineStep) {
   return PASS_PIPELINE.filter((p) => p.order < pipelineStep.order).map((p) => p.handoffFile);
 }
@@ -251,15 +269,17 @@ export function collectOrphanDefers({
         continue;
       }
 
-      const targetStep = getPipelineStepByPassKey(targetKey);
+      const { step: targetStep, canonicalKey } = resolveDeferTarget(targetKey);
       if (!targetStep) {
         warnings.push(`${basename(filePath)}: unknown defer target pass "${targetKey}"`);
         continue;
       }
 
-      if (!enabledKeys.has(targetKey)) {
+      // Normalize to canonical passKey so downstream ids/lookups are stable.
+      const targetPass = canonicalKey;
+      if (!enabledKeys.has(targetPass)) {
         warnings.push(
-          `${basename(filePath)}: defer to disabled pass "${targetKey}" — enable pass or remove defer`,
+          `${basename(filePath)}: defer to disabled pass "${targetPass}" — enable pass or remove defer`,
         );
         continue;
       }
@@ -267,13 +287,13 @@ export function collectOrphanDefers({
       // Backward defer: target pass ran before discoverer
       if (targetStep.order >= step.order) continue;
 
-      const id = orphanDeferId({ targetPass: targetKey, discoveredByPass: step.passKey, note });
+      const id = orphanDeferId({ targetPass, discoveredByPass: step.passKey, note });
       if (seen.has(id)) continue;
       seen.add(id);
 
       orphans.push({
         id,
-        targetPass: targetKey,
+        targetPass,
         targetExpert: targetStep.expert,
         targetOrder: targetStep.order,
         targetHandoffFile: targetStep.handoffFile,

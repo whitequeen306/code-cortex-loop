@@ -9,7 +9,26 @@ import {
   validateCrossValidation,
   validateCrossValidationEntry,
   validatePassHandoff,
+  resolveDeferTarget,
 } from '../scripts/lib/shared.mjs';
+
+test('resolveDeferTarget accepts both passKey and category alias', () => {
+  // Canonical passKey "review" resolves to step 1.
+  const byKey = resolveDeferTarget('review');
+  assert.equal(byKey.canonicalKey, 'review');
+  assert.equal(byKey.step.order, 1);
+  // Category alias "correctness" must resolve to the SAME canonical passKey.
+  const byCat = resolveDeferTarget('correctness');
+  assert.equal(byCat.canonicalKey, 'review');
+  assert.equal(byCat.step.order, 1);
+  // All other passKeys where passKey === category resolve unchanged.
+  const sec = resolveDeferTarget('security');
+  assert.equal(sec.canonicalKey, 'security');
+  // Unknown key resolves to nothing.
+  const unknown = resolveDeferTarget('nope');
+  assert.equal(unknown.step, null);
+  assert.equal(unknown.canonicalKey, null);
+});
 
 test('orphanDeferId is stable for same defer', () => {
   const id = orphanDeferId({
@@ -69,6 +88,62 @@ test('collectOrphanDefers finds backward defers only', () => {
     assert.equal(result.orphans[0].targetPass, 'review');
     assert.equal(result.orphans[0].discoveredByPass, 'performance');
     assert.ok(result.byTarget.review);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('collectOrphanDefers accepts category alias "correctness" as defer target for step 1', () => {
+  const dir = join(tmpdir(), `cortexloop-alias-${Date.now()}`);
+  const handoffDir = join(dir, '.cortexloop/handoff');
+  mkdirSync(handoffDir, { recursive: true });
+
+  const baseFinding = {
+    severity: 'High',
+    location: 'src/a.ts:1',
+    problem: 'x',
+    evidence: 'y',
+    confidence: 'high',
+    recommendation: 'z',
+    autoFixable: 'no',
+  };
+
+  try {
+    writeFileSync(
+      join(handoffDir, '01-correctness.json'),
+      JSON.stringify({
+        pass: 'review',
+        category: 'correctness',
+        expert: 'code-reviewer',
+        summary: 'ok',
+        findings: [],
+        deferToLaterPasses: [],
+      }),
+    );
+    // Expert wrote the category alias "correctness" instead of passKey "review".
+    writeFileSync(
+      join(handoffDir, '05-performance.json'),
+      JSON.stringify({
+        pass: 'performance',
+        category: 'performance',
+        expert: 'performance-analyst',
+        summary: 'ok',
+        findings: [baseFinding],
+        deferToLaterPasses: [{ pass: 'correctness', note: 'Race on balance read at transfer()' }],
+      }),
+    );
+
+    const result = collectOrphanDefers({ handoffDir, passesConfig: {} });
+    // Alias must be normalized to canonical passKey "review", not dropped or warned.
+    assert.equal(result.orphanCount, 1);
+    assert.equal(result.orphans[0].targetPass, 'review');
+    assert.equal(result.orphans[0].discoveredByPass, 'performance');
+    assert.ok(result.byTarget.review);
+    assert.equal(
+      result.warnings.filter((w) => w.includes('unknown defer target') || w.includes('disabled pass')).length,
+      0,
+      `unexpected alias warnings: ${JSON.stringify(result.warnings)}`,
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

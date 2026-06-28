@@ -90,7 +90,7 @@ Write to the path in your pass contract. Required fields:
 
 - `pass`, `category`, `expert`, `summary` (1–3 sentences for downstream experts)
 - `findings` — scored items only
-- `deferToLaterPasses` — `[{ "pass": "<passKey>", "note": "..." }]`
+- `deferToLaterPasses` — `[{ "pass": "<passKey>", "note": "..." }]`. Use the passKey (e.g. `review`); the category alias (`correctness`) is also accepted and normalized to the same passKey
 - `openQuestions` — unresolved, not scored
 
 Schema: `schemas/pass-handoff.schema.json`

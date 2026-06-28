@@ -92,7 +92,10 @@
       "required": ["pass", "note"],
       "additionalProperties": false,
       "properties": {
-        "pass": { "type": "string" },
+        "pass": {
+          "type": "string",
+          "description": "Target passKey (e.g. review, security). Category aliases (e.g. correctness) are accepted and normalized to the canonical passKey."
+        },
         "note": { "type": "string" }
       }
     },
