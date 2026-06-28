@@ -57,14 +57,16 @@ node scripts/build-scope-manifest.mjs --mode=recent   # or --mode=whole
 
 | Artifact | Purpose |
 |----------|---------|
-| `.cortexloop/scope-manifest.json` | fileCount, byDirectory, mapThreshold, pathsFile, scopeMapFile pointers |
+| `.cortexloop/scope-manifest.json` | fileCount, byDirectory, mapThreshold, pathsFile, scopeMapFile, **indexStrategy** |
 | `.cortexloop/scope-paths.json` | full path list — **experts read on disk**, not orchestrator prompt |
-| `.cortexloop/scope-map.json` | CortexScope Index hotspots (when fileCount > threshold, default 100) |
+| `.cortexloop/scope-map.json` | CortexScope Index hotspots (when fileCount > threshold, default 100); includes **hotspotSymbolHints** |
 | `.cortexloop/context-anchor.md` | structured orchestrator anchor (compact-context.mjs) |
 | `.cortexloop/run-state.json` | nextPass, completedPasses |
 | `.cortexloop/handoff-summary.json` | compact pass summaries for thin orchestrator |
 
-**On-demand retrieval:** experts prioritize scope-map then grep/glob (codegraph MCP optional). Orchestrator NEVER pastes path lists or expert reports into its session.
+**On-demand retrieval:** experts read `indexStrategy` then scope-map then grep/glob. **codegraph MCP is optional** — suggested for large/low-confidence scopes via `indexStrategy.optionalDeepIndex`, never required. Orchestrator NEVER pastes path lists or expert reports into its session.
+
+**Index tiers (built-in):** L0 = paths + grep (small scope). L1 = + scope-map + hotspotSymbolHints. External codegraph is optional deep index — not bundled, not a pipeline gate.
 
 ### Map → Depth (large scope)
 
@@ -75,7 +77,11 @@ When `scope-manifest.json` has `requiresMap: true`:
 3. Seven experts: **prioritize** hotspots + mustReview + patternHits + **sample** longTailSample.paths
 4. Full paths remain in `scope-paths.json` — non-hotspot is NOT out-of-scope
 
-Config: `cortexloop.config.json` → `scope.mapThreshold` (100), `scope.mapEnrichThreshold` (0.7), `scope.longTailSampleCount` (20), `scope.mapWeights`.
+### Optional codegraph offer (Step 2c — before Pass 1)
+
+After scope manifest + map, run `node scripts/ensure-codegraph-index.mjs --check --json`. When `offer: true`, **ask the user once** (skip in CI / when `scope.deepIndexOffer: false`). User **yes** → `--install-and-init --yes`; **no** → `--record=decline`. Never install without consent. Declined runs continue **L1 + grep only**.
+
+Config: `cortexloop.config.json` → `scope.mapThreshold` (100), `scope.mapEnrichThreshold` (0.7), `scope.longTailSampleCount` (20), `scope.mapWeights`, `scope.deepIndexOffer` (true), `scope.deepIndexFileThreshold` (300).
 
 ## Analysis Phase (Read-Only, Sequential Experts)
 

@@ -24,12 +24,20 @@ Ultra-thin shared contract for all 7 pipeline experts. **Load this first**, then
 
 - **Run archive:** read `.cortexloop/run-meta.json` first — write category report to `reports.categoryReports[...]` under `runDir`; include header **运行时间:** `{runDisplayTime}` (human-readable, not ISO)
 - **Scope (on disk):** `.cortexloop/scope-manifest.json`, `.cortexloop/scope-paths.json`
+- **Index strategy:** read `scope-manifest.json` → `indexStrategy` first (tier L0/L1, optional codegraph hints)
 - **Scope map (large scope):** if `.cortexloop/scope-map.json` exists, read in this order:
   1. `hotspots` + `entryFiles` — prioritize depth here first
-  2. `mustReview` + `patternHits[<your category>]` — mandatory review
-  3. `longTailSample.paths` — sample at least a few non-hotspot files per pass
-  4. `recentChangeFocus` — git-changed files
-- **Coverage rule:** MAP is prioritization, not exclusion. Never treat non-hotspot paths as out-of-scope; use grep/glob for slices (codegraph MCP optional).
+  2. `hotspotSymbolHints` — export names on hotspot entry files (grep targets, not a call graph)
+  3. `mustReview` + `patternHits[<your category>]` — mandatory review
+  4. `longTailSample.paths` — sample at least a few non-hotspot files per pass
+  5. `recentChangeFocus` — git-changed files
+- **Code retrieval order (required):**
+  1. `indexStrategy` → know guaranteed tier (L0 paths only, or L1 + scope-map)
+  2. scope-map priorities above
+  3. grep/glob for file slices
+  4. **Only when needed:** codegraph MCP if `indexStrategy.optionalDeepIndex.useWhen` applies and `userDecision !== 'decline'`
+  5. **Without codegraph / user declined:** continue grep/Read; mark unverified chains Confidence **medium**
+- **Coverage rule:** MAP is prioritization, not exclusion. Never treat non-hotspot paths as out-of-scope.
 - **Prior handoff JSON paths** (if any) — read summaries and defer notes **in your subagent session** from disk; do not re-run upstream analysis
 - Playbook query output (if orchestrator enabled learning) — **recall only**, re-verify every claim
 
