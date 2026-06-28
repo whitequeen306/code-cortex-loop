@@ -975,6 +975,12 @@ export function buildIndexStrategy(opts) {
       cliAvailable,
       userDecision,
       deepIndexTargets,
+      // indexHealth: freshness signal (I-2). Populated lazily by
+      // refreshManifestDeepIndexState in ensure-codegraph-index.mjs via
+      // `codegraph status --json`. null when codegraph is absent/uninitialized
+      // or the status probe failed — callers should fall back to the binary
+      // codegraphPresent flag in that case.
+      indexHealth: null,
       useWhen: [
         'cross-file call chain (A calls B)',
         'impact radius before changing a symbol',

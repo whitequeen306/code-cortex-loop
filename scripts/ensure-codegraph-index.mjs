@@ -13,6 +13,7 @@ import {
   detectCodegraphCli,
   detectCodegraphProjectIndex,
   codegraphCliVersion,
+  codegraphIndexStatus,
   installAndInitCodegraph,
 } from './lib/codegraph-install.mjs';
 import {
@@ -60,6 +61,40 @@ function readJson(path) {
 }
 
 /**
+ * Derive the indexHealth signal from a `codegraph status --json` result.
+ * Returns a compact summary for embedding in the scope manifest, or null when
+ * no status is available. Fields:
+ *   - state: 'fresh' | 'stale' | 'unknown'
+ *   - pendingChanges: total added+modified+removed since last sync
+ *   - worktreeMismatch: true when the index was built against a different
+ *     worktree/branch than the current one (codegraph flags this)
+ *   - lastSyncAt: ISO string of the index's last sync, if the CLI reports one
+ *   - nodeCount / fileCount / dbSizeBytes: quick liveness numbers
+ *
+ * @param {object|null} status
+ * @returns {object|null}
+ */
+function deriveIndexHealth(status) {
+  if (!status) return null;
+  const pending = status.pendingChanges || {};
+  const pendingTotal =
+    (pending.added ?? 0) + (pending.modified ?? 0) + (pending.removed ?? 0);
+  const mismatch = Boolean(status.worktreeMismatch);
+  // Either signal makes the index stale: pending changes mean the working tree
+  // has drifted from the indexed graph; a worktree mismatch means the index was
+  // built in a different checkout and may not match the files in scope at all.
+  const state = pendingTotal > 0 || mismatch ? 'stale' : 'fresh';
+  return {
+    state,
+    pendingChanges: pendingTotal,
+    worktreeMismatch: mismatch || null,
+    nodeCount: status.nodeCount ?? null,
+    fileCount: status.fileCount ?? null,
+    dbSizeBytes: status.dbSizeBytes ?? null,
+  };
+}
+
+/**
  * Patch manifest.indexStrategy after install/init or user choice.
  * @param {string} manifestPath
  * @param {string} rootDir
@@ -75,6 +110,15 @@ export function refreshManifestDeepIndexState(manifestPath, rootDir = '.', extra
   manifest.indexStrategy.optionalDeepIndex.codegraphPresent = codegraphPresent;
   if (cliAvailable) {
     manifest.indexStrategy.optionalDeepIndex.cliVersion = codegraphCliVersion();
+  }
+  // Index health: probe codegraph status for freshness. Only meaningful when
+  // an index actually exists; absent/failed probes yield null (state 'unknown'
+  // at read time). The orchestrator treats null as "fall back to codegraphPresent".
+  if (codegraphPresent) {
+    const health = deriveIndexHealth(codegraphIndexStatus(rootDir));
+    manifest.indexStrategy.optionalDeepIndex.indexHealth = health;
+  } else {
+    manifest.indexStrategy.optionalDeepIndex.indexHealth = null;
   }
   if (extra.userDecision) {
     manifest.indexStrategy.optionalDeepIndex.userDecision = extra.userDecision;
@@ -122,13 +166,15 @@ export function assessDeepIndexOffer(opts) {
   }
 
   if (codegraphPresent) {
+    const health = deriveIndexHealth(codegraphIndexStatus(opts.root));
     return {
       offer: false,
-      reason: 'index-already-present',
+      reason: health?.state === 'stale' ? 'index-stale-needs-sync' : 'index-already-present',
       suggested,
       cliAvailable,
       codegraphPresent: true,
       cliVersion: codegraphCliVersion(),
+      indexHealth: health,
     };
   }
 

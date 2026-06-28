@@ -51,11 +51,45 @@ export function codegraphCliVersion() {
 }
 
 /**
- * @param {string} rootDir
+ * @param {string} [rootDir]
  * @returns {boolean}
  */
 export function detectCodegraphProjectIndex(rootDir = '.') {
   return existsSync(resolve(rootDir, '.codegraph'));
+}
+
+/**
+ * Query `codegraph status --json` for index freshness metadata. This is the
+ * I-2 indexHealth signal: pendingChanges.{added,modified,removed} > 0 means
+ * the index is stale relative to the working tree and needs `codegraph sync`;
+ * worktreeMismatch non-null means the index was built against a different
+ * worktree/branch.
+ *
+ * Returns the parsed status object, or null when the CLI is unavailable, the
+ * project is not initialized, or any error occurs (callers treat null as
+ * "health unknown — rely on existence only").
+ *
+ * @param {string} [rootDir]
+ * @returns {object|null}
+ */
+export function codegraphIndexStatus(rootDir = '.') {
+  try {
+    const r = spawnSync('codegraph status --json', {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 20000,
+      shell: SHELL_PLATFORM,
+      cwd: resolve(rootDir),
+    });
+    if (r.status !== 0) return null;
+    const out = String(r.stdout || '').trim();
+    if (!out) return null;
+    const status = JSON.parse(out);
+    if (status && status.initialized === false) return null;
+    return status;
+  } catch {
+    return null;
+  }
 }
 
 /**
