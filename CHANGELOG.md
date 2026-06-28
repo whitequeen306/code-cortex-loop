@@ -15,6 +15,10 @@ All notable changes to CodeCortexLoop are documented here.
 - Step 4 in `commands/cortexloop.md` now invokes `aggregate-findings.mjs` instead of leaving merge/dedup to inline LLM work; CL-### numbering happens after suppression on the script's severity-first output
 - README "质量不会降的原因" updated to describe machine-checked aggregation
 
+### Added (P-4 defer provenance)
+- Optional `sourceLocation` (file:line) and `sourceContext` (symbol/snippet) on `deferToLaterPasses[].defer` in `pass-handoff.schema.json`. `collectOrphanDefers` passes them through to orphan entries; `aggregate-findings.mjs` uses `sourceLocation` to stamp an `orphanId` onto the matching finding's `provenance` so Step 3.5 recycle additions stay traceable end-to-end. Backward compatible — defers without these fields still work.
+- expert-core SKILL.md + passes/README.md document the new optional fields and recommend their use
+
 ## [2.4.0] - 2026-06-25
 
 ### Added

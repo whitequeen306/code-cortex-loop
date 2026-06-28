@@ -90,7 +90,7 @@ Write to the path in your pass contract. Required fields:
 
 - `pass`, `category`, `expert`, `summary` (1–3 sentences for downstream experts)
 - `findings` — scored items only
-- `deferToLaterPasses` — `[{ "pass": "<passKey>", "note": "..." }]`. Use the passKey (e.g. `review`); the category alias (`correctness`) is also accepted and normalized to the same passKey
+- `deferToLaterPasses` — `[{ "pass": "<passKey>", "note": "...", "sourceLocation": "<file:line>", "sourceContext": "<symbol or snippet>" }]`. Use the passKey (e.g. `review`); the category alias (`correctness`) is also accepted and normalized to the same passKey. `sourceLocation`/`sourceContext` are optional but recommended — `aggregate-findings.mjs` uses `sourceLocation` to attach an `orphanId` to the matching finding's `provenance`, and the target expert can jump straight to the site instead of re-reading the whole file.
 - `openQuestions` — unresolved, not scored
 
 Schema: `schemas/pass-handoff.schema.json`

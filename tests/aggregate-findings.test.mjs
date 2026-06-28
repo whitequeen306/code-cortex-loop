@@ -125,6 +125,7 @@ test('aggregateFindings attaches orphanId when finding came from Step 3.5 recycl
         targetPass: 'review',
         discoveredByPass: 'performance',
         sourceLocation: 'src/ledger.ts:88',
+        sourceContext: 'transfer(amount, to)',
         note: 'Race on balance',
       },
     ];

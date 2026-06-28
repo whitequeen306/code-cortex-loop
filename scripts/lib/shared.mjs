@@ -304,6 +304,8 @@ export function collectOrphanDefers({
         discoveredByExpert: step.expert,
         discoveredOrder: step.order,
         sourceHandoffFile: step.handoffFile,
+        sourceLocation: typeof defer.sourceLocation === 'string' ? defer.sourceLocation.trim() : null,
+        sourceContext: typeof defer.sourceContext === 'string' ? defer.sourceContext.trim() : null,
         note: note.trim(),
       });
     }

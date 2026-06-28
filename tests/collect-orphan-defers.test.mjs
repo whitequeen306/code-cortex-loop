@@ -220,3 +220,99 @@ test('validateCrossValidationEntry requires rejectReason when rejected', () => {
     /rejectReason/,
   );
 });
+
+test('collectOrphanDefers passes sourceLocation/sourceContext through to orphans (P-4)', () => {
+  const dir = join(tmpdir(), `cortexloop-prov-${Date.now()}`);
+  const handoffDir = join(dir, '.cortexloop/handoff');
+  mkdirSync(handoffDir, { recursive: true });
+
+  const baseFinding = {
+    severity: 'High',
+    location: 'src/a.ts:1',
+    problem: 'x',
+    evidence: 'y',
+    confidence: 'high',
+    recommendation: 'z',
+    autoFixable: 'no',
+  };
+
+  try {
+    writeFileSync(
+      join(handoffDir, '01-correctness.json'),
+      JSON.stringify({
+        pass: 'review',
+        category: 'correctness',
+        expert: 'code-reviewer',
+        summary: 'ok',
+        findings: [],
+        deferToLaterPasses: [],
+      }),
+    );
+    // Expert attaches provenance to the defer so the target expert can jump to the site.
+    writeFileSync(
+      join(handoffDir, '05-performance.json'),
+      JSON.stringify({
+        pass: 'performance',
+        category: 'performance',
+        expert: 'performance-analyst',
+        summary: 'ok',
+        findings: [baseFinding],
+        deferToLaterPasses: [
+          {
+            pass: 'review',
+            note: 'Race on balance read at transfer()',
+            sourceLocation: 'src/ledger.ts:88',
+            sourceContext: 'transfer(amount, to)',
+          },
+        ],
+      }),
+    );
+
+    const result = collectOrphanDefers({ handoffDir, passesConfig: {} });
+    assert.equal(result.orphanCount, 1);
+    const orphan = result.orphans[0];
+    assert.equal(orphan.sourceLocation, 'src/ledger.ts:88');
+    assert.equal(orphan.sourceContext, 'transfer(amount, to)');
+    assert.equal(orphan.targetPass, 'review');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('collectOrphanDefers tolerates defers without sourceLocation (backward compatible)', () => {
+  const dir = join(tmpdir(), `cortexloop-noprov-${Date.now()}`);
+  const handoffDir = join(dir, '.cortexloop/handoff');
+  mkdirSync(handoffDir, { recursive: true });
+
+  try {
+    writeFileSync(
+      join(handoffDir, '01-correctness.json'),
+      JSON.stringify({
+        pass: 'review',
+        category: 'correctness',
+        expert: 'code-reviewer',
+        summary: 'ok',
+        findings: [],
+      }),
+    );
+    // Old-style defer: only pass + note, no provenance fields.
+    writeFileSync(
+      join(handoffDir, '05-performance.json'),
+      JSON.stringify({
+        pass: 'performance',
+        category: 'performance',
+        expert: 'performance-analyst',
+        summary: 'ok',
+        findings: [],
+        deferToLaterPasses: [{ pass: 'review', note: 'Race on balance' }],
+      }),
+    );
+
+    const result = collectOrphanDefers({ handoffDir, passesConfig: {} });
+    assert.equal(result.orphanCount, 1);
+    assert.equal(result.orphans[0].sourceLocation, null);
+    assert.equal(result.orphans[0].sourceContext, null);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

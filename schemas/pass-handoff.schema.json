@@ -96,7 +96,15 @@
           "type": "string",
           "description": "Target passKey (e.g. review, security). Category aliases (e.g. correctness) are accepted and normalized to the canonical passKey."
         },
-        "note": { "type": "string" }
+        "note": { "type": "string" },
+        "sourceLocation": {
+          "type": "string",
+          "description": "file:line where the deferred concern was found. Optional but recommended — lets aggregate-findings.mjs attach an orphanId to the matching finding in provenance and lets the target expert jump straight to the site."
+        },
+        "sourceContext": {
+          "type": "string",
+          "description": "Short snippet or symbol name at sourceLocation (e.g. 'transfer(amount, to)' or 'if (balance < 0) throw'). Optional; gives the target expert a foothold without re-reading the whole file."
+        }
       }
     },
     "crossValidationEntry": {
