@@ -30,6 +30,60 @@ const SOURCE_EXTENSIONS = new Set([
   '.md', '.mdc',
 ]);
 
+/**
+ * Extension → playbook `language` token. Keys mirror SOURCE_EXTENSIONS so the
+ * manifest's primaryLanguage can be fed straight to `playbook.mjs query --lang=`
+ * (Step 0.5). `md`/`mdc` map to 'any' (docs are language-neutral) and never win
+ * primaryLanguage.
+ */
+const LANG_BY_EXT = {
+  '.ts': 'ts', '.tsx': 'ts', '.mts': 'ts', '.cts': 'ts',
+  '.js': 'js', '.jsx': 'js', '.mjs': 'js', '.cjs': 'js',
+  '.py': 'py',
+  '.java': 'java', '.kt': 'java',
+  '.go': 'go',
+  '.rs': 'rust',
+  '.rb': 'ruby',
+  '.php': 'php',
+  '.vue': 'js', '.svelte': 'js',
+  '.cs': 'csharp',
+  '.swift': 'swift',
+  '.scala': 'scala',
+  '.sql': 'sql',
+  '.graphql': 'graphql',
+  '.proto': 'proto',
+};
+
+/**
+ * Pick the dominant code language across a path list by counting extensions.
+ * Docs (.md/.mdc) are excluded so a docs-heavy repo isn't classified 'any'.
+ * Returns a language token usable as `playbook.mjs query --lang=`, or 'any' if
+ * no code files are present / a tie can't be broken.
+ */
+export function detectPrimaryLanguage(paths) {
+  const counts = new Map();
+  for (const p of paths) {
+    const lower = p.toLowerCase();
+    const dot = lower.lastIndexOf('.');
+    if (dot < 0) continue;
+    const ext = lower.slice(dot);
+    if (!SOURCE_EXTENSIONS.has(ext)) continue;
+    const lang = LANG_BY_EXT[ext];
+    if (!lang || lang === 'any') continue; // skip docs
+    counts.set(lang, (counts.get(lang) || 0) + 1);
+  }
+  if (!counts.size) return 'any';
+  let bestLang = 'any';
+  let bestCount = 0;
+  for (const [lang, n] of counts) {
+    if (n > bestCount || (n === bestCount && bestLang === 'any')) {
+      bestLang = lang;
+      bestCount = n;
+    }
+  }
+  return bestLang;
+}
+
 function parseArgs(argv) {
   const opts = {
     mode: 'recent',
@@ -143,12 +197,14 @@ export function buildScopeManifest(opts) {
   paths = [...new Set(paths)].sort();
 
   const byDirectory = aggregatePathsByDirectory(paths, 2);
+  const primaryLanguage = detectPrimaryLanguage(paths);
   const manifest = {
     version: '2.3',
     generatedAt: new Date().toISOString(),
     generatedBy: 'cortexloop',
     scopeMode: opts.mode,
     fileCount: paths.length,
+    primaryLanguage,
     gitCommit: tryGitCommit(),
     gitBranch: tryGitBranch(),
     pathsFile: opts.pathsOut,

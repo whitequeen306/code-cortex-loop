@@ -255,7 +255,8 @@ Run post-processing after every `report.json` write. See `commands/cortexloop.md
 Before analysis (Step 0.5) — **verified tier only** by default:
 
 ```bash
-node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=<detected> --global-merge
+node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --global-merge
+# pass --lang=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.cortexloop/scope-manifest.json','utf8')).primaryLanguage||'any')") once scope manifest exists
 ```
 
 After Direct re-verify: reflect skill → `reflection.json` → `playbook.mjs record` (self_verified; new entries start as **candidate**).

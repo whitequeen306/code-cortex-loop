@@ -79,7 +79,8 @@ External oracle (`external_verified`) outweighs self-report. Negatives are stron
 **Step 0.5** (before parallel analysis):
 
 ```bash
-node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=<detected> --global-merge
+node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --global-merge
+# pass --lang=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.cortexloop/scope-manifest.json','utf8')).primaryLanguage||'any')") once scope manifest exists
 ```
 
 Default: **verified tier only**. To see unconfirmed hypotheses:

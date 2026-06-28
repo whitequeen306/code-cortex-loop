@@ -32,7 +32,7 @@ All functional issues — correctness, security, tests, errors, perf, simplify. 
 - **Scope map:** if `.cortexloop/scope-map.json` exists: prioritize hotspots, mustReview, patternHits for your category, sample longTailSample.paths — never treat non-hotspot as out-of-scope
 - Playbook query:
   ```bash
-  node scripts/playbook.mjs query --category=cleanup --lang=<detected> --global-merge
+  node scripts/playbook.mjs query --category=cleanup --lang=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.cortexloop/scope-manifest.json','utf8')).primaryLanguage||'any')") --global-merge
   ```
 - Prior handoffs (read from disk): all `01`–`06` in `.cortexloop/handoff/`
 

@@ -39,7 +39,7 @@ You are the **Security Expert** — pass 2. You assess exploitable risk, trust b
 - **Scope map:** if `.cortexloop/scope-map.json` exists: prioritize hotspots, mustReview, patternHits for your category, sample longTailSample.paths — never treat non-hotspot as out-of-scope
 - Playbook query:
   ```bash
-  node scripts/playbook.mjs query --category=security --lang=<detected> --global-merge
+  node scripts/playbook.mjs query --category=security --lang=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.cortexloop/scope-manifest.json','utf8')).primaryLanguage||'any')") --global-merge
   ```
 - Prior handoffs (read from disk in subagent): `.cortexloop/handoff/01-correctness.json`
 

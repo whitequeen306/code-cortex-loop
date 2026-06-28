@@ -41,7 +41,7 @@ Check upstream defer notes — e.g. bcrypt on every request flagged from securit
 - **Scope map:** if `.cortexloop/scope-map.json` exists: prioritize hotspots, mustReview, patternHits for your category, sample longTailSample.paths — never treat non-hotspot as out-of-scope
 - Playbook query:
   ```bash
-  node scripts/playbook.mjs query --category=performance --lang=<detected> --global-merge
+  node scripts/playbook.mjs query --category=performance --lang=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.cortexloop/scope-manifest.json','utf8')).primaryLanguage||'any')") --global-merge
   ```
 - Prior handoffs (read from disk): `01` through `04` in `.cortexloop/handoff/`
 

@@ -140,8 +140,10 @@ In fallback mode, still follow pass contracts in order and write handoff JSON pe
 Before analysis, query **verified-tier** learned patterns only (recall, not authority — re-derive and re-verify every fix):
 
 ```bash
-node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=<detected> --global-merge
+node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.cortexloop/scope-manifest.json','utf8')).primaryLanguage||'any')") --global-merge
 ```
+
+Read `<detected>` from `.cortexloop/scope-manifest.json` → `primaryLanguage` (written by `build-scope-manifest.mjs`). If the manifest is missing, omit `--lang` (defaults to `any`, no language filter). **Never** pass the literal placeholder `<detected>` — it would filter out every `language=js/py` entry.
 
 Optional: add `--include-candidates` to see unconfirmed hypotheses (labeled as guesses — **do NOT apply**).
 
@@ -360,7 +362,8 @@ Scope (read on disk — on-demand retrieval only):
 Report header (required): **运行时间:** {runDisplayTime} · **Run 目录:** {runDir}
 
 Prior handoffs (read from disk in YOUR subagent session): {priorHandoffPaths or "none"}
-Playbook (this category only): node scripts/playbook.mjs query --category={category} --lang={lang} --global-merge
+Playbook (this category only): node scripts/playbook.mjs query --category={category} --lang=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.cortexloop/scope-manifest.json','utf8')).primaryLanguage||'any')") --global-merge
+  (If manifest missing, drop --lang — defaults to `any`.)
 
 Load skills in order: `cortexloop-expert-core` first, then domain depth skill(s) listed in the pass contract. Do not load other passes' domain skills.
 

@@ -41,7 +41,7 @@ Do **not** produce security or performance findings — flag them for the approp
 - **Scope map:** if `.cortexloop/scope-map.json` exists: prioritize hotspots, mustReview, patternHits for your category, sample longTailSample.paths — never treat non-hotspot as out-of-scope
 - Playbook query (correctness category only, if learning enabled):
   ```bash
-  node scripts/playbook.mjs query --category=correctness --lang=<detected> --global-merge
+  node scripts/playbook.mjs query --category=correctness --lang=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.cortexloop/scope-manifest.json','utf8')).primaryLanguage||'any')") --global-merge
   ```
 - Prior handoffs: **none** (first pass)
 

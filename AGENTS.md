@@ -74,7 +74,8 @@ node scripts/run-summary.mjs --out=docs/cortexloop/run-summary.md
 Before analysis:
 
 ```bash
-node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --lang=<detected> --global-merge
+node scripts/playbook.mjs query --category=performance,simplicity,errorHandling --global-merge
+# pass --lang=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.cortexloop/scope-manifest.json','utf8')).primaryLanguage||'any')") once scope manifest exists
 # add --include-candidates to see unconfirmed hypotheses (do NOT apply)
 ```
 
