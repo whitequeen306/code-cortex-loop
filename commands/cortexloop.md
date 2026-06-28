@@ -145,7 +145,9 @@ node scripts/playbook.mjs query --category=performance,simplicity,errorHandling 
 
 Read `<detected>` from `.cortexloop/scope-manifest.json` → `primaryLanguage` (written by `build-scope-manifest.mjs`). If the manifest is missing, omit `--lang` (defaults to `any`, no language filter). **Never** pass the literal placeholder `<detected>` — it would filter out every `language=js/py` entry.
 
-Optional: add `--include-candidates` to see unconfirmed hypotheses (labeled as guesses — **do NOT apply**).
+Optional: add `--include-candidates` to see unconfirmed hypotheses (labeled as guesses — **do NOT apply**). Or set `cortexloop.config.json` → `learning.queryVerifiedOnly: false` to always include candidates.
+
+`query` reads config `learning.global` and `learning.queryVerifiedOnly` automatically (CLI flags override).
 
 Use output as **where to investigate first** during Step 3. Each expert runs its own category-scoped playbook query per `passes/XX-*.md`. Playbook hits do not skip analysis or blind-apply fixes.
 
@@ -663,7 +665,8 @@ Or append manually:
 
 ```bash
 node scripts/playbook.mjs record .cortexloop/reflection.json
-# append --global if config learning.global is true
+# `record` reads config learning.global and also-records to the global playbook
+# when true — no need to pass --global manually. CLI --global still overrides.
 # re-export Chinese markdown only: node scripts/playbook.mjs export-zh
 ```
 

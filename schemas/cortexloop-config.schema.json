@@ -137,13 +137,13 @@
     },
     "learning": {
       "type": "object",
-      "description": "Learning-loop config. Scripts honor ONLY keys with CLI flag equivalents: playbookPath (--playbook), global (--global / --global-merge), queryVerifiedOnly (--include-candidates inverts), prune.* (--min-confidence / --max-age-days / --max-entries / --drop-quarantined). Tier promotion, decay, and outcome deltas are script-internal defaults (PLAYBOOK_DEFAULTS, OUTCOME_DELTAS in scripts/lib/shared.mjs) and are NOT configurable here — documenting them invited users to set values the scripts would silently ignore.",
+      "description": "Learning-loop config. playbook.mjs reads these keys via loadLearningConfig(); CLI flags override them. Read keys: playbookPath (--playbook), global (--global / --global-merge), queryVerifiedOnly (--include-candidates inverts), prune.* (--min-confidence / --max-age-days / --max-entries / --drop-quarantined). enabled and reflectOn are orchestrator-level toggles (gate Step 0.5 / Step 6 in commands/cortexloop.md). Tier promotion thresholds, decay, and outcome deltas remain script-internal defaults (PLAYBOOK_DEFAULTS, OUTCOME_DELTAS in scripts/lib/shared.mjs) — NOT configurable here, because exposing them invited users to set values that previously were silently ignored.",
       "properties": {
         "enabled": { "type": "boolean", "default": true },
         "playbookPath": { "type": "string", "default": ".cortexloop/playbook.json" },
         "global": { "type": "boolean", "default": false },
         "reflectOn": { "enum": ["direct"], "default": "direct" },
-        "queryVerifiedOnly": { "type": "boolean", "default": true, "description": "Step 0.5 surfaces only verified-tier patterns; candidates need --include-candidates" },
+        "queryVerifiedOnly": { "type": "boolean", "default": true, "description": "Step 0.5 surfaces only verified-tier patterns; candidates need --include-candidates (or set this false to always include candidates)" },
         "prune": {
           "type": "object",
           "properties": {

@@ -564,6 +564,39 @@ export function isCrossValidationEnabled(configPath = 'cortexloop.config.json') 
   return cfg.crossValidation?.enabled !== false;
 }
 
+/**
+ * Read learning-loop config from cortexloop.config.json → `learning`.
+ * Returns normalized values for the keys that have CLI-flag equivalents in
+ * playbook.mjs (playbookPath, global, queryVerifiedOnly, prune.*). Tier
+ * promotion thresholds, decay, and outcome deltas remain script-internal
+ * defaults (PLAYBOOK_DEFAULTS, OUTCOME_DELTAS) — NOT configurable here.
+ *
+ * Precedence in playbook.mjs: explicit CLI flag > this config value > built-in
+ * default. Returns built-in defaults when the config file or `learning` block
+ * is absent, so a project with no cortexloop.config.json is behavior-identical
+ * to before. `enabled` and `reflectOn` are orchestrator-level toggles (gating
+ * Step 0.5 / Step 6 in commands/cortexloop.md) — playbook.mjs does not hard-gate
+ * on them so the CLI stays usable for manual maintenance.
+ */
+export function loadLearningConfig(configPath = 'cortexloop.config.json') {
+  const cfg = loadConfig(configPath);
+  const learning = cfg?.learning ?? {};
+  const prune = learning.prune ?? {};
+  return {
+    enabled: learning.enabled !== false,
+    playbookPath: learning.playbookPath ?? DEFAULT_PLAYBOOK,
+    global: learning.global === true,
+    reflectOn: learning.reflectOn ?? 'direct',
+    queryVerifiedOnly: learning.queryVerifiedOnly !== false,
+    prune: {
+      minConfidence: prune.minConfidence ?? 0.3,
+      maxAgeDays: prune.maxAgeDays ?? 180,
+      maxEntries: prune.maxEntries ?? 200,
+      dropQuarantined: prune.dropQuarantined === true,
+    },
+  };
+}
+
 /** Ensure report.json was produced by CodeCortexLoop, not hand-edited for CI bypass. */
 export function validateReport(report) {
   if (!report || typeof report !== 'object') {

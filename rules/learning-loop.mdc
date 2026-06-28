@@ -63,7 +63,7 @@ If a suggested fix fails tests, is reverted, or is judged inapplicable, run `pla
 
 ## Outcome signals (confidence moves only here)
 
-Scripts use built-in defaults (scripts do **not** read `cortexloop.config.json`):
+Scripts use built-in defaults (`OUTCOME_DELTAS` in `scripts/lib/shared.mjs`) — these deltas are NOT read from config:
 
 | Outcome | Delta | When to use |
 |---------|-------|-------------|
@@ -178,7 +178,7 @@ node scripts/playbook.mjs prune --min-confidence=0.3 --max-age-days=180 --max-en
 node scripts/playbook.mjs prune --drop-quarantined
 ```
 
-Uses **decayed** confidence for threshold. Defaults match `learning.prune` in config (documentation only).
+Uses **decayed** confidence for threshold. Defaults come from `learning.prune` in config (overridable by the matching CLI flag); built-in defaults apply when config is absent.
 
 ## Project vs global
 
@@ -206,15 +206,15 @@ Human-readable Chinese export (not used by `query`):
 | `.cortexloop/reflection.json` | Latest reflect output (input to `record`; include EN + ZH fields) |
 | `docs/cortexloop/08-reflection.md` | Human-readable retrospective |
 
-## Config (documentation + orchestrator flags)
+## Config (read by playbook.mjs; CLI flags override)
 
-See `cortexloop.config.json` → `learning`:
+See `cortexloop.config.json` → `learning` (read by `loadLearningConfig()` in `scripts/lib/shared.mjs`). **Precedence per key: explicit CLI flag > config value > built-in default.** A project with no `cortexloop.config.json` is behavior-identical to before.
 
-- `enabled` — toggle learning loop
+- `enabled` — toggle learning loop (orchestrator gates Step 0.5 / Step 6 on this; `playbook.mjs` does not hard-gate so the CLI stays usable for manual maintenance)
 - `playbookPath` — default `.cortexloop/playbook.json` (CLI: `--playbook`)
 - `global` — also record to `~/.cortexloop/playbook.json` (CLI: `--global` / `--global-merge`)
-- `reflectOn` — `"direct"` (default)
-- `queryVerifiedOnly` — Step 0.5 verified-only (default true; CLI: `--include-candidates` inverts)
+- `reflectOn` — `"direct"` (default; orchestrator Step 6 trigger)
+- `queryVerifiedOnly` — Step 0.5 verified-only (default true; CLI: `--include-candidates` inverts, or set this false to always include candidates)
 - `prune` — thresholds including `dropQuarantined` (CLI: `--min-confidence` / `--max-age-days` / `--max-entries` / `--drop-quarantined`)
 
-Tier promotion thresholds, `decay.perDay`, and `outcomeWeights` are **script-internal defaults** (`PLAYBOOK_DEFAULTS`, `OUTCOME_DELTAS` in `scripts/lib/shared.mjs`) — they are NOT read from config. The values are documented inline above (Two tiers, Outcome signals). Do not add them to your config; the scripts would silently ignore them.
+Tier promotion thresholds, `decay.perDay`, and `outcomeWeights` are **script-internal defaults** (`PLAYBOOK_DEFAULTS`, `OUTCOME_DELTAS` in `scripts/lib/shared.mjs`) — they are NOT read from config. The values are documented inline above (Two tiers, Outcome signals). Do not add them to your config; `loadLearningConfig` does not surface them even if a hand-edited config includes them.

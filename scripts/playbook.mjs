@@ -24,13 +24,13 @@
 
 import { existsSync } from 'node:fs';
 import {
-  DEFAULT_PLAYBOOK,
   DEFAULT_REFLECTION,
   GLOBAL_PLAYBOOK,
   OUTCOME_DELTAS,
   PLAYBOOK_DEFAULTS,
   applyOutcome,
   decayedConfidence,
+  loadLearningConfig,
   loadPlaybook,
   mergePlaybooks,
   parseArgs,
@@ -45,9 +45,18 @@ import {
 
 const { positional, flags, getFlagValue } = parseArgs();
 
+// Load once: CLI flags still win over these values (see each command). A
+// missing config file or `learning` block yields built-in defaults, so a
+// project without cortexloop.config.json is behavior-identical to before.
+const LEARNING_CFG = loadLearningConfig();
+
+// Single-target commands (feedback, prune): --global targets the global
+// playbook ONLY; otherwise --playbook or config learning.playbookPath. Note
+// config learning.global ("also record to global") is record-specific and does
+// NOT redirect these commands — they have no "also" path.
 function resolvePlaybookPath() {
   if (flags.has('--global')) return GLOBAL_PLAYBOOK;
-  return getFlagValue('--playbook', DEFAULT_PLAYBOOK);
+  return getFlagValue('--playbook', LEARNING_CFG.playbookPath);
 }
 
 function parseCategories(raw) {
@@ -92,9 +101,13 @@ function cmdQuery() {
   const lang = getFlagValue('--lang', null);
   const limit = Number(getFlagValue('--limit', '8'));
   const format = getFlagValue('--format', 'md');
-  const playbookPath = getFlagValue('--playbook', DEFAULT_PLAYBOOK);
-  const globalMerge = flags.has('--global-merge');
-  const includeCandidates = flags.has('--include-candidates');
+  // CLI --playbook wins; else config learning.playbookPath; else built-in default.
+  const playbookPath = getFlagValue('--playbook', LEARNING_CFG.playbookPath);
+  const globalMerge = flags.has('--global-merge') || LEARNING_CFG.global;
+  // CLI --include-candidates inverts config queryVerifiedOnly (default true →
+  // verified-only). Passing the flag shows candidates; otherwise the config
+  // default governs.
+  const includeCandidates = flags.has('--include-candidates') || !LEARNING_CFG.queryVerifiedOnly;
 
   const projectPbExists = existsSync(playbookPath);
   const projectPb = loadPlaybook(playbookPath);
@@ -214,8 +227,9 @@ function recordSelfVerified(playbook, reflectionEntries) {
 
 function cmdRecord() {
   const reflectionPath = positional[1] || DEFAULT_REFLECTION;
-  const playbookPath = getFlagValue('--playbook', DEFAULT_PLAYBOOK);
-  const alsoGlobal = flags.has('--global');
+  const playbookPath = getFlagValue('--playbook', LEARNING_CFG.playbookPath);
+  // CLI --global wins; else config learning.global ("also record to global").
+  const alsoGlobal = flags.has('--global') || LEARNING_CFG.global;
 
   if (!existsSync(reflectionPath)) {
     console.error(`[cortexloop] Reflection not found: ${reflectionPath}`);
@@ -330,10 +344,11 @@ function cmdFeedback() {
 }
 
 function cmdPrune() {
-  const minConf = Number(getFlagValue('--min-confidence', '0.3'));
-  const maxAgeDays = Number(getFlagValue('--max-age-days', '180'));
-  const maxEntries = Number(getFlagValue('--max-entries', '200'));
-  const dropQuarantined = flags.has('--drop-quarantined');
+  const minConf = Number(getFlagValue('--min-confidence', String(LEARNING_CFG.prune.minConfidence)));
+  const maxAgeDays = Number(getFlagValue('--max-age-days', String(LEARNING_CFG.prune.maxAgeDays)));
+  const maxEntries = Number(getFlagValue('--max-entries', String(LEARNING_CFG.prune.maxEntries)));
+  // CLI --drop-quarantined wins; else config learning.prune.dropQuarantined.
+  const dropQuarantined = flags.has('--drop-quarantined') || LEARNING_CFG.prune.dropQuarantined;
   const playbookPath = resolvePlaybookPath();
 
   const playbook = loadPlaybook(playbookPath);
@@ -362,7 +377,7 @@ function cmdPrune() {
 }
 
 function cmdExportZh() {
-  const playbookPath = getFlagValue('--playbook', DEFAULT_PLAYBOOK);
+  const playbookPath = getFlagValue('--playbook', LEARNING_CFG.playbookPath);
   const playbook = loadPlaybook(playbookPath);
   const zhPath = savePlaybookZh(playbookPath, playbook);
   console.log(`[cortexloop] Playbook (中文) exported -> ${zhPath}`);
