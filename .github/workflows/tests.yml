@@ -1,0 +1,62 @@
+# CodeCortexLoop — project self-test
+#
+# What this does: every time you push to master or open a PR, GitHub spins up
+# a clean Ubuntu VM, checks out your code, and runs `npm test` (the 57 node:test
+# cases). Green check = all tests passed; red X = something broke.
+#
+# This is the smallest real CI. It does NOT run the CortexLoop analysis pipeline
+# (that needs an AI agent host). It only guards the scripts/tests themselves.
+#
+# Compare with cortexloop-example.yml — that one is the example we ship to USERS
+# of the tool (AI-agent-driven gate). This one is the tool's own test gate.
+
+name: tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Same PR pushing more commits cancels the previous run — saves free CI minutes.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # node:test runner needs Node >= 18. Pin the two current LTS lines.
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # Zero-dep project — no `npm install` needed. The test files import only
+      # node: built-ins + sibling scripts. If you ever add deps, add
+      # `npm ci` here.
+      - name: Run tests
+        run: npm test
+
+      # `if: always()` = even if tests failed, save the TAP output so you can
+      # download it from the Actions tab and see why. Without this, a red CI
+      # leaves you blind.
+      - name: Save test output
+        if: always()
+        run: |
+          mkdir -p test-out
+          npm test > test-out/test.txt 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-output-node-${{ matrix.node-version }}
+          path: test-out/
+          retention-days: 7
