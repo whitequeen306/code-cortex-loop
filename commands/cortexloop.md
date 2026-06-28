@@ -151,7 +151,11 @@ Optional: add `--include-candidates` to see unconfirmed hypotheses (labeled as g
 
 Use output as **where to investigate first** during Step 3. Each expert runs its own category-scoped playbook query per `passes/XX-*.md`. Playbook hits do not skip analysis or blind-apply fixes.
 
-## Step 1 — Detect Mode
+## Step 1 — Detect Mode + Initialize Run Archive
+
+> Two substeps run under this single Step 1 header: (1a) detect mode/scope, (1b) create the run archive. They share the same header because mode + scope are the inputs `init-run.mjs` needs, so detecting them and materializing the run folder are one logical unit.
+
+### 1a — Detect Mode
 
 | Trigger | Behavior |
 |---------|----------|
@@ -159,16 +163,16 @@ Use output as **where to investigate first** during Step 3. Each expert runs its
 | `/cortexloop` (default) | Ask user two questions (below) |
 | Preset commands | Skip preset question; use locked preset |
 
-### Question 1 — Mode (skip in CI)
+#### Question 1 — Mode (skip in CI)
 
 - **Report** (recommended first run): write `docs/cortexloop/*`, stop for confirmation
 - **Direct**: apply fixes incrementally with test-after-each-group
 
-### Question 2 — Scope (skip in CI if config sets scope)
+#### Question 2 — Scope (skip in CI if config sets scope)
 
 - **Recent changes** | **Whole project**
 
-## Step 1 — Initialize run archive (every invocation)
+### 1b — Initialize run archive (every invocation)
 
 Before scope or analysis, create a **new run folder** keyed by **human-readable local time** (not raw ISO in UI):
 
