@@ -68,13 +68,20 @@ function fileOf(example) {
   return String(example).replace(/:\d+(:\d+)?$/, '');
 }
 
-function printEntry(e) {
+function printEntry(e, rank) {
   const conf = decayedConfidence(e).toFixed(2);
-  console.log(`## ${e.signature} (${e.id}) — ${e.tier || 'candidate'}`);
+  const score = playbookScore(e).toFixed(3);
+  // Per-entry tier marker: verified gets ✅, candidate gets ⚠️ (matches the
+  // section headers). Lets a skim-reader distinguish an unconfirmed guess from
+  // trusted recall even when reading a single entry in isolation.
+  const tier = e.tier || 'candidate';
+  const tierIcon = tier === 'verified' ? '✅' : '⚠️';
+  const rankLabel = rank != null ? ` [rank #${rank}]` : '';
+  console.log(`## ${tierIcon} ${e.signature} (${e.id}) — ${tier}${rankLabel}`);
   console.log(`- **Category:** ${e.category}`);
   console.log(`- **Problem to investigate:** ${e.problemPattern}`);
   console.log(`- **Fix method (re-derive & verify, do not paste):** ${e.fixMethod}`);
-  console.log(`- **Confidence:** ${conf} | **Verified:** ${e.verifiedCount ?? 0}x in ${(e.distinctContexts || []).length} context(s)` +
+  console.log(`- **Confidence:** ${conf} (decayed) | **Recall score:** ${score} | **Verified:** ${e.verifiedCount ?? 0}x in ${(e.distinctContexts || []).length} context(s)` +
     (e.failedCount ? ` | **Failures:** ${e.failedCount}` : ''));
   if (e.examples?.length) console.log(`- **Examples:** ${e.examples.join(', ')}`);
   console.log('');
@@ -136,12 +143,12 @@ function cmdQuery() {
 
   if (verified.length) {
     console.log('## ✅ Verified patterns (trusted recall)\n');
-    for (const e of verified) printEntry(e);
+    verified.forEach((e, i) => printEntry(e, i + 1));
   }
 
   if (includeCandidates && candidates.length) {
     console.log('## ⚠️ Candidate patterns (UNCONFIRMED hypotheses — do NOT apply, treat as guesses)\n');
-    for (const e of candidates) printEntry(e);
+    candidates.forEach((e, i) => printEntry(e, i + 1));
   }
 
   console.log('_Hits must pass refactor-safety + tests. See rules/learning-loop.mdc_');
