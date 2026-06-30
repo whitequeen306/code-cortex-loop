@@ -14,6 +14,7 @@ These run after every `/cortexloop` completion. Negligible vs AI analysis time.
 
 | Mode | Passes | Est. wall time* | Est. tokens* |
 |------|--------|-----------------|--------------|
+| `/cortexloop-lite` | 3 (skips Playbook / cross-validation enrich) | ~2–3 min | ~60k–120k |
 | `/cortexloop-quick` | 3 (review, security, errorHandling) | ~2–4 min | ~80k–150k |
 | `/cortexloop` (full) | 7 | ~5–12 min | ~200k–450k |
 | `/cortexloop-deep` | 7 + whole repo | ~10–25 min | ~400k–900k |
@@ -23,7 +24,7 @@ These run after every `/cortexloop` completion. Negligible vs AI analysis time.
 ## When NOT to run full pipeline
 
 - Typo-only change → skip; use your linter
-- <50 lines changed → `/cortexloop-quick`
+- <50 lines changed → `/cortexloop-lite` or `/cortexloop-quick`
 - Pre-PR on feature branch → `/cortexloop-pre-pr` (recent scope, High+ floor)
 
 ## Measuring your project

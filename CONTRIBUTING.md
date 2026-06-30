@@ -24,7 +24,7 @@ Restart Cursor/Claude Code and run `/cortexloop` in a test project.
 
 | Area | Examples |
 |------|----------|
-| **Case studies** | New `examples/case-studies/<repo>/` with real report.json + handoffs |
+| **Case studies** | New `examples/<name>/` with real report.json + docs (see [examples/lianyu-pc](../examples/lianyu-pc/)) |
 | **Scripts** | Tests required in `tests/*.test.mjs` |
 | **Pass contracts** | Changes affect all 7 agents — discuss in issue first |
 | **Docs** | README stays short; long content → `docs/GUIDE.md` |

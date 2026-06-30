@@ -10,9 +10,7 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parent.parent
 
 CASE_STUDIES = {
-    "chokidar": ROOT / "examples/case-studies/chokidar/docs/cortexloop/report.html",
-    "fastify-hello": ROOT / "examples/case-studies/fastify-hello/docs/cortexloop/report.html",
-    "flask-todo": ROOT / "examples/case-studies/flask-todo/docs/cortexloop/report.html",
+    "lianyu-pc": ROOT / "examples/lianyu-pc/docs/cortexloop/report.html",
     "demo-app": ROOT / "examples/demo-app/docs/cortexloop/report.html",
 }
 
@@ -42,7 +40,7 @@ def capture(html: Path, out: Path, *, full_page: bool = True, clip_selector: str
     print(f"Saved: {out}")
 
 
-def composite_chokidar_launch(hero: Path, findings: Path, out: Path) -> None:
+def composite_launch(hero: Path, findings: Path, out: Path, *, title: str, subtitle: str) -> None:
     """Side-by-side hero + findings for Reddit / README."""
     from PIL import Image, ImageDraw, ImageFont
 
@@ -65,8 +63,8 @@ def composite_chokidar_launch(hero: Path, findings: Path, out: Path) -> None:
         font = ImageFont.load_default()
         sub = font
 
-    draw.text((pad, 8), "CodeCortexLoop on chokidar (npm file watcher)", fill=(17, 24, 39), font=font)
-    draw.text((pad, 32), "Real /cortexloop run · score 71 → 79 after Direct", fill=(107, 114, 128), font=sub)
+    draw.text((pad, 8), title, fill=(17, 24, 39), font=font)
+    draw.text((pad, 32), subtitle, fill=(107, 114, 128), font=sub)
 
     y = pad + label_h
     canvas.paste(left, (pad, y))
@@ -79,8 +77,12 @@ def composite_chokidar_launch(hero: Path, findings: Path, out: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Capture cortexloop dashboard screenshots")
-    parser.add_argument("--case", choices=[*CASE_STUDIES.keys(), "all"], default="chokidar")
-    parser.add_argument("--launch-assets", action="store_true", help="Generate docs/assets launch PNGs from chokidar")
+    parser.add_argument("--case", choices=[*CASE_STUDIES.keys(), "all"], default="lianyu-pc")
+    parser.add_argument(
+        "--launch-assets",
+        action="store_true",
+        help="Generate docs/assets launch PNGs from lianyu-pc report",
+    )
     args = parser.parse_args()
 
     cases = CASE_STUDIES.keys() if args.case == "all" else [args.case]
@@ -90,12 +92,12 @@ def main() -> None:
         out_dir = html.parent
         capture(html, out_dir / "report-dashboard.png", full_page=True)
 
-    if args.launch_assets or args.case == "chokidar":
-        html = CASE_STUDIES["chokidar"]
+    if args.launch_assets or args.case == "lianyu-pc":
+        html = CASE_STUDIES["lianyu-pc"]
         assets = ROOT / "docs/assets"
-        hero = assets / "chokidar-report-hero.png"
-        findings = assets / "chokidar-report-findings.png"
-        full = assets / "chokidar-report-full.png"
+        hero = assets / "lianyu-pc-report-hero.png"
+        findings = assets / "lianyu-pc-report-findings.png"
+        full = assets / "lianyu-pc-report-full.png"
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -103,12 +105,10 @@ def main() -> None:
             page.goto(html.as_uri(), wait_until="networkidle")
             page.wait_for_timeout(600)
 
-            # Findings table card
             page.locator("table").first.locator("xpath=ancestor::div[contains(@class,'card')]").screenshot(
                 path=str(findings)
             )
 
-            # Hero: reload clean page, strip findings table, capture score + categories
             page.goto(html.as_uri(), wait_until="networkidle")
             page.wait_for_timeout(400)
             page.locator(".wrap").evaluate(
@@ -128,8 +128,14 @@ def main() -> None:
         for p in (hero, findings, full):
             print(f"Saved: {p}")
 
-        composite = assets / "chokidar-launch-preview.png"
-        composite_chokidar_launch(hero, findings, composite)
+        composite = assets / "lianyu-pc-launch-preview.png"
+        composite_launch(
+            hero,
+            findings,
+            composite,
+            title="CodeCortexLoop on LianYu-PC (Vue 3 + Spring Boot)",
+            subtitle="Real /cortexloop-deep Report · health score 32 · 81 findings",
+        )
 
 
 if __name__ == "__main__":

@@ -15,24 +15,36 @@
 | **趋势 + 徽章** | `history.json` 记录历次得分趋势 |
 | **基线棘轮** | 老项目历史欠债一次性接受，CI 只对**新增**问题报错 |
 | **CI / GitHub Action** | 内置复合 Action |
-| **零依赖** | 所有后处理脚本均为零 npm 依赖的纯 Node 脚本 |
+| **CI/安装零额外依赖** | 后处理脚本仅需 Node，不在用户项目 `npm install` |
 
 ## 工作模式
 
 - **Report 模式** —— 写出报告 + handoff + 看板，停下等你确认
-- **Direct 模式** —— 分组增量修复、复验时重跑七专家管道，自动反思沉淀
+- **Direct 模式** —— 选择修复下限（**High+** 默认 / **Medium+** / **含 Low 全量**）→ 分组增量修复、复验时重跑七专家管道，自动反思沉淀
 - **CI 模式** —— 机器可读报告 + 退出码 + 可选 PR 评论
+
+### Direct 修复下限（`direct.fixFloor`）
+
+与 `severityFloor`（报告阶段）不同，控制 **Direct 自动改代码** 的范围：
+
+| 选项 | fixFloor | 自动修复 |
+|------|----------|----------|
+| A（默认） | `High` | Critical + High |
+| B | `Medium` | + Medium |
+| C | `Low` | + Low（Info 永不自动修） |
+
+配置：`cortexloop.config.json` → `"direct": { "fixFloor": "High" }`。CLI：`--fix-floor=Medium`。
 
 ## 工具支持与退化模式
 
 | 工具 | 子 agent | 体验 |
 |------|----------|------|
-| **Cursor** | Task 工具 | 7 个独立 Task 串行，领域隔离 |
-| **Claude Code** | Task / 子 agent | 同上 |
-| **OpenCode** | **Task 工具** + subagent | 与 Cursor 同流程；需 `permission.task` + `mode: subagent` |
-| **Qoder** | **Agent 工具** + `~/.qoder/agents/` | 7 个自定义智能体串行委派，**独立上下文** |
-| **Trae** | **SOLO 模式** + 自定义智能体 | SOLO Coder 串行委派；普通 IDE 聊天退化为单会话 |
-| **Codex** | **显式 spawn** + `~/.codex/agents/*.toml` | 按 pass 顺序逐个 spawn；Codex 不会自动 spawn |
+| **Cursor** | Task 工具 | 7 个独立 Task 串行，领域隔离（**一等公民**） |
+| **Claude Code** | Task / 子 agent | 同上（**一等公民**） |
+| **OpenCode** | **Task 工具** + subagent | 与 Cursor 同流程（**一等公民**） |
+| **Qoder** | **Agent 工具** + `~/.qoder/agents/` | 社区/实验性 |
+| **Trae** | **SOLO 模式** + 自定义智能体 | 社区/实验性 |
+| **Codex** | **显式 spawn** + `~/.codex/agents/*.toml` | 社区/实验性 |
 
 Orchestrator 分支：Cursor/Claude/OpenCode → Task；Qoder → Agent；Trae → SOLO；Codex → spawn；未知工具 → fallback。
 
@@ -44,6 +56,7 @@ Trae / Qoder / OpenCode / Codex 详情：[adapters/trae/README.md](../adapters/t
 
 | 命令 | 用途 |
 |------|------|
+| `/cortexloop-lite` | 最轻量：3 pass，跳过 Playbook / cross-validation / MAP enrich |
 | `/cortexloop` | 完整流水线 |
 | `/cortexloop-quick` | 专家 1+2+4（审查 + 安全 + 错误处理） |
 | `/cortexloop-deep` | 全部 7 专家、整库扫描 |
@@ -107,9 +120,11 @@ node scripts/ci-gate.mjs docs/cortexloop/report.json --baseline
 ## 项目配置
 
 ```bash
-cp cortexloop.config.example.json cortexloop.config.json
+cp cortexloop.config.minimal.json cortexloop.config.json
 cp .cortexloopignore.example .cortexloopignore
 ```
+
+全量高级项见 [cortexloop.config.example.json](../cortexloop.config.example.json)（`mapWeights`、`learning.prune`、`crossValidation` 等）。
 
 ## CI / GitHub Actions
 
@@ -154,6 +169,97 @@ cp .cortexloopignore.example .cortexloopignore
 ## 性能预算
 
 见 [PERFORMANCE.md](PERFORMANCE.md)。
+
+## 大项目上下文工程
+
+> 借鉴 SWE-Agent 长程上下文管理、CodeDelegator 角色分离、Magistrate/RepoReviewer 分层审查、Cursor Subagents 隔离上下文等思路，解决 **「Pass 1 跑完、Pass 2 起不来」** 的真实痛点——不是压缩分析质量，而是让 orchestrator **永远保持瘦身**。
+
+**小项目无感：** scope 不足约 100 文件时不会触发 MAP；以下机制在大仓库或长会话断链时自动生效。
+
+### 要解决的难题
+
+| 症状 | 根因 |
+|------|------|
+| Pass 1 完成后主会话说「启动 Pass 2」却不 Task | orchestrator 上下文被 Pass 1 全文撑爆 |
+| 607 个文件 inline 进 prompt | scope 列表占满 token，调度层先于分析层崩溃 |
+| 用户发「继续」后长时间无响应 | 接近满的上下文 + 二次规划 → Cursor 超时 |
+
+**旧模式**：聊天窗口 = 接力总线 → 大项目必断。  
+**新模式**：**磁盘 = 接力总线**，聊天窗口只做调度。
+
+### 借鉴的方法 → CodeCortexLoop 落地
+
+| 思路 | 业界参考 | 我们怎么做 |
+|------|----------|------------|
+| **Thin Orchestrator** | CodeDelegator、agent-review-orchestrator | 主会话只读 anchor/summary；禁止粘贴专家报告 |
+| **Artifact-driven Handoff** | Cursor Subagents 文档 | 全量 handoff/report 落盘；orchestrator 只收 `PASS_COMPLETE` |
+| **On-demand Retrieval** | Claude Code、Confucius SDK | `scope-manifest.json` + `scope-paths.json`；专家 grep/codegraph 按需读 |
+| **Map → Depth** | Magistrate、RepoReviewer、LLM Map-Reduce | `fileCount > 100` 先 **CortexScope Index** 确定性 map，再 7 pass 定点深扫 |
+| **Structured Compaction** | CAT (ACL 2026 Findings)、Zylos Research | 每 pass 后写 `context-anchor.md` + `handoff-summary.json` |
+
+### 架构：磁盘即接力总线
+
+```mermaid
+flowchart TB
+  subgraph disk ["磁盘 — 唯一真相源"]
+    SM["scope-manifest.json"]
+    SP["scope-paths.json"]
+    MAP["scope-map.json"]
+    H["handoff/*.json"]
+    RPT["docs/cortexloop/*.md"]
+    ANCHOR["context-anchor.md"]
+  end
+
+  ORCH["Orchestrator 极瘦上下文"] -->|"Task 委派"| EX["Expert 子 agent 新上下文"]
+  EX -->|"Read 按需"| SM
+  EX -->|"Read 按需"| SP
+  EX -->|"Write 全量"| H
+  EX -->|"PASS_COMPLETE 仅"| ORCH
+  ORCH -->|"compact 每 pass"| ANCHOR
+  ORCH -->|"Step 4 全量 merge"| H
+```
+
+### 相关脚本（CI/安装零额外依赖，仅需 Node）
+
+```bash
+node scripts/build-scope-manifest.mjs --mode=whole    # scope 落盘 + 大 scope 自动 scope-map
+node scripts/build-scope-map.mjs                        # 单独跑 CortexScope Index MAP
+node scripts/compact-context.mjs --init --mode=direct   # 初始化 context anchor
+node scripts/handoff-summary.mjs --through=3            # 压缩摘要给 orchestrator
+node scripts/compact-context.mjs --pass=3 --next-pass=4 # 每 pass 后结构化压缩
+```
+
+### CortexScope Index（MAP 专用轻量索引）
+
+| 信号 | 作用 |
+|------|------|
+| Git churn | 近期改动文件/目录加权 |
+| Regex import 图 | 找高扇入 hub 文件 |
+| 入口启发式 | main/index/Controller/IPC 等 |
+| Pass 分桶 pattern | security/errorHandling 等关键词强制 mustReview |
+
+**与 codegraph MCP 的关系**：互补非替代。CortexScope Index 负责 MAP 阶段秒级出图（**L1**）；`indexStrategy.optionalDeepIndex` 在大 scope / 低置信度时**建议**（非必须）用 codegraph 深挖调用链。
+
+**防遗漏**：MAP 是**优先级排序**不是范围裁剪。`scope-paths.json` 仍含全量路径；`mustReview` + `longTailSample` 强制专家扫非 hotspot 区域。
+
+#### 三层索引：L0 / L1 / codegraph
+
+| 层 | 是什么 | 自带 |
+|----|--------|------|
+| **L0** | `scope-paths.json` + grep | 永远有 |
+| **L1** | `scope-map.json` 热点地图 | 大项目（>100 文件）自动 |
+| **codegraph** | 函数级调用链 | 可选，用户同意才装 |
+
+**何时建议 codegraph**：文件数 ≥ 300、L1 置信度 < 0.7、或 `mapEnrichRecommended`；用户拒绝后仍保留 L1，仅损失调用链精度。
+
+### 质量不会降的原因
+
+- **压缩的是 orchestrator 聊天上下文**，不是 expert 分析证据链
+- 7 个专家仍在**独立子上下文**中读完整 prior handoffs + 按需拉代码
+- Step 4 由 `aggregate-findings.mjs` 机器化合并去重
+- Step 3.5 跨 pass defer 回收机制不变（`lite` preset 可关闭）
+
+大 scope trade-off：**非 hotspot 区域深度降低**（非消失）——`longTailSample` + `mustReview` 缓解；小 scope（<100 文件）不触发 Map。
 
 ## 致谢
 

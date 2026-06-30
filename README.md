@@ -6,6 +6,19 @@
 
 [![健康分徽章](examples/demo-app/.cortexloop/health-badge.svg)](examples/demo-app/docs/cortexloop/report.html)
 
+## 两条上手路径
+
+| 路径 | 命令 | 适合 | 你会得到 |
+|------|------|------|----------|
+| **Quick** | `/cortexloop-quick` 或 `/cortexloop-lite` | 小改动、第一次试用 | 3 pass 审查 → 打开 `docs/cortexloop/report.html` |
+| **Full** | `/cortexloop` | 完整功能、大 PR、Direct 修复 | 7 pass → 可选 Direct 复验 → Playbook → CI 门禁 |
+
+**Quick 路径：** 安装后重启 IDE → 在项目里输入 `/cortexloop-quick` → 选 **Report** → 跑完打开 [demo 看板](examples/demo-app/docs/cortexloop/report.html) 感受格式。不涉及 scope-map、Playbook、基线——后台仍会做必要落盘，你无需配置。
+
+**Full 路径：** `/cortexloop` 完整七专家 → Direct 模式自动修复并复验 → 经验写入 Playbook → `/cortexloop-pre-pr --ci` + GitHub Action 做 PR 门禁。大仓库（>100 文件）自动启用 MAP，[详见 GUIDE](docs/GUIDE.md#大项目上下文工程)。
+
+---
+
 ## 它怎么跑完一整圈？
 
 你在聊天里输入 `/cortexloop`，相当于请来一位**调度员**，后面跟着七位**分工明确的审查专家**（正确性、安全、测试、错误处理、性能、精简、清理）。调度员自己不读你的全部代码，而是负责排期、收报告、算健康分；真正看代码的是七位专家，各干各的领域，按顺序接力。
@@ -37,121 +50,25 @@ Direct 且复验通过后，工具会把**可复用的修复经验**写进项目
 
 | 能力 | 说明 |
 |------|------|
-| **七专家串行** | Orchestrator 调度 7 路独立专家（Cursor/Claude/OpenCode：`Task`；Qoder：`Agent`；Trae：SOLO 委派） |
+| **七专家串行** | Orchestrator 调度 7 路独立专家（Cursor/Claude/OpenCode：`Task`；Qoder/Trae/Codex：见 [工具支持](#工具支持)） |
 | **健康分 0–100** | 七维打分 + 总分；Direct 模式输出 **修复前 → 修复后** |
 | **三种模式** | Report（只诊断）· Direct（修复+复验）· CI（门禁） |
 | **Playbook** | 项目内学习修复模式（候选/已验证，防幻觉） |
-| **零依赖脚本** | 看板、徽章、history、ci-gate 纯 Node，无 npm 依赖 |
-| **大项目上下文工程** | 磁盘接力 + Map→Depth + 结构化压缩；600+ 文件 scope 下 7 pass 不断链 |
+| **CI/安装零额外依赖** | 后处理与门禁脚本仅需 Node，无需在用户项目 `npm install` |
+| **大项目不断链** | 磁盘接力 + Map→Depth；>100 文件自动 MAP，小项目无感 → [GUIDE](docs/GUIDE.md#大项目上下文工程) |
 
 ---
 
-## 大项目上下文工程
+<details>
+<summary>大项目上下文工程（600+ 文件 / Pass 断链 → 展开摘要）</summary>
 
-> 借鉴 SWE-Agent 长程上下文管理、CodeDelegator 角色分离、Magistrate/RepoReviewer 分层审查、Cursor Subagents 隔离上下文等思路，解决 **「Pass 1 跑完、Pass 2 起不来」** 的真实痛点——不是压缩分析质量，而是让 orchestrator **永远保持瘦身**。
+> **小项目无感：** scope 不足约 100 文件时不触发 MAP；聊天窗口只做调度，索引与 handoff 落盘。
 
-### 要解决的难题
+解决 **「Pass 1 跑完、Pass 2 起不来」**：607 文件 inline 进 prompt 时调度层先于分析层崩溃。新模式是 **磁盘 = 接力总线**——orchestrator 只读 `handoff-summary.json` / `context-anchor.md`，专家在独立 Task 上下文里按需读 `scope-paths.json` 与 `scope-map.json`。
 
-| 症状 | 根因 |
-|------|------|
-| Pass 1 完成后主会话说「启动 Pass 2」却不 Task | orchestrator 上下文被 Pass 1 全文撑爆 |
-| 607 个文件 inline 进 prompt | scope 列表占满 token，调度层先于分析层崩溃 |
-| 用户发「继续」后长时间无响应 | 接近满的上下文 + 二次规划 → Cursor 超时 |
+完整架构图、CortexScope Index 信号、L0/L1/codegraph 分层与相关脚本见 **[docs/GUIDE.md — 大项目上下文工程](docs/GUIDE.md#大项目上下文工程)**。
 
-**旧模式**：聊天窗口 = 接力总线 → 大项目必断。  
-**新模式**：**磁盘 = 接力总线**，聊天窗口只做调度。
-
-### 借鉴的方法 → CodeCortexLoop 落地
-
-| 思路 | 业界参考 | 我们怎么做 |
-|------|----------|------------|
-| **Thin Orchestrator** | CodeDelegator、agent-review-orchestrator | 主会话只读 anchor/summary；禁止粘贴专家报告 |
-| **Artifact-driven Handoff** | Cursor Subagents 文档 | 全量 handoff/report 落盘；orchestrator 只收 `PASS_COMPLETE` |
-| **On-demand Retrieval** | Claude Code、Confucius SDK | `scope-manifest.json` + `scope-paths.json`；专家 grep/codegraph 按需读 |
-| **Map → Depth** | Magistrate、RepoReviewer、LLM Map-Reduce | `fileCount > 100` 先 **CortexScope Index** 确定性 map，再 7 pass 定点深扫 |
-| **Structured Compaction** | CAT (ACL 2026 Findings)、Zylos Research | 每 pass 后写 `context-anchor.md` + `handoff-summary.json` |
-
-### 架构：磁盘即接力总线
-
-```mermaid
-flowchart TB
-  subgraph disk ["磁盘 — 唯一真相源"]
-    SM["scope-manifest.json"]
-    SP["scope-paths.json"]
-    MAP["scope-map.json"]
-    H["handoff/*.json"]
-    RPT["docs/cortexloop/*.md"]
-    ANCHOR["context-anchor.md"]
-  end
-
-  ORCH["Orchestrator 极瘦上下文"] -->|"Task 委派"| EX["Expert 子 agent 新上下文"]
-  EX -->|"Read 按需"| SM
-  EX -->|"Read 按需"| SP
-  EX -->|"Write 全量"| H
-  EX -->|"PASS_COMPLETE 仅"| ORCH
-  ORCH -->|"compact 每 pass"| ANCHOR
-  ORCH -->|"Step 4 全量 merge"| H
-```
-
-### 新增脚本（零 npm 依赖）
-
-```bash
-node scripts/build-scope-manifest.mjs --mode=whole    # scope 落盘 + 大 scope 自动 scope-map
-node scripts/build-scope-map.mjs                        # 单独跑 CortexScope Index MAP
-node scripts/compact-context.mjs --init --mode=direct   # 初始化 context anchor
-node scripts/handoff-summary.mjs --through=3            # 压缩摘要给 orchestrator
-node scripts/compact-context.mjs --pass=3 --next-pass=4 # 每 pass 后结构化压缩
-```
-
-### CortexScope Index（MAP 专用轻量索引）
-
-借鉴 codegraph「**预索引落盘、按需查询**」思想，但不依赖 MCP 或 npm：
-
-| 信号 | 作用 |
-|------|------|
-| Git churn | 近期改动文件/目录加权 |
-| Regex import 图 | 找高扇入 hub 文件 |
-| 入口启发式 | main/index/Controller/IPC 等 |
-| Pass 分桶 pattern | security/errorHandling 等关键词强制 mustReview |
-
-**与 codegraph MCP 的关系**：互补非替代。CortexScope Index 负责 MAP 阶段秒级出图（**L1，零依赖**）；`scope-manifest.json` → `indexStrategy.optionalDeepIndex` 在大 scope / 低置信度时**建议**（非必须）用 codegraph 深挖调用链。
-
-**防遗漏**：MAP 是**优先级排序**不是范围裁剪。`scope-paths.json` 仍含全量路径；`mustReview` + `longTailSample` 强制专家扫非 hotspot 区域；低置信度时可选 LLM enrich（最多 5 个 hotspot）。
-
-#### 三层索引：L0 / L1 / codegraph 各管什么
-
-三层是**独立互补**，不是递进升级——L0、L1 是工具自带、永远在；codegraph 是外部可选件，只在 L1 觉得不够时才建议、且必须用户同意才装。
-
-| 层 | 是什么 | 谁来建 | 自带 |
-|----|--------|--------|------|
-| **L0** | 「项目有哪些文件」清单（`scope-paths.json`）+ `grep` | CortexLoop | ✅ 永远有 |
-| **L1** | 在 L0 上多一份「热点地图」（`scope-map.json`） | CortexLoop | ✅ 大项目自动开 |
-| **codegraph** | 真正的「A 函数调用 B 函数」调用链图 | 外部工具 | ❌ 用户同意才装 |
-
-> L1 的热点**不是从 codegraph 来的**，是 Git 改动量 + 正则 import 入度 + 关键词命中三个朴素信号加权算出的（见上表信号列）。codegraph 是给 L1 打补丁的可选件，不是 L1 的前提。
-
-**何时进 L1（自动，无需 codegraph）**：项目超过约 100 个文件，自动从 L0 升 L1（`scope.mapThreshold` 默认 100）。专家照常按地图干活，codegraph 完全不参与。
-
-**何时建议上 codegraph（会询问用户）**：命中以下任意一条，且尚未装过、配置未关闭询问、本次未拒绝——就把 `indexStrategy.optionalDeepIndex.suggested` 标为 `true`，并在 Pass 1 前问一次：
-
-1. 文件数 ≥ 300（`scope.deepIndexFileThreshold`）；
-2. L1 地图置信度 < 0.7（`scope.mapEnrichThreshold`，import 解析率低或无近期 Git 改动时会掉下来）；
-3. 地图标记 `mapEnrichRecommended`（本质同条件 2）。
-
-注意 `optionalDeepIndex.required` 恒为 `false`——**永远是「建议」不是「强制」**。工具保证 L0/L1 必有，深符号/调用链才走外部 codegraph。
-
-**用户拒绝后退化到哪**：退到**普通 L1**，不是 L0。`scope-manifest.json → retrievalOrder` 第 4 条（`codegraph MCP only when useWhen applies`）被跳过，专家需要「跨文件调用链 / 改一个符号看影响半径 / L1+grep 仍看不清入口」这类信息时退回 `grep/glob + Read`，且按 `optionalDeepIndex.fallbackWithout` 约定：**调用链类发现置信度最多标 `medium`，除非人工核对**。热点地图、`mustReview`、`longTailSample` 全部照常工作，每个文件仍在视野里——只损失「真函数调用链」这一类问题的精度。
-
-> 💡 **小提示**：大型项目搭配 codegraph 使用效果更佳哦。
-
-### 质量不会降的原因
-
-- **压缩的是 orchestrator 聊天上下文**，不是 expert 分析证据链
-- 7 个专家仍在**独立子上下文**中读完整 prior handoffs + 按需拉代码
-- Step 4 由 `aggregate-findings.mjs` 机器化合并去重：用与 `baseline.mjs` 相同的 `findingFingerprint`，跨 pass 重复 finding 自动归并并保留 `provenance`（来源 pass/expert + 同指纹其他发现者 + Step 3.5 回收 orphanId）；Evidence + Confidence 字段直透传到 `report.json`
-- Step 3.5 跨 pass defer 回收机制不变
-
-大 scope trade-off：**非 hotspot 区域深度降低**（非消失）——`longTailSample` + `mustReview` 缓解；要全库等深 scan 可缩小 scope 或提高 `scope.longTailSampleCount`；小 scope（<100 文件）不触发 Map。
+</details>
 
 ---
 
@@ -185,8 +102,8 @@ cd code-cortex-loop
 
 | 问题 | 原因 |
 |------|------|
-| 你常用 **Cursor**、**Claude Code**、**OpenCode**、**Qoder**、**Trae（SOLO）** 或 **Codex** 吗？ | Cursor/Claude/OpenCode：`Task`；Qoder：`Agent`；Trae：SOLO；Codex：显式 spawn |
-| 改动量 **≥ 几百行** 或是一个完整功能吗？ | 改个 typo 用 linter 就够了 |
+| 你常用 **Cursor**、**Claude Code** 或 **OpenCode** 吗？ | 三者为一等公民（Task 完整）；其它工具见 [工具支持](#工具支持) |
+| 改动量 **≥ 几百行** 或是一个完整功能吗？ | 改个 typo 用 linter；小改用 `/cortexloop-lite` |
 | 能接受每次 **约 3–10 分钟** 跑完整流程吗？ | 见下方 [性能预算](#性能预算)；小 PR 用 `/cortexloop-quick` |
 
 ---
@@ -201,7 +118,7 @@ cd code-cortex-loop
 | **成本** | 你的模型 token | 订阅 | 授权/云 | 写规则的时间 |
 | **适合谁** | 已习惯 Cursor/Claude/Qoder Agent 的开发者 | 零配置 PR review 的团队 | 合规/静态分析 | 爱折腾的人 |
 
-**不是 SaaS**，是 **harness + 零依赖脚本**，让现有 AI 工具像一支有流程的审查团队。
+**不是 SaaS**，是 **harness + CI/安装零额外依赖的 Node 脚本**，让现有 AI 工具像一支有流程的审查团队。
 
 ---
 
@@ -248,8 +165,18 @@ flowchart LR
 | 模式 | 触发 | 行为 |
 |------|------|------|
 | **Report** | `/cortexloop` 默认询问 | 写出报告 + 看板，**停下等你确认**再改代码 |
-| **Direct** | 选择 Direct | 分组修复 → 每组跑测试 → **复验重跑七专家** → 输出修复前后得分 → 自动反思写入 Playbook |
+| **Direct** | 选择 Direct | 先选修复下限 → 分组修复 → 复验 → Playbook（见下表） |
 | **CI** | `/cortexloop --ci` 或配置 `ci.enabled` | 无交互，写 `report.json`，跑 `ci-gate`，可选 PR 评论 |
+
+**Direct 修复下限**（选 Direct 时询问；默认 **A. High+**）：
+
+| 选项 | 自动修复 | 说明 |
+|------|----------|------|
+| **A. High+** | Critical + High | 推荐默认 |
+| **B. Medium+** | + Medium | 功能收尾、愿意多改一点 |
+| **C. 全量** | + Low | 改动面大，复验更耗时；Info 仍不自动修 |
+
+配置：`direct.fixFloor` · CLI：`--fix-floor=High|Medium|Low`
 
 ---
 
@@ -257,6 +184,7 @@ flowchart LR
 
 | 命令 | 用途 |
 |------|------|
+| `/cortexloop-lite` | **最轻量**：3 pass，跳过 Playbook / cross-validation / MAP enrich / codegraph 询问 |
 | `/cortexloop` | 完整 7 pass；询问 Report / Direct 与范围 |
 | `/cortexloop-quick` | 3 pass：审查 + 安全 + 错误处理；适合小改动 |
 | `/cortexloop-deep` | 7 pass 整库深扫 |
@@ -338,14 +266,18 @@ node scripts/playbook.mjs feedback --signature=<sig> --outcome=external_verified
 
 ## 工具支持
 
+**一等公民（完整 Task 子 agent 隔离）：** Cursor · Claude Code · OpenCode
+
+**社区 / 实验性（需额外配置，体验可能降级为单会话）：** Qoder · Trae · Codex
+
 | 工具 | 安装参数 | 配置目录 | 子 agent |
 |------|----------|----------|----------|
 | **Cursor** | `cursor` | `~/.cursor/` | ✅ Task 完整 |
 | **Claude Code** | `claude` | `~/.claude/` | ✅ Task 完整 |
 | **OpenCode** | `opencode` | `~/.config/opencode/` | ✅ Task（需 `permission.task`；见 [adapters/opencode/](adapters/opencode/)） |
-| **Qoder** | `qoder` | `~/.qoder/` | ✅ Agent 工具（需主会话启用 Agent；见 [adapters/qoder/](adapters/qoder/)） |
-| **Trae** | `trae` | `~/.trae/` | ⚡ SOLO 模式 + 自定义智能体（见 [adapters/trae/](adapters/trae/)） |
-| **Codex** | `codex` | `~/.codex/` | ⚡ 显式 spawn + TOML 子 agent（见 [adapters/codex/](adapters/codex/)） |
+| **Qoder** | `qoder` | `~/.qoder/` | ⚡ Agent 工具（见 [adapters/qoder/](adapters/qoder/)） |
+| **Trae** | `trae` | `~/.trae/` | ⚡ SOLO 模式（见 [adapters/trae/](adapters/trae/)） |
+| **Codex** | `codex` | `~/.codex/` | ⚡ 显式 spawn（见 [adapters/codex/](adapters/codex/)） |
 
 未配置子 agent 或用户确认时才会退化为单会话 fallback。OpenCode 与 Cursor 共用 Task 流程。各工具差异：[adapters/](adapters/)。
 
@@ -396,10 +328,18 @@ Codex **不会自动 spawn**——必须在 prompt 里写清顺序。详见 [ada
 
 ## 项目配置（可选）
 
+日常用法可只复制最小配置；高级项见完整 example。
+
 ```bash
-cp cortexloop.config.example.json cortexloop.config.json
+cp cortexloop.config.minimal.json cortexloop.config.json   # 推荐首次
+# cp cortexloop.config.example.json cortexloop.config.json  # 全量参考（含 MAP/Playbook/CI 高级项）
 cp .cortexloopignore.example .cortexloopignore
 ```
+
+| 配置文件 | 用途 |
+|----------|------|
+| [cortexloop.config.minimal.json](cortexloop.config.minimal.json) | preset + scope + CI 开关——个人日常够用 |
+| [cortexloop.config.example.json](cortexloop.config.example.json) | 全量参考：`mapWeights`、Playbook prune、crossValidation 等高级项 |
 
 `cortexloop.config.json` 可覆盖 preset、scope、启用哪些 pass、CI 阈值、Playbook 路径等。行内抑制：`// cortexloop-ignore CL-001`。
 
@@ -470,6 +410,7 @@ jobs:
 
 | 模式 | Pass 数 | 预估耗时* | 预估 token* |
 |------|---------|-----------|-------------|
+| `/cortexloop-lite` | 3（跳过 Playbook/cross-val） | ~2–3 分钟 | ~6万–12万 |
 | `/cortexloop-quick` | 3 | ~2–4 分钟 | ~8万–15万 |
 | `/cortexloop` | 7 | ~5–12 分钟 | ~20万–45万 |
 | `/cortexloop-deep` | 7 + 整库 | ~10–25 分钟 | ~40万–90万 |
@@ -508,7 +449,7 @@ passes/       # 七专家串行合约
 agents/       # 领域专家 persona
 skills/       # cortexloop-expert-core（公共）+ 各领域 depth skill + reflect
 rules/        # workflow、learning-loop、refactor-safety …
-scripts/      # ci-gate、playbook、scope-manifest、compact-context、看板、安装脚本（零 npm 依赖）
+scripts/      # ci-gate、playbook、scope-manifest、compact-context、看板、安装脚本（CI/安装零额外依赖）
 schemas/      # report、config、handoff JSON schema
 examples/     # demo-app + lianyu-pc（真实大项目 Report）
 action.yml    # GitHub 复合 Action

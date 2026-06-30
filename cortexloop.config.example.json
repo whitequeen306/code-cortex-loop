@@ -1,6 +1,7 @@
 {
   "$schema": "./schemas/cortexloop-config.schema.json",
   "preset": "default",
+  "_readme": "Full reference — everyday use: copy cortexloop.config.minimal.json instead. Advanced keys below: scope.mapWeights, learning.prune, crossValidation, baseline, scores.weights.",
   "scope": {
     "mode": "recent",
     "mapThreshold": 100,
@@ -28,6 +29,9 @@
     "cleanup": true
   },
   "severityFloor": "Medium",
+  "direct": {
+    "fixFloor": "High"
+  },
   "exclude": [
     "node_modules/**",
     "dist/**",

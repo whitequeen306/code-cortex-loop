@@ -142,6 +142,7 @@ Experts do not invoke each other — orchestrator runs the pipeline in order.
 
 | Command | Purpose |
 |---------|---------|
+| `/cortexloop-lite` | Minimal 3-pass pipeline |
 | `/cortexloop` | Full pipeline |
 | `/cortexloop-quick` | Fast pass |
 | `/cortexloop-deep` | Whole project deep scan |

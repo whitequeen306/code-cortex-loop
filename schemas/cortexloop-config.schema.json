@@ -5,7 +5,7 @@
   "properties": {
     "$schema": { "type": "string" },
     "preset": {
-      "enum": ["default", "quick", "deep", "security", "pre-pr"]
+      "enum": ["default", "lite", "quick", "deep", "security", "pre-pr"]
     },
     "scope": {
       "oneOf": [
@@ -53,6 +53,17 @@
     },
     "severityFloor": {
       "enum": ["Critical", "High", "Medium", "Low", "Info"]
+    },
+    "direct": {
+      "type": "object",
+      "description": "Direct mode apply policy. fixFloor is the minimum severity tier to auto-fix (Critical always included; Info never auto-fixed). Distinct from severityFloor which filters report findings during analysis.",
+      "properties": {
+        "fixFloor": {
+          "enum": ["High", "Medium", "Low"],
+          "default": "High",
+          "description": "High = Critical+High only (default); Medium = +Medium; Low = +Low"
+        }
+      }
     },
     "exclude": {
       "type": "array",

@@ -425,6 +425,49 @@ export function validateCrossValidation({
 export const VALID_SEVERITIES = ['Critical', 'High', 'Medium', 'Low', 'Info'];
 const HANDOFF_CONFIDENCE = ['high', 'medium'];
 
+/** Direct mode: minimum severity tier to auto-apply fixes (Critical always included). */
+export const DIRECT_FIX_FLOORS = ['High', 'Medium', 'Low'];
+export const DEFAULT_DIRECT_FIX_FLOOR = 'High';
+
+/** @param {string} severity */
+export function severityRank(severity) {
+  const idx = VALID_SEVERITIES.indexOf(severity);
+  return idx === -1 ? VALID_SEVERITIES.length : idx;
+}
+
+/**
+ * @param {string|undefined|null} raw
+ * @returns {'High'|'Medium'|'Low'}
+ */
+export function normalizeDirectFixFloor(raw) {
+  if (!raw) return DEFAULT_DIRECT_FIX_FLOOR;
+  const s = String(raw).trim();
+  const cap = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  if (DIRECT_FIX_FLOORS.includes(cap)) return cap;
+  throw new Error(
+    `Invalid direct fix floor: ${raw}. Use High (Critical+High), Medium (+Medium), or Low (+Low). Info is never auto-fixed.`,
+  );
+}
+
+/**
+ * @param {string} severity
+ * @param {'High'|'Medium'|'Low'} fixFloor
+ */
+export function severityMeetsDirectFixFloor(severity, fixFloor = DEFAULT_DIRECT_FIX_FLOOR) {
+  if (severity === 'Info') return false;
+  if (severity === 'Critical') return true;
+  const floor = normalizeDirectFixFloor(fixFloor);
+  return severityRank(severity) <= severityRank(floor);
+}
+
+/**
+ * @param {object[]} findings
+ * @param {'High'|'Medium'|'Low'} fixFloor
+ */
+export function filterFindingsForDirectFix(findings, fixFloor = DEFAULT_DIRECT_FIX_FLOOR) {
+  return findings.filter((f) => severityMeetsDirectFixFloor(f.severity, fixFloor));
+}
+
 export function validatePassHandoff(handoff) {
   if (!handoff || typeof handoff !== 'object') return 'handoff must be an object';
   if (!handoff.pass || typeof handoff.pass !== 'string') return 'pass is required';
@@ -722,6 +765,18 @@ export function loadLearningConfig(configPath = 'cortexloop.config.json') {
       maxEntries: prune.maxEntries ?? 200,
       dropQuarantined: prune.dropQuarantined === true,
     },
+  };
+}
+
+/**
+ * Read Direct-mode config from cortexloop.config.json → `direct`.
+ * @param {string} [configPath]
+ */
+export function loadDirectConfig(configPath = 'cortexloop.config.json') {
+  const cfg = loadConfig(configPath);
+  const direct = cfg?.direct ?? {};
+  return {
+    fixFloor: normalizeDirectFixFloor(direct.fixFloor ?? DEFAULT_DIRECT_FIX_FLOOR),
   };
 }
 

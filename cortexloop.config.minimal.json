@@ -1,0 +1,10 @@
+{
+  "$schema": "./schemas/cortexloop-config.schema.json",
+  "preset": "default",
+  "scope": {
+    "mode": "recent"
+  },
+  "ci": {
+    "enabled": false
+  }
+}

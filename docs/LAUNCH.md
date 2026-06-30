@@ -6,14 +6,13 @@ Assets (prefer **real case study screenshots** over the demo GIF):
 
 | Asset | Path | Use for |
 |-------|------|---------|
-| **Launch composite (recommended)** | `docs/assets/chokidar-launch-preview.png` | Reddit, Release, README |
-| Hero (score + categories) | `docs/assets/chokidar-report-hero.png` | Twitter, thumbnails |
-| Findings table | `docs/assets/chokidar-report-findings.png` | Second image in thread |
-| Full page | `docs/assets/chokidar-report-full.png` | GitHub Release |
-| Per-case full PNG | `examples/case-studies/<repo>/docs/cortexloop/report-dashboard.png` | Case study README |
+| **Launch composite (recommended)** | [docs/assets/lianyu-pc-showcase.png](../docs/assets/lianyu-pc-showcase.png) | Reddit, Release, README |
+| Standard dashboard (81 findings) | [examples/lianyu-pc/docs/cortexloop/report.html](../examples/lianyu-pc/docs/cortexloop/report.html) | Screenshot for social |
+| Before/after showcase | [examples/lianyu-pc/docs/cortexloop/showcase.html](../examples/lianyu-pc/docs/cortexloop/showcase.html) | Report → Direct narrative |
+| Teaching demo | [examples/demo-app/docs/cortexloop/report.html](../examples/demo-app/docs/cortexloop/report.html) | First try |
 | Demo GIF (optional) | `docs/assets/cortexloop-demo.gif` | Animated fallback only |
 
-Regenerate: `python scripts/capture-dashboard-screenshot.py --case all --launch-assets`
+Regenerate showcase: see [examples/README.md](../examples/README.md).
 
 ---
 
@@ -23,21 +22,22 @@ Regenerate: `python scripts/capture-dashboard-screenshot.py --case all --launch-
 
 **Body:**
 
-I built a post-coding harness for Cursor (also Claude Code, with fallback on other tools):
+I built a post-coding harness for Cursor (also Claude Code / OpenCode; other tools need extra setup):
 
 - One slash command launches 7 sequential review passes (correctness → security → tests → …)
 - Outputs an HTML dashboard with health score 0–100
 - Direct mode fixes + re-verifies, then records patterns to a Playbook (with anti-hallucination trust tiers)
-- Zero-dep Node scripts for CI gate, badge, PR comments
+- CI/install: zero extra npm deps — gate, badge, PR comment scripts need Node only
 
-**Not for everyone** — best if you already live in Cursor Agent mode and want structure instead of ad-hoc "review my code".
+**Not for everyone** — best if you already live in Cursor Agent mode. For small diffs try `/cortexloop-lite` or `/cortexloop-quick`.
 
-Real run on chokidar (file watcher): found swallowed watcher errors, score 71→79 after Direct.
+Real run on **LianYu-PC** (Vue 3 + Spring Boot full stack, `/cortexloop-deep` Report): health score **32**, 81 findings.
 
-GIF: (attach `cortexloop-demo.gif`)
 Repo: https://github.com/whitequeen306/code-cortex-loop
 
 Install: `curl -fsSL …/install-remote.sh | bash -s cursor`
+
+Pre-generated report: `examples/lianyu-pc/docs/cortexloop/report.html`
 
 Happy to answer questions — aiming for 24h response on first issues.
 
@@ -49,48 +49,27 @@ Happy to answer questions — aiming for 24h response on first issues.
 
 **Body:**
 
-CodeCortexLoop is a harness (commands + agents + zero-dep scripts) that turns "review my code" into a structured 7-pass pipeline with health scores, HTML dashboard, CI gate, and a Playbook that learns fix patterns with a trust model (candidate/verified tiers, negative signals).
+Show HN: harness that runs 7 sequential domain-expert review passes inside Cursor/Claude Code (Task subagents), outputs a health-score HTML dashboard, optional Direct fix+re-verify, and a project-local Playbook with verified/candidate tiers.
 
-Works best on Cursor and Claude Code where Task subagents give real domain isolation. Other tools degrade to single-session mode — documented honestly.
+Not SaaS — rules + zero-extra-dep Node scripts for CI gate.
 
-Case study on chokidar: https://github.com/whitequeen306/code-cortex-loop/tree/main/examples/case-studies/chokidar
+Case study (real repo scan, no source bundled): https://github.com/whitequeen306/code-cortex-loop/tree/main/examples/lianyu-pc
 
-Not a hosted service — competes more with "write your own Cursor rules" than CodeRabbit.
-
-https://github.com/whitequeen306/code-cortex-loop
+Try `/cortexloop-lite` for a minimal 3-pass path.
 
 ---
 
 ## Twitter / X
 
-Post 1 (GIF thread):
+**Post 1:** GIF or LianYu showcase + one-liner + github link
 
-> Built CodeCortexLoop — `/cortexloop` in Cursor runs 7 expert passes and outputs a health-score dashboard 🧵
->
-> [attach GIF]
->
-> Not SaaS. A harness + scripts. Best on Cursor/Claude Code.
->
-> github.com/whitequeen306/code-cortex-loop
-
-Post 2 (case study):
-
-> Ran it on chokidar (npm file watcher):
-> • Found swallowed watcher errors (High)
-> • Score 71 → 79 after Direct mode
->
-> Pre-generated report in repo — no install needed to preview:
-> examples/case-studies/chokidar/docs/cortexloop/report.html
+**Post 2:** LianYu-PC case — score 32, 81 findings, link to `examples/lianyu-pc/docs/cortexloop/report.html`
 
 ---
 
-## Issue response SLA (first 2 weeks)
+## Pre-launch checklist
 
-| Priority | Target response |
-|----------|-----------------|
-| Install / broken on Cursor or Claude | < 24h |
-| Bug in scripts (ci-gate, playbook, etc.) | < 48h |
-| Feature requests | Acknowledge + label; no commitment |
-| "Why not just use X?" | Point to README comparison table |
-
-Label first issues: `good first issue` for docs typos, missing case study metadata, install script edge cases.
+- [ ] Open `examples/lianyu-pc/docs/cortexloop/report.html` in browser
+- [ ] README install one-liner works
+- [ ] Release notes include screenshot
+- [ ] Plan 24h issue response for first week

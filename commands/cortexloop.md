@@ -160,7 +160,8 @@ Use output as **where to investigate first** during Step 3. Each expert runs its
 | Trigger | Behavior |
 |---------|----------|
 | `/cortexloop --ci` or config `ci.enabled` | **CI mode**: Report only, write JSON/SARIF, run ci-gate, no user prompts |
-| `/cortexloop` (default) | Ask user two questions (below) |
+| `/cortexloop --direct` or `--fix-floor=…` | **Direct** with optional non-interactive fix floor |
+| `/cortexloop` (default) | Ask user questions below |
 | Preset commands | Skip preset question; use locked preset |
 
 #### Question 1 — Mode (skip in CI)
@@ -172,13 +173,45 @@ Use output as **where to investigate first** during Step 3. Each expert runs its
 
 - **Recent changes** | **Whole project**
 
+#### Question 3 — Direct fix floor (Direct mode only; skip in CI)
+
+Ask **after** user chooses Direct (or when `--direct` without `--fix-floor`). Default from `cortexloop.config.json` → `direct.fixFloor` (**High** if unset).
+
+Present as:
+
+```
+Direct 模式：自动修复哪些严重度？（Critical 始终包含；Info 永不自动修）
+
+A. High+ — 只修 Critical + High（推荐，默认）
+B. Medium+ — 再修 Medium
+C. 全量 — 连 Low 一起修（改动面大，复验更耗时）
+```
+
+| Choice | `directFixFloor` | Auto-fix severities |
+|--------|------------------|---------------------|
+| A | `High` | Critical, High |
+| B | `Medium` | Critical, High, Medium |
+| C | `Low` | Critical, High, Medium, Low |
+
+When user picks **C**, print one-line warning: large diff surface; re-verify token/time cost increases.
+
+CLI override: `--fix-floor=High|Medium|Low` (case-insensitive). Precedence: CLI > user answer > config > default **High**.
+
+**Not the same as `severityFloor`:** `severityFloor` controls which findings enter the **report** during analysis; `directFixFloor` controls which reported findings Direct **auto-applies**. Example: full `/cortexloop` may report Medium+ while Direct still fixes High+ only if user picks A.
+
+Record choice in run-meta: `directFixFloor`. Include in `00-summary.md` and final summary.
+
+Findings with `autoFixable: needs-confirmation` still require user OK. Cleanup deletions still honor `cleanup.askBeforeDelete`.
+
 ### 1b — Initialize run archive (every invocation)
 
 Before scope or analysis, create a **new run folder** keyed by **human-readable local time** (not raw ISO in UI):
 
 ```bash
-node scripts/init-run.mjs --mode=<report|direct> --preset=<preset> --scope=<recent|whole>
+node scripts/init-run.mjs --mode=<report|direct> --preset=<preset> --scope=<recent|whole> [--fix-floor=High|Medium|Low]
 ```
+
+When `mode=direct`, pass `--fix-floor` from Question 3 / CLI / `loadDirectConfig().fixFloor`.
 
 Writes:
 
@@ -644,7 +677,17 @@ node scripts/ci-gate.mjs docs/cortexloop/report.json --baseline
 
 ### Direct
 
-Apply per workflow apply-order. After all groups:
+Read `directFixFloor` from run-meta (or `loadDirectConfig()`). Only auto-apply findings where `severityMeetsDirectFixFloor(severity, directFixFloor)` — **Critical always; Info never**.
+
+Helper (orchestrator may run for a manifest):
+
+```bash
+node -e "import { filterFindingsForDirectFix, readJson } from './scripts/lib/shared.mjs'; const r=readJson('docs/cortexloop/report.json'); console.log(JSON.stringify(filterFindingsForDirectFix(r.findings, process.argv[1]||'High').map(f=>f.id)))" High
+```
+
+Apply per workflow **Direct Mode Apply Order** (respecting fix floor). Findings **below** the floor: leave `status: open`, list under **Deferred (below Direct fix floor)** in summary — do not silently drop.
+
+After all groups:
 
 1. **Re-verify**: re-run **Step 3 + Step 3.5** sequential expert pipeline (read-only) on same scope — mandatory delegation per pass (Task, Agent, or SOLO), not orchestrator inline analysis
 2. Write updated `report.json`

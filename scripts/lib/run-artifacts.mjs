@@ -84,6 +84,7 @@ export function initCortexloopRun(opts = {}) {
     mode = 'report',
     preset = 'default',
     scope = 'recent',
+    fixFloor = null,
     runsRoot = DEFAULT_RUNS_ROOT,
     metaPath = DEFAULT_RUN_META,
   } = opts;
@@ -108,6 +109,7 @@ export function initCortexloopRun(opts = {}) {
     mode,
     preset,
     scope,
+    ...(mode === 'direct' && fixFloor ? { directFixFloor: fixFloor } : {}),
     gitCommit: tryGitCommit(),
     gitBranch: tryGitBranch(),
     reports,
@@ -124,6 +126,7 @@ export function initCortexloopRun(opts = {}) {
 - **模式:** ${mode}
 - **范围:** ${scope}
 - **预设:** ${preset}
+${mode === 'direct' && fixFloor ? `- **Direct 修复下限:** ${fixFloor}（Critical 始终包含；Info 不自动修）` : ''}
 ${meta.gitCommit ? `- **Git:** \`${meta.gitCommit.slice(0, 7)}\` (${meta.gitBranch || 'detached'})` : ''}
 
 本目录保存此次运行的专家报告与 \`report.json\`。最新一次运行会同步到 \`docs/cortexloop/report.json\` 供看板/CI 使用。

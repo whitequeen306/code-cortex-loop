@@ -52,10 +52,10 @@ test('validateHandoffs fails when handoff missing', () => {
   assert.ok(result.errors.some((e) => e.type === 'missing'));
 });
 
-test('summarizeRun counts executed passes from chokidar case study', () => {
-  const base = 'examples/case-studies/chokidar';
+test('summarizeRun counts executed passes from lianyu-pc example', () => {
+  const base = 'examples/lianyu-pc';
   if (!existsSync(join(base, '.cortexloop/handoff/01-correctness.json'))) {
-    return; // skip if case study not present
+    return; // skip if handoffs not bundled
   }
   const summary = summarizeRun({
     handoffDir: join(base, '.cortexloop/handoff'),

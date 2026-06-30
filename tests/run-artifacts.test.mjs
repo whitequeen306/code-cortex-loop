@@ -32,7 +32,24 @@ test('formatRunDisplayTimeEn is YYYY-MM-DD HH:mm', () => {
   assert.equal(formatRunDisplayTimeEn(d), '2026-06-25 09:05');
 });
 
-test('initCortexloopRun creates run folder and meta', () => {
+test('initCortexloopRun stores directFixFloor in direct mode', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cortexloop-run-'));
+  const runsRoot = join(root, 'docs/cortexloop/runs');
+  mkdirSync(runsRoot, { recursive: true });
+  const prev = process.cwd();
+  try {
+    process.chdir(root);
+    const meta = initCortexloopRun({ mode: 'direct', fixFloor: 'Medium', runsRoot: 'docs/cortexloop/runs' });
+    assert.equal(meta.directFixFloor, 'Medium');
+    const onDisk = JSON.parse(readFileSync('.cortexloop/run-meta.json', 'utf8'));
+    assert.equal(onDisk.directFixFloor, 'Medium');
+  } finally {
+    process.chdir(prev);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('initCortexloopRun omits directFixFloor in report mode', () => {
   const root = mkdtempSync(join(tmpdir(), 'cortexloop-run-'));
   try {
     const meta = initCortexloopRun({
@@ -46,6 +63,7 @@ test('initCortexloopRun creates run folder and meta', () => {
     assert.ok(existsSync(join(root, 'runs', meta.runId, 'RUN.md')));
     assert.match(readFileSync(join(root, 'runs', meta.runId, 'RUN.md'), 'utf8'), /运行时间/);
     assert.equal(JSON.parse(readFileSync(join(root, 'run-meta.json'), 'utf8')).runId, meta.runId);
+    assert.equal(meta.directFixFloor, undefined);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

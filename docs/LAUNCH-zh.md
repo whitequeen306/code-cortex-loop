@@ -8,32 +8,31 @@
 
 | 素材 | 路径 | 用途 |
 |------|------|------|
-| **推荐：chokidar 合成图** | `docs/assets/chokidar-launch-preview.png` | r/cursor、Release、README 首图 |
-| 健康分 + 类别条形图 | `docs/assets/chokidar-report-hero.png` | 推特缩略图 |
-| 问题列表（findings 表） | `docs/assets/chokidar-report-findings.png` | 第二条帖 / 评论区 |
-| 完整看板 | `docs/assets/chokidar-report-full.png` | GitHub Release |
-| 各 case 完整 PNG | `examples/case-studies/<repo>/docs/cortexloop/report-dashboard.png` | 案例页 |
+| **推荐：LianYu showcase** | [docs/assets/lianyu-pc-showcase.png](../docs/assets/lianyu-pc-showcase.png) | r/cursor、Release、README 首图 |
+| 标准看板（81 findings） | [examples/lianyu-pc/docs/cortexloop/report.html](../examples/lianyu-pc/docs/cortexloop/report.html) | 浏览器截图 → 推特 / 掘金 |
+| 对比看板 | [examples/lianyu-pc/docs/cortexloop/showcase.html](../examples/lianyu-pc/docs/cortexloop/showcase.html) | Report → Direct 对比 |
+| 教学 demo 看板 | [examples/demo-app/docs/cortexloop/report.html](../examples/demo-app/docs/cortexloop/report.html) | 第一次试用 |
 | demo GIF（可选） | `docs/assets/cortexloop-demo.gif` | 动画备选，不如上面真实 |
 
-**重新生成截图：**
+**重新生成 LianYu showcase 图：**
 
 ```bash
-python scripts/capture-dashboard-screenshot.py --case all --launch-assets
+node scripts/make-showcase-dashboard.mjs examples/lianyu-pc/docs/cortexloop/report.json \
+  --out=examples/lianyu-pc/docs/cortexloop/showcase.html
+python scripts/capture-showcase-screenshot.py
 ```
-
-HTML 源文件（浏览器可打开）：`examples/case-studies/chokidar/docs/cortexloop/report.html`
 
 ---
 
 ## 创建 GitHub Release 时怎么贴
 
 1. 打开 https://github.com/whitequeen306/code-cortex-loop/releases/new
-2. **Choose a tag:** `v2.2.0`
-3. **Release title:** `v2.2.0 — 七专家流水线 + 真实 case study`
+2. **Choose a tag:** `v2.2.0`（或当前版本）
+3. **Release title:** `v2.x — 七专家流水线 + LianYu-PC 真实案例`
 4. **描述里：**
-   - 拖入 `docs/assets/cortexloop-demo.gif`（或 Markdown：`![demo](../docs/assets/cortexloop-demo.gif)`）
-   - 拖入你截好的 `chokidar-dashboard.png`
-   - 写 2–3 句：chokidar 跑完 71 分，Direct 后 79 分，发现 watcher 错误被吞
+   - 拖入 `docs/assets/cortexloop-demo.gif`（若有）
+   - 拖入 `docs/assets/lianyu-pc-showcase.png` 或 report.html 截图
+   - 写 2–3 句：LianYu-PC 整库 Report **32 分**，81 条 finding，典型问题含验证码泄露、SSE 静默失败
 5. 发布
 
 ---
@@ -44,22 +43,22 @@ HTML 源文件（浏览器可打开）：`examples/case-studies/chokidar/docs/co
 
 **正文：**
 
-给 Cursor / Claude Code 用的「写完代码后」流水线 harness（其它工具会退化为单会话，文档里写清楚了）：
+给 Cursor / Claude Code 用的「写完代码后」流水线 harness（Qoder/Trae/Codex 见文档，体验可能降级）：
 
 - 一条命令串行跑 7 个审查 pass（正确性 → 安全 → 测试 → …）
 - 产出 HTML 健康分看板（0–100）
 - Direct 模式修复 + 复验，经验写入 Playbook（候选/已验证两层，防幻觉）
-- 零 npm 依赖脚本：CI 门禁、徽章、PR 评论
+- CI/安装零额外依赖：门禁、徽章、PR 评论脚本仅需 Node
 
-**不是给所有人用的** —— 适合已经习惯 Cursor Agent、想要结构化审查而不是随口「帮我 review」的人。
+**不是给所有人用的** —— 适合已经习惯 Cursor Agent、想要结构化审查而不是随口「帮我 review」的人。小改动先试 `/cortexloop-lite` 或 `/cortexloop-quick`。
 
-在 **chokidar**（npm 文件监听库）上实跑：发现 watcher 错误被吞（High），Direct 后 **71 → 79**。
+在 **LianYu-PC**（Vue 3 + Spring Boot 全栈）上 `/cortexloop-deep` Report：**健康分 32**，81 条 finding。
 
 - 仓库：https://github.com/whitequeen306/code-cortex-loop
-- 安装：`curl -fsSL https://raw.githubusercontent.com/whitequeen306/code-cortex-loop/main/scripts/install-remote.sh | bash -s cursor`
-- 案例看板：clone 后打开 `examples/case-studies/chokidar/docs/cortexloop/report.html`
+- 安装：`curl -fsSL https://raw.githubusercontent.com/whitequeen306/code-cortex-loop/master/scripts/install-remote.sh | bash -s cursor`
+- 案例看板：clone 后打开 `examples/lianyu-pc/docs/cortexloop/report.html`
 
-（附上 GIF + chokidar 看板截图）
+（附上 GIF + LianYu 看板截图）
 
 前几个 issue 争取 24 小时内回复。
 
@@ -72,8 +71,8 @@ HTML 源文件（浏览器可打开）：`examples/case-studies/chokidar/docs/co
 **正文要点：**
 
 1. 一句话：一条 `/cortexloop`，七个领域专家接力，输出健康分和 HTML 看板
-2. **三张图：** GIF + chokidar 看板截图 + （可选）demo-app 看板
-3. **诚实说明：** 完整 Task 子 agent 隔离只有 Cursor / Claude Code；其它工具是 fallback
+2. **三张图：** GIF（可选）+ LianYu 看板截图 + demo-app 看板
+3. **诚实说明：** 完整 Task 子 agent 隔离以 Cursor / Claude Code / OpenCode 为最佳；其它工具需额外配置
 4. **和 CodeRabbit / Sonar 的区别：** 不是托管 SaaS，是 harness + 脚本，吃你自己的模型 token
 5. 链接仓库 + 一行安装命令
 
@@ -85,30 +84,27 @@ HTML 源文件（浏览器可打开）：`examples/case-studies/chokidar/docs/co
 
 **Body:**（同英文 LAUNCH.md，略）
 
-Case study: https://github.com/whitequeen306/code-cortex-loop/tree/main/examples/case-studies/chokidar
+Case study: https://github.com/whitequeen306/code-cortex-loop/tree/main/examples/lianyu-pc
 
 ---
 
 ## 推特 / X
 
-**帖 1（带 GIF）：**
+**帖 1（带 GIF 或 showcase 图）：**
 
 > 做了 CodeCortexLoop：Cursor 里 `/cortexloop` 串行 7 路审查，输出健康分看板
 >
-> [贴 docs/assets/cortexloop-demo.gif]
->
-> 不是 SaaS，是 harness + 脚本。Cursor / Claude Code 体验最好。
+> 小改动用 `/cortexloop-lite`。不是 SaaS，是 harness + 脚本。
 >
 > github.com/whitequeen306/code-cortex-loop
 
 **帖 2（case study）：**
 
-> 在 chokidar（npm 文件监听）上跑了一次：
-> • 发现 watcher 错误被吞（High）
-> • Direct 后 71 → 79
+> 在 LianYu-PC（Vue + Spring Boot）上跑 `/cortexloop-deep` Report：
+> • 健康分 32，81 条 finding
+> • 验证码泄露、SSE 静默失败、核心路径零测试
 >
-> 不用安装也能在仓库里看预生成报告：
-> examples/case-studies/chokidar/docs/cortexloop/report.html
+> 预生成看板：examples/lianyu-pc/docs/cortexloop/report.html
 
 ---
 
@@ -127,8 +123,8 @@ Case study: https://github.com/whitequeen306/code-cortex-loop/tree/main/examples
 
 ## 发帖前检查清单
 
-- [ ] GIF 能在本地打开：`docs/assets/cortexloop-demo.gif`
-- [ ] chokidar 看板能在浏览器打开并截图
-- [ ] GitHub Release 已创建并附上 GIF + 截图
+- [ ] GIF 或 showcase 图能在本地打开
+- [ ] LianYu 看板能在浏览器打开：`examples/lianyu-pc/docs/cortexloop/report.html`
+- [ ] GitHub Release 已创建并附上截图
 - [ ] README 顶部一行安装命令可用
 - [ ] 准备好 24h 内回复前 5 个 issue

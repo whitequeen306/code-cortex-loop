@@ -11,6 +11,7 @@ Read at the start of every `/cortexloop` invocation. Load project config from `c
 
 | Preset | Command | Passes enabled | Severity floor | Default scope |
 |--------|---------|----------------|----------------|---------------|
+| `lite` | `/cortexloop-lite` | review, security, error-handling | High+ only | recent changes |
 | `default` | `/cortexloop` | all 7 | Medium | ask user |
 | `quick` | `/cortexloop-quick` | review, security, error-handling | High+ only | recent changes |
 | `deep` | `/cortexloop-deep` | all 7 + benchmarks required | Low+ | whole project |
@@ -269,14 +270,28 @@ See `rules/learning-loop.mdc` — memory is **recall, not authority**; re-derive
 
 ## Direct Mode Apply Order
 
+Read `directFixFloor` from run-meta (`High` | `Medium` | `Low`). Only auto-apply findings at or above the floor (**Critical always**; **Info never**). Findings below the floor stay open and appear in summary as deferred.
+
+| Fix floor | Auto-fix severities |
+|-----------|---------------------|
+| `High` (default) | Critical, High |
+| `Medium` | Critical, High, Medium |
+| `Low` | Critical, High, Medium, Low |
+
+Apply groups in order (skip findings below floor):
+
 1. Critical correctness + security
 2. Critical error-handling
 3. High correctness + security
-4. Tests for fixed bugs
-5. Simplicity (behavior-preserving)
-6. Performance (benchmark-proven)
-7. Cleanup (ask before delete)
-8. Medium/Low if tests pass
+4. High error-handling + other High in enabled categories
+5. Medium (only if floor is Medium or Low)
+6. Tests for fixed bugs (from applied set)
+7. Simplicity for applied findings only (behavior-preserving)
+8. Performance for applied findings only (benchmark-proven)
+9. Cleanup for applied findings only (**ask before delete**)
+10. Low (only if floor is Low)
+
+Skip any finding with `autoFixable: needs-confirmation` until user confirms.
 
 After **each logical group**: run tests + lint; revert group on failure.
 
@@ -326,9 +341,10 @@ Only **new** Critical/High findings fail the gate.
 ```markdown
 ## CodeCortexLoop Summary
 
-**Preset:** [default | quick | deep | security | pre-pr]
+**Preset:** [lite | default | quick | deep | security | pre-pr]
 **Scope:** [recent | whole]
 **Mode:** [Report | Direct | CI]
+**Direct fix floor:** [High | Medium | Low] _(Direct only; omit in Report/CI)_
 
 ### Health Score
 | Category | Before | After |
