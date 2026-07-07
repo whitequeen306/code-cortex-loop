@@ -22,6 +22,7 @@ import {
   DEFAULT_ORPHAN_DEFERS,
   aggregateFindings,
   loadPassesConfig,
+  passesConfigForRunPlan,
   parseArgs,
   readJson,
   writeJson,
@@ -30,6 +31,7 @@ import {
 const { positional, flags, getFlagValue } = parseArgs();
 const handoffDir = getFlagValue('--handoff-dir', DEFAULT_HANDOFF_DIR);
 const configPath = getFlagValue('--config', 'cortexloop.config.json');
+const runPlanPath = getFlagValue('--run-plan', null);
 const outPath = getFlagValue('--out', DEFAULT_AGGREGATED_FINDINGS);
 const orphansPath = getFlagValue('--orphans', DEFAULT_ORPHAN_DEFERS);
 const asJson = flags.has('--json');
@@ -37,16 +39,20 @@ const quiet = flags.has('--quiet');
 
 if (flags.has('--help') || flags.has('-h')) {
   console.log(
-    'Usage: node scripts/aggregate-findings.mjs [--handoff-dir=DIR] [--config=PATH] [--out=FILE] [--orphans=FILE] [--json]',
+    'Usage: node scripts/aggregate-findings.mjs [--handoff-dir=DIR] [--config=PATH] [--run-plan=PATH] [--out=FILE] [--orphans=FILE] [--json]',
   );
   process.exit(0);
 }
 
 let passesConfig = {};
 try {
-  passesConfig = loadPassesConfig(configPath);
+  if (runPlanPath) {
+    passesConfig = passesConfigForRunPlan(readJson(runPlanPath));
+  } else {
+    passesConfig = loadPassesConfig(configPath);
+  }
 } catch (err) {
-  console.error(`Failed to read config ${configPath}: ${err.message}`);
+  console.error(`Failed to read ${runPlanPath ? `run plan ${runPlanPath}` : `config ${configPath}`}: ${err.message}`);
   process.exit(2);
 }
 

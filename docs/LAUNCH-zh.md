@@ -50,7 +50,7 @@ python scripts/capture-showcase-screenshot.py
 - Direct 模式修复 + 复验，经验写入 Playbook（候选/已验证两层，防幻觉）
 - CI/安装零额外依赖：门禁、徽章、PR 评论脚本仅需 Node
 
-**不是给所有人用的** —— 适合已经习惯 Cursor Agent、想要结构化审查而不是随口「帮我 review」的人。小改动先试 `/cortexloop-lite` 或 `/cortexloop-quick`。
+**不是给所有人用的** —— 适合已经习惯 Cursor Agent、想要结构化审查而不是随口「帮我 review」的人。小改动先试 `/cortexloop-lite`。
 
 在 **LianYu-PC**（Vue 3 + Spring Boot 全栈）上 `/cortexloop-deep` Report：**健康分 32**，81 条 finding。
 

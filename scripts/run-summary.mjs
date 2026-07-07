@@ -12,6 +12,7 @@ import {
   DEFAULT_HANDOFF_DIR,
   getEnabledPipeline,
   loadPassesConfig,
+  passesConfigForRunPlan,
 } from './lib/shared.mjs';
 
 /** Rough chars-per-token estimate for English/JSON mixed content. */
@@ -21,6 +22,7 @@ function parseArgs(argv) {
   const opts = {
     handoffDir: DEFAULT_HANDOFF_DIR,
     configPath: 'cortexloop.config.json',
+    runPlanPath: null,
     outPath: 'docs/cortexloop/run-summary.md',
     jsonOut: null,
     quiet: false,
@@ -29,6 +31,7 @@ function parseArgs(argv) {
     if (arg === '--quiet') opts.quiet = true;
     else if (arg.startsWith('--handoff-dir=')) opts.handoffDir = arg.slice('--handoff-dir='.length);
     else if (arg.startsWith('--config=')) opts.configPath = arg.slice('--config='.length);
+    else if (arg.startsWith('--run-plan=')) opts.runPlanPath = arg.slice('--run-plan='.length);
     else if (arg.startsWith('--out=')) opts.outPath = arg.slice('--out='.length);
     else if (arg.startsWith('--json-out=')) opts.jsonOut = arg.slice('--json-out='.length);
     else if (arg === '--help' || arg === '-h') {
@@ -37,6 +40,14 @@ function parseArgs(argv) {
     }
   }
   return opts;
+}
+
+function readPassesConfigFromRunPlan(runPlanPath) {
+  try {
+    return passesConfigForRunPlan(JSON.parse(readFileSync(runPlanPath, 'utf8')));
+  } catch {
+    return {};
+  }
 }
 
 function readPassesConfigLenient(configPath) {
@@ -182,7 +193,9 @@ function renderMarkdown(summary) {
 
 function main() {
   const opts = parseArgs(process.argv.slice(2));
-  const passesConfig = readPassesConfigLenient(opts.configPath);
+  const passesConfig = opts.runPlanPath
+    ? readPassesConfigFromRunPlan(opts.runPlanPath)
+    : readPassesConfigLenient(opts.configPath);
   const summary = summarizeRun({ handoffDir: opts.handoffDir, passesConfig });
 
   const md = renderMarkdown(summary);

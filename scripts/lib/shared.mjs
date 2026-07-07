@@ -159,6 +159,174 @@ export const PASS_PIPELINE = [
 
 export const PASS_KEYS = PASS_PIPELINE.map((p) => p.passKey);
 
+export const REVIEW_PRESETS = {
+  lite: {
+    label: 'Lite',
+    cost: 'low',
+    passes: ['review', 'security', 'errorHandling'],
+  },
+  standard: {
+    label: 'Standard',
+    cost: 'medium',
+    passes: ['review', 'security', 'tests', 'errorHandling'],
+  },
+  full: {
+    label: 'Full',
+    cost: 'high',
+    passes: [...PASS_KEYS],
+  },
+};
+
+export const REVIEW_PRESET_ORDER = ['lite', 'standard', 'full'];
+
+export function normalizeReviewPreset(rawPreset = 'standard') {
+  const value = String(rawPreset ?? 'standard').trim().toLowerCase();
+  const aliases = {
+    default: 'standard',
+    quick: 'lite',
+    deep: 'full',
+  };
+  const preset = aliases[value] ?? value;
+  if (!Object.hasOwn(REVIEW_PRESETS, preset)) {
+    throw new Error(`Invalid review preset: ${rawPreset}`);
+  }
+  return preset;
+}
+
+export function getPresetPasses(rawPreset = 'standard') {
+  return [...REVIEW_PRESETS[normalizeReviewPreset(rawPreset)].passes];
+}
+
+const RISK_PATH_PATTERNS = [
+  { label: 'auth/permission/session/token path touched', points: 3, pattern: /(^|[/\\])(auth|permission|permissions|session|sessions|token|tokens)([/\\]|\.|$)/i },
+  { label: 'payment/billing path touched', points: 3, pattern: /(^|[/\\])(payment|payments|billing|invoice|invoices)([/\\]|\.|$)/i },
+  { label: 'database/migration/schema path touched', points: 2, pattern: /(^|[/\\])(db|database|databases|migration|migrations|schema|schemas)([/\\]|\.|$)/i },
+  { label: 'api/controller/route path touched', points: 2, pattern: /(^|[/\\])(api|apis|controller|controllers|route|routes)([/\\]|\.|$)/i },
+  { label: 'file upload/filesystem path touched', points: 2, pattern: /(^|[/\\])(upload|uploads|filesystem|fs|files)([/\\]|\.|$)/i },
+  { label: 'external URL/webhook/http client path touched', points: 2, pattern: /(^|[/\\])(webhook|webhooks|http|client|clients|url|urls)([/\\]|\.|$)/i },
+  { label: 'config/ci/build path touched', points: 1, pattern: /(^|[/\\])(config|configs|ci|build|workflow|workflows)([/\\]|\.|$)|(^|[/\\])\.github([/\\]|$)/i },
+];
+
+function addRisk(reasons, reasonSet, reason, points) {
+  if (!reasonSet.has(reason)) {
+    reasonSet.add(reason);
+    reasons.push(reason);
+    return points;
+  }
+  return 0;
+}
+
+export function recommendPresetForRisk(score) {
+  if (score >= 7) return { level: 'high', preset: 'full' };
+  if (score >= 3) return { level: 'medium', preset: 'standard' };
+  return { level: 'low', preset: 'lite' };
+}
+
+export function assessReviewRisk({
+  changedFiles = [],
+  changedLines = 0,
+  hasImplementationChanges = true,
+  hasTestChanges = false,
+  testsDeletedOrWeakened = false,
+  crossModuleChange = false,
+  largeDeletion = false,
+  dependencyChanged = false,
+} = {}) {
+  const reasons = [];
+  const reasonSet = new Set();
+  let score = 0;
+
+  if (changedLines > 800) score += addRisk(reasons, reasonSet, 'changed lines > 800', 3);
+  else if (changedLines > 300) score += addRisk(reasons, reasonSet, 'changed lines > 300', 2);
+  else if (changedLines > 100) score += addRisk(reasons, reasonSet, 'changed lines > 100', 1);
+
+  if (changedFiles.length > 30) score += addRisk(reasons, reasonSet, 'changed files > 30', 3);
+  else if (changedFiles.length > 15) score += addRisk(reasons, reasonSet, 'changed files > 15', 2);
+  else if (changedFiles.length > 5) score += addRisk(reasons, reasonSet, 'changed files > 5', 1);
+
+  for (const file of changedFiles) {
+    for (const signal of RISK_PATH_PATTERNS) {
+      if (signal.pattern.test(file)) {
+        score += addRisk(reasons, reasonSet, signal.label, signal.points);
+      }
+    }
+  }
+
+  if (hasImplementationChanges && !hasTestChanges) {
+    score += addRisk(reasons, reasonSet, 'implementation changed but no tests changed', 1);
+  }
+  if (testsDeletedOrWeakened) score += addRisk(reasons, reasonSet, 'tests deleted or weakened', 2);
+  if (crossModuleChange) score += addRisk(reasons, reasonSet, 'cross-module change', 2);
+  if (largeDeletion) score += addRisk(reasons, reasonSet, 'large deletion', 2);
+  if (dependencyChanged) score += addRisk(reasons, reasonSet, 'dependency file changed', 1);
+
+  const recommendation = recommendPresetForRisk(score);
+  return {
+    score,
+    level: recommendation.level,
+    recommendedPreset: recommendation.preset,
+    reasons,
+  };
+}
+
+function presetRank(preset) {
+  return REVIEW_PRESET_ORDER.indexOf(normalizeReviewPreset(preset));
+}
+
+export function resolveReviewPreset({
+  requestedPreset = 'auto',
+  recommendedPreset = 'standard',
+  maxPreset = 'full',
+} = {}) {
+  const max = normalizeReviewPreset(maxPreset);
+  const requested = String(requestedPreset ?? 'auto').trim().toLowerCase();
+  const target = requested === 'auto' ? normalizeReviewPreset(recommendedPreset) : normalizeReviewPreset(requested);
+  if (presetRank(target) > presetRank(max)) {
+    return { preset: max, reason: `budget.maxPreset=${max}` };
+  }
+  return { preset: target, reason: requested === 'auto' ? 'recommended' : 'user-selected' };
+}
+
+export function buildReviewRunPlan({
+  mode = 'report',
+  scope = 'recent',
+  requestedPreset = 'auto',
+  maxPreset = 'full',
+  directFixFloor = null,
+  risk = assessReviewRisk(),
+} = {}) {
+  const selection = resolveReviewPreset({
+    requestedPreset,
+    recommendedPreset: risk.recommendedPreset,
+    maxPreset,
+  });
+  const enabledPasses = getPresetPasses(selection.preset);
+  const enabledSet = new Set(enabledPasses);
+  const skippedPasses = PASS_KEYS.filter((passKey) => !enabledSet.has(passKey));
+  const preset = REVIEW_PRESETS[selection.preset];
+  return {
+    mode,
+    scope,
+    preset: selection.preset,
+    requestedPreset,
+    recommendedPreset: risk.recommendedPreset,
+    selectionReason: selection.reason,
+    directFixFloor,
+    risk,
+    enabledPasses,
+    skippedPasses,
+    cost: {
+      level: preset.cost,
+      estimatedPasses: enabledPasses.length,
+    },
+  };
+}
+
+export function passesConfigForRunPlan(runPlan = {}) {
+  const enabled = new Set(runPlan.enabledPasses ?? PASS_KEYS);
+  return Object.fromEntries(PASS_KEYS.map((passKey) => [passKey, enabled.has(passKey)]));
+}
+
 /** Subagent support by tool — used for orchestrator bootstrap (see commands/cortexloop.md Step 0.1). */
 export const TOOL_TASK_SUPPORT = {
   cursor: 'full',

@@ -1,6 +1,6 @@
 ---
 name: cortexloop
-description: Full post-coding pipeline with health scores, presets, CI output, and re-verify. Asks Report vs Direct unless --ci.
+description: Cost-aware post-coding pipeline with risk preflight, Lite/Standard/Full presets, CI output, and re-verify.
 disable-model-invocation: true
 ---
 
@@ -151,18 +151,18 @@ Optional: add `--include-candidates` to see unconfirmed hypotheses (labeled as g
 
 Use output as **where to investigate first** during Step 3. Each expert runs its own category-scoped playbook query per `passes/XX-*.md`. Playbook hits do not skip analysis or blind-apply fixes.
 
-## Step 1 — Detect Mode + Initialize Run Archive
+## Step 1 — Mode, Scope, Budget Preflight + Initialize Run Archive
 
-> Two substeps run under this single Step 1 header: (1a) detect mode/scope, (1b) create the run archive. They share the same header because mode + scope are the inputs `init-run.mjs` needs, so detecting them and materializing the run folder are one logical unit.
+> `/cortexloop` is the smart router. It must not launch Full by default without explicit user confirmation or non-interactive config. First decide mode and scope, then run a lightweight Budget Preflight, recommend Lite / Standard / Full, and only then launch experts.
 
-### 1a — Detect Mode
+### 1a — Detect mode and scope
 
 | Trigger | Behavior |
 |---------|----------|
 | `/cortexloop --ci` or config `ci.enabled` | **CI mode**: Report only, write JSON/SARIF, run ci-gate, no user prompts |
 | `/cortexloop --direct` or `--fix-floor=…` | **Direct** with optional non-interactive fix floor |
 | `/cortexloop` (default) | Ask user questions below |
-| Preset commands | Skip preset question; use locked preset |
+| Preset commands (`/cortexloop-lite`, `/cortexloop-standard`, `/cortexloop-full`) | Skip preset question; use locked preset |
 
 #### Question 1 — Mode (skip in CI)
 
@@ -173,7 +173,48 @@ Use output as **where to investigate first** during Step 3. Each expert runs its
 
 - **Recent changes** | **Whole project**
 
-#### Question 3 — Direct fix floor (Direct mode only; skip in CI)
+### 1b — Budget Preflight and preset confirmation
+
+After mode and scope are known, run Budget Preflight before launching any expert:
+
+- Count changed files and changed lines for the selected scope
+- Detect sensitive path signals: auth/session/token, payment/billing, database/migration/schema, API/routes, file upload/filesystem, external URL/webhook/http client, config/CI/build
+- Detect structural signals: implementation without tests, tests deleted or weakened, cross-module change, large deletion, dependency file changed
+- Compute `risk.score`, `risk.level`, `risk.recommendedPreset`, and `risk.reasons`
+- Build a normalized run plan with `preset`, `enabledPasses`, `skippedPasses`, and `cost`
+- Write the run plan to `.cortexloop/run-plan.json` and copy the same object into run metadata
+
+#### Question 3 — Preset (skip for preset commands and CI)
+
+Show the recommendation and let the user confirm or override:
+
+```
+Budget Preflight 完成
+
+风险等级: <Low|Medium|High>
+推荐档位: <Lite|Standard|Full>
+推荐原因:
+- <reason 1>
+- <reason 2>
+
+请选择执行档位:
+A. Lite — 3 pass，低成本，适合小改
+B. Standard — 4 pass，推荐，覆盖 PR 主要风险
+C. Full — 7 pass，高成本，适合上线前/高风险
+D. Cancel
+```
+
+Preset mapping:
+
+| Preset | Passes | Cost | Use case |
+|--------|--------|------|----------|
+| `lite` | `review`, `security`, `errorHandling` | Low | Small changes, first run, token-sensitive users |
+| `standard` | `review`, `security`, `tests`, `errorHandling` | Medium | Normal PRs and moderate feature changes |
+| `full` | all 7 passes | High | Large PRs, release checks, security-sensitive or architecture-heavy changes |
+
+CI mode is non-interactive: use `ci.preset` or `budget.defaultPreset`; if preset is `auto`, use the preflight recommendation. Respect `budget.maxPreset`; when it caps a higher recommendation, record `selectionReason: budget.maxPreset=<preset>` in the report.
+
+#### Question 4 — Direct fix floor (Direct mode only; skip in CI)
 
 Ask **after** user chooses Direct (or when `--direct` without `--fix-floor`). Default from `cortexloop.config.json` → `direct.fixFloor` (**High** if unset).
 
@@ -199,11 +240,11 @@ CLI override: `--fix-floor=High|Medium|Low` (case-insensitive). Precedence: CLI 
 
 **Not the same as `severityFloor`:** `severityFloor` controls which findings enter the **report** during analysis; `directFixFloor` controls which reported findings Direct **auto-applies**. Example: full `/cortexloop` may report Medium+ while Direct still fixes High+ only if user picks A.
 
-Record choice in run-meta: `directFixFloor`. Include in `00-summary.md` and final summary.
+Record choice in `.cortexloop/run-plan.json` and run-meta: `preset`, `risk`, `enabledPasses`, `skippedPasses`, `cost`, and `directFixFloor`. Include in `00-summary.md` and final summary.
 
 Findings with `autoFixable: needs-confirmation` still require user OK. Cleanup deletions still honor `cleanup.askBeforeDelete`.
 
-### 1b — Initialize run archive (every invocation)
+### 1c — Initialize run archive (every invocation)
 
 Before scope or analysis, create a **new run folder** keyed by **human-readable local time** (not raw ISO in UI):
 
@@ -521,7 +562,7 @@ Replace `{agentName}` with the pipeline table name (e.g. `code-reviewer` for pas
 Run CodeCortexLoop Report on scope {files}. Spawn subagents strictly ONE AT A TIME in this order; wait for each to write report + handoff JSON before the next:
 code-reviewer → security-auditor → test-engineer → silent-failure-hunter → performance-analyst → code-simplifier → cleanup-curator
 Do not run all seven passes inline in this session.
-After all passes: node scripts/validate-handoffs.mjs
+After all passes: node scripts/validate-handoffs.mjs --run-plan=.cortexloop/run-plan.json
 ```
 
 Prefer **one spawn per pass** when validating handoffs between steps.
@@ -624,7 +665,7 @@ Prerequisite: Step 3.5c cross-validation passed (`validate-cross-validation.mjs`
 1. **Validate handoffs** (fail-fast before scoring):
 
 ```bash
-node scripts/validate-handoffs.mjs
+node scripts/validate-handoffs.mjs --run-plan=.cortexloop/run-plan.json
 ```
 
 Exit code 1 = missing or invalid handoff — re-run failed pass (Task, Agent, SOLO/spawn delegation, or fallback persona). In CI mode, exit 3.
@@ -632,7 +673,7 @@ Exit code 1 = missing or invalid handoff — re-run failed pass (Task, Agent, SO
 2. **Aggregate findings** (machine-checked merge + dedup):
 
 ```bash
-node scripts/aggregate-findings.mjs --orphans=.cortexloop/orphan-defers.json
+node scripts/aggregate-findings.mjs --run-plan=.cortexloop/run-plan.json --orphans=.cortexloop/orphan-defers.json
 ```
 
 Reads `.cortexloop/aggregated-findings.json` — a deduplicated, severity-sorted findings array. Dedup uses the **same `findingFingerprint`** as `baseline.mjs`, so aggregation and the baseline ratchet agree on what counts as "the same finding." Each finding carries `evidence` + `confidence` (required by the finding quality gate) and a `provenance` block (`pass`, `expert`, `orphanId` when it came from Step 3.5 recycle, `sources[]` listing other passes/experts that flagged the same fingerprint).
@@ -657,7 +698,7 @@ node scripts/record-history.mjs docs/cortexloop/report.json
 node scripts/make-badge.mjs docs/cortexloop/report.json
 node scripts/make-dashboard.mjs docs/cortexloop/report.json
 node scripts/pr-comment.mjs docs/cortexloop/report.json
-node scripts/run-summary.mjs --out=docs/cortexloop/run-summary.md
+node scripts/run-summary.mjs --run-plan=.cortexloop/run-plan.json --out=docs/cortexloop/run-summary.md
 ```
 
 `sync-run-latest` copies this run → `docs/cortexloop/` for CI, badge, and dashboard.

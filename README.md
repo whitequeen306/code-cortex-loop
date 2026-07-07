@@ -1,27 +1,41 @@
 # CodeCortexLoop
 
-**一条命令，七位领域专家，可自我进化的 Playbook。**
+**按风险花 token 的 AI 代码审查流水线。**
 
-面向 AI 编码工具的「写完代码后」流水线：**正确性 → 安全 → 测试 → 错误处理 → 性能 → 精简 → 清理** —— 配套健康分、HTML 看板、handoff 接力、双语 Playbook、基线棘轮与 CI 集成。
+面向 AI 编码工具的「写完代码后」审查 harness：先做轻量预检，按变更风险推荐 **Lite / Standard / Full**，再调度对应专家。配套健康分、HTML 看板、handoff 接力、双语 Playbook、基线棘轮与 CI 集成。
 
 [![健康分徽章](examples/demo-app/.cortexloop/health-badge.svg)](examples/demo-app/docs/cortexloop/report.html)
 
-## 两条上手路径
+## 快速上手
 
 | 路径 | 命令 | 适合 | 你会得到 |
 |------|------|------|----------|
-| **Quick** | `/cortexloop-quick` 或 `/cortexloop-lite` | 小改动、第一次试用 | 3 pass 审查 → 打开 `docs/cortexloop/report.html` |
-| **Full** | `/cortexloop` | 完整功能、大 PR、Direct 修复 | 7 pass → 可选 Direct 复验 → Playbook → CI 门禁 |
+| **Auto** | `/cortexloop` | 不确定该花多少 token | 预检风险 → 推荐 Lite / Standard / Full → 你确认后执行 |
+| **Lite** | `/cortexloop-lite` | 小改动、第一次试用 | 3 pass 审查 → 打开 `docs/cortexloop/report.html` |
+| **Standard** | `/cortexloop-standard` | 普通 PR、几百行改动 | 4 pass：正确性 + 安全 + 测试 + 错误处理 |
+| **Full** | `/cortexloop-full` | 大 PR、上线前、高风险改动 | 7 pass 深审 → 可选 Direct 复验 → Playbook → CI 门禁 |
 
-**Quick 路径：** 安装后重启 IDE → 在项目里输入 `/cortexloop-quick` → 选 **Report** → 跑完打开 [demo 看板](examples/demo-app/docs/cortexloop/report.html) 感受格式。不涉及 scope-map、Playbook、基线——后台仍会做必要落盘，你无需配置。
+**Auto 路径：** 安装后重启 IDE → 在项目里输入 `/cortexloop` → 选择 **Report / Direct** 和范围 → 预检会根据变更文件、行数、敏感路径、测试信号推荐档位。Full 不再是默认 token 成本，除非你确认或配置指定。
 
-**Full 路径：** `/cortexloop` 完整七专家 → Direct 模式自动修复并复验 → 经验写入 Playbook → `/cortexloop-pre-pr --ci` + GitHub Action 做 PR 门禁。大仓库（>100 文件）自动启用 MAP，[详见 GUIDE](docs/GUIDE.md#大项目上下文工程)。
+**Lite 路径：** 输入 `/cortexloop-lite` → 选 **Report** → 跑完打开 [demo 看板](examples/demo-app/docs/cortexloop/report.html) 感受格式。不涉及 scope-map、Playbook、基线——后台仍会做必要落盘，你无需配置。
+
+**Standard 路径：** 输入 `/cortexloop-standard`，直接跑普通 PR 最常用的 4 个专家：正确性、安全、测试、错误处理。
+
+**Full 路径：** `/cortexloop-full` 完整七专家，适合大 PR、上线前或安全敏感改动。Direct 模式可自动修复并复验，经验写入 Playbook；`/cortexloop-pre-pr --ci` + GitHub Action 可做 PR 门禁。大仓库（>100 文件）自动启用 MAP，[详见 GUIDE](docs/GUIDE.md#大项目上下文工程)。
 
 ---
 
-## 它怎么跑完一整圈？
+## 它怎么决定跑多深？
 
-你在聊天里输入 `/cortexloop`，相当于请来一位**调度员**，后面跟着七位**分工明确的审查专家**（正确性、安全、测试、错误处理、性能、精简、清理）。调度员自己不读你的全部代码，而是负责排期、收报告、算健康分；真正看代码的是七位专家，各干各的领域，按顺序接力。
+你在聊天里输入 `/cortexloop`，相当于请来一位**调度员**：它先问 **Report / Direct** 和审查范围，然后做 Budget Preflight，按变更文件、行数、敏感路径、测试信号等推荐 Lite / Standard / Full。用户确认后，调度员才按档位启动专家。
+
+| 档位 | 专家 | 适合 |
+|------|------|------|
+| **Lite** | 正确性、安全、错误处理 | 小改动、第一次试用、token 敏感 |
+| **Standard** | 正确性、安全、测试、错误处理 | 普通 PR、几百行改动 |
+| **Full** | 7 位专家全量 | 大 PR、上线前、安全敏感、重构 |
+
+Full 模式下会跑七位**分工明确的审查专家**（正确性、安全、测试、错误处理、性能、精简、清理）。调度员自己不做领域判断，而是负责排期、收报告、算健康分；真正看代码的是专家，各干各的领域，按顺序接力。
 
 **第一次跑某个项目**，建议先用 **Report 模式**：只诊断、不改代码，你看完分数和报告再决定要不要修。
 
@@ -33,16 +47,16 @@
 **② 先建「该看哪里」的索引**  
 工具先用 Git 弄清本次要审查哪些文件。项目很大（超过大约一百个文件）时，会再多做一步 **MAP**：像地图一样标出改动多、被大量引用、容易出问题的区域，让后面的专家**先盯重点**，而不是四百个文件盲目乱翻。索引和地图都写在磁盘上，不会把文件名塞进聊天窗口把 AI 撑爆。
 
-**③ 七轮专家审查**  
-七位专家依次上岗，每人只在独立会话里工作，读完前面专家的简要交接，再深入自己负责的那一类问题。大项目里会优先看 MAP 标出的热点，也会抽样扫一些「冷门」目录，避免只查热门文件夹。
+**③ 按档位启动专家**  
+Lite 跑 3 位，Standard 跑 4 位，Full 跑 7 位。每位专家只在独立会话里工作，读完前面专家的简要交接，再深入自己负责的那一类问题。大项目里会优先看 MAP 标出的热点，也会抽样扫一些「冷门」目录，避免只查热门文件夹。
 
 **④ 出报告**  
 汇总成健康分、分类说明和可打开的 HTML 看板。若选 **Direct 模式**，会按严重程度分批改代码、跑测试，改完再**重新审查一遍**确认没修坏、没漏修。
 
 **⑤ 自进化，供下次使用**  
-Direct 且复验通过后，工具会把**可复用的修复经验**写进项目内的 Playbook。下次再跑 `/cortexloop`，会**先翻翻以前验证过的套路**，再重新建索引、做 MAP、走七轮审查——形成「越用越懂这个项目」的闭环。给人看的进化笔记追加在同一份日志里，不会每次清空。
+Direct 且复验通过后，工具会把**可复用的修复经验**写进项目内的 Playbook。下次再跑 `/cortexloop`，会**先翻翻以前验证过的套路**，再重新建索引、做 MAP、按档位审查——形成「越用越懂这个项目」的闭环。给人看的进化笔记追加在同一份日志里，不会每次清空。
 
-**一句话：** 先建索引、画地图 → 七专家按领域深查 → 报告归档 →（可选）自动修复并复验 → 经验写入 Playbook → 下次带着记忆再来。
+**一句话：** 先预检风险和成本 → 你确认档位 → 专家按领域审查 → 报告归档 →（可选）自动修复并复验 → 经验写入 Playbook → 下次带着记忆再来。
 
 ---
 
@@ -50,7 +64,8 @@ Direct 且复验通过后，工具会把**可复用的修复经验**写进项目
 
 | 能力 | 说明 |
 |------|------|
-| **七专家串行** | Orchestrator 调度 7 路独立专家（Cursor/Claude/OpenCode：`Task`；Qoder/Trae/Codex：见 [工具支持](#工具支持)） |
+| **成本感知调度** | `/cortexloop` 先预检风险，再推荐 Lite / Standard / Full；Full 需要用户确认或配置指定 |
+| **多专家串行** | Orchestrator 按档位调度 3 / 4 / 7 路独立专家（Cursor/Claude/OpenCode：`Task`；Qoder/Trae/Codex：见 [工具支持](#工具支持)） |
 | **健康分 0–100** | 七维打分 + 总分；Direct 模式输出 **修复前 → 修复后** |
 | **三种模式** | Report（只诊断）· Direct（修复+复验）· CI（门禁） |
 | **Playbook** | 项目内学习修复模式（候选/已验证，防幻觉） |
@@ -104,7 +119,7 @@ cd code-cortex-loop
 |------|------|
 | 你常用 **Cursor**、**Claude Code** 或 **OpenCode** 吗？ | 三者为一等公民（Task 完整）；其它工具见 [工具支持](#工具支持) |
 | 改动量 **≥ 几百行** 或是一个完整功能吗？ | 改个 typo 用 linter；小改用 `/cortexloop-lite` |
-| 能接受每次 **约 3–10 分钟** 跑完整流程吗？ | 见下方 [性能预算](#性能预算)；小 PR 用 `/cortexloop-quick` |
+| 能接受每次 **约 3–10 分钟** 跑完整流程吗？ | 见下方 [性能预算](#性能预算)；小 PR 用 `/cortexloop-lite` |
 
 ---
 
@@ -113,7 +128,7 @@ cd code-cortex-loop
 | | CodeCortexLoop | CodeRabbit / Copilot Review | SonarQube / Snyk | 自己写 Cursor rules |
 |--|----------------|----------------------------|------------------|---------------------|
 | **跑在哪** | AI IDE 会话里 | 托管 PR 机器人 | CI / 服务端 | 你的聊天 |
-| **多领域审查** | 7 路专家串行 | 单次 review | 规则扫描 | 看你怎么 prompt |
+| **多领域审查** | 按风险调度 3 / 4 / 7 路专家 | 单次 review | 规则扫描 | 看你怎么 prompt |
 | **项目内学习** | Playbook（候选/已验证） | 产品记忆 | 基线/issue | 手动维护 |
 | **成本** | 你的模型 token | 订阅 | 授权/云 | 写规则的时间 |
 | **适合谁** | 已习惯 Cursor/Claude/Qoder Agent 的开发者 | 零配置 PR review 的团队 | 合规/静态分析 | 爱折腾的人 |
@@ -127,9 +142,12 @@ cd code-cortex-loop
 ```mermaid
 flowchart LR
   pre["分析前查 Playbook"] --> orch["Orchestrator 指挥"]
-  orch --> e1["专家1 正确性"]
+  orch --> budget["Budget Preflight"]
+  budget --> preset{"Lite / Standard / Full"}
+  preset --> e1["专家1 正确性"]
   e1 --> e2["专家2 安全"]
-  e2 --> e7["…专家7"]
+  e2 --> maybe["按档位继续"]
+  maybe --> e7["…最多专家7"]
   e7 --> score["汇总 + 健康分"]
   score --> out{"Report / Direct / CI"}
   out -->|Direct| fix["修复 + 复验"]
@@ -137,14 +155,16 @@ flowchart LR
   reflect -.-> pre
 ```
 
-- **Orchestrator**（主会话）：定 scope、按序委派专家、汇总 handoff、打分；**禁止**自己 inline 做 pass 分析
+- **Orchestrator**（主会话）：定 scope、做成本预检、按序委派专家、汇总 handoff、打分；**禁止**自己 inline 做 pass 分析
 - **领域专家**（每 pass 一个独立子 agent）：只负责本领域，写类别报告 + handoff JSON，供下游专家阅读
   - **Cursor / Claude Code / OpenCode**：通过 `Task` 工具启动（OpenCode 需配置 `permission.task`）
   - **Qoder**：通过内置 `Agent` 工具委派 `~/.qoder/agents/` 中的自定义智能体（阻塞、独立上下文）
   - **Trae**：在 **SOLO 模式**下由 SOLO Coder 按顺序委派 `~/.trae/agents/` 中的 7 个自定义智能体
 - **分析串行、修复串行**（Direct 模式下每组修复后跑测试）
 
-### 七专家固定顺序
+### 专家固定顺序
+
+Lite / Standard / Full 都从同一条顺序里裁剪：Lite 跑 1、2、4；Standard 跑 1、2、3、4；Full 跑全部 7 步。
 
 | 步 | Pass | 专家 | 类别报告 | Handoff |
 |----|------|-------------|----------|---------|
@@ -165,7 +185,7 @@ flowchart LR
 | 模式 | 触发 | 行为 |
 |------|------|------|
 | **Report** | `/cortexloop` 默认询问 | 写出报告 + 看板，**停下等你确认**再改代码 |
-| **Direct** | 选择 Direct | 先选修复下限 → 分组修复 → 复验 → Playbook（见下表） |
+| **Direct** | 选择 Direct | 先确认档位和修复下限 → 分组修复 → 复验 → Playbook（见下表） |
 | **CI** | `/cortexloop --ci` 或配置 `ci.enabled` | 无交互，写 `report.json`，跑 `ci-gate`，可选 PR 评论 |
 
 **Direct 修复下限**（选 Direct 时询问；默认 **A. High+**）：
@@ -184,14 +204,21 @@ flowchart LR
 
 | 命令 | 用途 |
 |------|------|
-| `/cortexloop-lite` | **最轻量**：3 pass，跳过 Playbook / cross-validation / MAP enrich / codegraph 询问 |
-| `/cortexloop` | 完整 7 pass；询问 Report / Direct 与范围 |
-| `/cortexloop-quick` | 3 pass：审查 + 安全 + 错误处理；适合小改动 |
-| `/cortexloop-deep` | 7 pass 整库深扫 |
+| `/cortexloop` | **智能入口**：询问 Report / Direct 与范围，预检风险并推荐 Lite / Standard / Full |
+| `/cortexloop-lite` | **低成本**：3 pass，适合小改动和第一次试用 |
+| `/cortexloop-standard` | **标准 PR 审查**：正确性 + 安全 + 测试 + 错误处理 |
+| `/cortexloop-full` | **完整 7 pass**：适合大 PR、上线前、高风险改动 |
 | `/cortexloop-security` | 安全 + 错误处理 + 依赖清理 |
 | `/cortexloop-pre-pr` | PR 前：近期改动，High+ 须清零 |
+
+高级命令：
+
+| 命令 | 用途 |
+|------|------|
 | `/cortexloop-baseline` | 接受或对比技术债基线 |
 | `/cortexloop-reflect` | 手动复盘并写入 Playbook |
+
+兼容别名：`/cortexloop-quick` → `/cortexloop-lite`，`/cortexloop-deep` → `/cortexloop-full`。
 
 ---
 
@@ -204,6 +231,7 @@ flowchart LR
 | 机器报告 | `docs/cortexloop/report.json` | CI 门禁输入（须含 `"generatedBy":"cortexloop"`） |
 | **HTML 看板** | `docs/cortexloop/report.html` | 浏览器直接打开，含分数环、类别条、问题表 |
 | 运行统计 | `docs/cortexloop/run-summary.md` | pass 数、耗时、估算 token |
+| Run Plan | `.cortexloop/run-plan.json` | 本次档位、风险分、启用/跳过 pass、成本等级 |
 | Handoff | `.cortexloop/handoff/*.json` | 每 pass 结构化交接 |
 | Scope 清单 | `.cortexloop/scope-manifest.json`、`.cortexloop/scope-paths.json` | 大 scope 按需读取，不进 prompt |
 | 风险地图 | `.cortexloop/scope-map.json` | CortexScope Index 热点 + mustReview + longTailSample（>100 文件） |
@@ -217,8 +245,9 @@ flowchart LR
 `report.json` 写出后自动跑后处理（badge、看板、历史、PR 评论体）。也可手动：
 
 ```bash
-node scripts/validate-handoffs.mjs
-node scripts/run-summary.mjs --out=docs/cortexloop/run-summary.md
+node scripts/validate-handoffs.mjs --run-plan=.cortexloop/run-plan.json
+node scripts/aggregate-findings.mjs --run-plan=.cortexloop/run-plan.json --orphans=.cortexloop/orphan-defers.json
+node scripts/run-summary.mjs --run-plan=.cortexloop/run-plan.json --out=docs/cortexloop/run-summary.md
 node scripts/make-dashboard.mjs docs/cortexloop/report.json
 ```
 
@@ -338,10 +367,10 @@ cp .cortexloopignore.example .cortexloopignore
 
 | 配置文件 | 用途 |
 |----------|------|
-| [cortexloop.config.minimal.json](cortexloop.config.minimal.json) | preset + scope + CI 开关——个人日常够用 |
+| [cortexloop.config.minimal.json](cortexloop.config.minimal.json) | budget + scope + CI 开关——个人日常够用 |
 | [cortexloop.config.example.json](cortexloop.config.example.json) | 全量参考：`mapWeights`、Playbook prune、crossValidation 等高级项 |
 
-`cortexloop.config.json` 可覆盖 preset、scope、启用哪些 pass、CI 阈值、Playbook 路径等。行内抑制：`// cortexloop-ignore CL-001`。
+`cortexloop.config.json` 可覆盖 budget、scope、启用哪些 pass、CI 阈值、Playbook 路径等。行内抑制：`// cortexloop-ignore CL-001`。
 
 ---
 
@@ -379,7 +408,7 @@ jobs:
 
 [![Report → Direct 先后对比](docs/assets/lianyu-pc-showcase.png)](examples/lianyu-pc/docs/cortexloop/showcase.html)
 
-在 **Vue 3 + Spring Boot 全栈项目**上跑 `/cortexloop-deep` **Report 模式**（2026-06-22，整库扫描）。上图展示 **Report 诊断 → Direct 修复示意** 的先后对比；完整 81 条明细见标准看板。
+在 **Vue 3 + Spring Boot 全栈项目**上跑旧命令 `/cortexloop-deep`（现在等价于 `/cortexloop-full`）的 **Report 模式**（2026-06-22，整库扫描）。上图展示 **Report 诊断 → Direct 修复示意** 的先后对比；完整 81 条明细见标准看板。
 
 | 阶段 | 健康分 | Critical / High / Medium / Low | 说明 |
 |------|--------|--------------------------------|------|
@@ -410,10 +439,10 @@ jobs:
 
 | 模式 | Pass 数 | 预估耗时* | 预估 token* |
 |------|---------|-----------|-------------|
-| `/cortexloop-lite` | 3（跳过 Playbook/cross-val） | ~2–3 分钟 | ~6万–12万 |
-| `/cortexloop-quick` | 3 | ~2–4 分钟 | ~8万–15万 |
-| `/cortexloop` | 7 | ~5–12 分钟 | ~20万–45万 |
-| `/cortexloop-deep` | 7 + 整库 | ~10–25 分钟 | ~40万–90万 |
+| `/cortexloop-lite` | 3 | ~2–4 分钟 | ~8万–15万 |
+| `/cortexloop-standard` | 4 | ~3–6 分钟 | ~12万–25万 |
+| `/cortexloop-full` | 7 | ~5–12 分钟 | ~20万–45万 |
+| `/cortexloop-full` + 整库 | 7 + 整库 | ~10–25 分钟 | ~40万–90万 |
 
 \* 约 500 行 scope、Cursor/Claude；[详细方法 →](docs/PERFORMANCE.md)
 

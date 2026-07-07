@@ -5,7 +5,17 @@
   "properties": {
     "$schema": { "type": "string" },
     "preset": {
-      "enum": ["default", "lite", "quick", "deep", "security", "pre-pr"]
+      "enum": ["default", "lite", "standard", "full", "quick", "deep", "security", "pre-pr"]
+    },
+    "budget": {
+      "type": "object",
+      "description": "Cost-aware orchestration defaults. defaultPreset=auto lets preflight recommend lite/standard/full; maxPreset caps the most expensive preset allowed.",
+      "properties": {
+        "defaultPreset": { "enum": ["auto", "lite", "standard", "full"], "default": "auto" },
+        "askBeforeRun": { "type": "boolean", "default": true },
+        "askBeforeFull": { "type": "boolean", "default": true },
+        "maxPreset": { "enum": ["lite", "standard", "full"], "default": "full" }
+      }
     },
     "scope": {
       "oneOf": [
@@ -92,6 +102,8 @@
       "type": "object",
       "properties": {
         "enabled": { "type": "boolean" },
+        "preset": { "enum": ["auto", "lite", "standard", "full"], "default": "standard" },
+        "upgradeToFullOnHighRisk": { "type": "boolean", "default": true },
         "sarif": { "type": "boolean" },
         "autoFix": { "type": "boolean" },
         "failOnCritical": { "type": "boolean" },

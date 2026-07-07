@@ -29,7 +29,7 @@ I built a post-coding harness for Cursor (also Claude Code / OpenCode; other too
 - Direct mode fixes + re-verifies, then records patterns to a Playbook (with anti-hallucination trust tiers)
 - CI/install: zero extra npm deps — gate, badge, PR comment scripts need Node only
 
-**Not for everyone** — best if you already live in Cursor Agent mode. For small diffs try `/cortexloop-lite` or `/cortexloop-quick`.
+**Not for everyone** — best if you already live in Cursor Agent mode. For small diffs try `/cortexloop-lite`.
 
 Real run on **LianYu-PC** (Vue 3 + Spring Boot full stack, `/cortexloop-deep` Report): health score **32**, 81 findings.
 

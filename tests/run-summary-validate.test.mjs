@@ -52,6 +52,41 @@ test('validateHandoffs fails when handoff missing', () => {
   assert.ok(result.errors.some((e) => e.type === 'missing'));
 });
 
+test('validateHandoffs accepts lite run-plan enabled passes', () => {
+  const dir = join(tmpdir(), `cortexloop-lite-vh-${Date.now()}`);
+  const handoffDir = join(dir, '.cortexloop/handoff');
+  mkdirSync(handoffDir, { recursive: true });
+
+  const handoffs = [
+    ['01-correctness.json', { pass: 'review', category: 'correctness', expert: 'code-reviewer' }],
+    ['02-security.json', { pass: 'security', category: 'security', expert: 'security-auditor' }],
+    ['04-error-handling.json', { pass: 'errorHandling', category: 'errorHandling', expert: 'silent-failure-hunter' }],
+  ];
+
+  try {
+    for (const [name, fields] of handoffs) {
+      writeFileSync(join(handoffDir, name), JSON.stringify({
+        ...fields,
+        summary: 'ok',
+        findings: [],
+        deferToLaterPasses: [],
+        openQuestions: [],
+      }));
+    }
+
+    const result = validateHandoffs({
+      handoffDir,
+      runPlan: { enabledPasses: ['review', 'security', 'errorHandling'] },
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.enabledCount, 3);
+    assert.equal(result.validatedCount, 3);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('summarizeRun counts executed passes from lianyu-pc example', () => {
   const base = 'examples/lianyu-pc';
   if (!existsSync(join(base, '.cortexloop/handoff/01-correctness.json'))) {

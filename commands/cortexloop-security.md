@@ -10,7 +10,7 @@ Run `/cortexloop` with preset **security** locked in:
 
 ```yaml
 preset: security
-passes: [security, error-handling, cleanup]
+passes: [security, errorHandling, cleanup]
 cleanup:
   depsOnly: true
 severityFloor: Medium

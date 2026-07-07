@@ -1,15 +1,17 @@
 ---
 name: cortexloop-deep
-description: Deep CodeCortexLoop pass — all 7 passes, whole project, benchmarks required for perf fixes.
+description: Deprecated alias for cortexloop-full.
 disable-model-invocation: true
 ---
 
 # CodeCortexLoop Deep
 
-Run `/cortexloop` with preset **deep** locked in:
+`/cortexloop-deep` is deprecated. Use `/cortexloop-full` for the complete 7-pass path.
+
+For compatibility, treat this command as preset **full**:
 
 ```yaml
-preset: deep
+preset: full
 passes: all
 severityFloor: Low
 scope: whole

@@ -10,7 +10,7 @@ Run `/cortexloop` with preset **lite** locked in — the lightest official path 
 
 ```yaml
 preset: lite
-passes: [review, security, error-handling]
+passes: [review, security, errorHandling]
 severityFloor: High
 scope: recent
 learning.enabled: false

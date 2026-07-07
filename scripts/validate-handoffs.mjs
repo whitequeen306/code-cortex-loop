@@ -12,6 +12,7 @@ import { join, basename } from 'node:path';
 import {
   DEFAULT_HANDOFF_DIR,
   getEnabledPipeline,
+  passesConfigForRunPlan,
   validatePassHandoff,
   loadPassesConfig,
 } from './lib/shared.mjs';
@@ -20,14 +21,16 @@ function parseArgs(argv) {
   const opts = {
     handoffDir: DEFAULT_HANDOFF_DIR,
     configPath: 'cortexloop.config.json',
+    runPlanPath: null,
     quiet: false,
   };
   for (const arg of argv) {
     if (arg === '--quiet') opts.quiet = true;
     else if (arg.startsWith('--handoff-dir=')) opts.handoffDir = arg.slice('--handoff-dir='.length);
     else if (arg.startsWith('--config=')) opts.configPath = arg.slice('--config='.length);
+    else if (arg.startsWith('--run-plan=')) opts.runPlanPath = arg.slice('--run-plan='.length);
     else if (arg === '--help' || arg === '-h') {
-      console.log(`Usage: node scripts/validate-handoffs.mjs [--handoff-dir=DIR] [--config=PATH]`);
+      console.log(`Usage: node scripts/validate-handoffs.mjs [--handoff-dir=DIR] [--config=PATH] [--run-plan=PATH]`);
       process.exit(0);
     } else {
       console.error(`Unknown argument: ${arg}`);
@@ -46,6 +49,16 @@ function loadPassesConfigFromOpts(configPath) {
   }
 }
 
+function loadPassesConfigFromRunPlan(runPlanPath) {
+  try {
+    const runPlan = JSON.parse(readFileSync(runPlanPath, 'utf8'));
+    return passesConfigForRunPlan(runPlan);
+  } catch (err) {
+    console.error(`Failed to read run plan ${runPlanPath}: ${err.message}`);
+    process.exit(2);
+  }
+}
+
 function loadHandoffFile(path) {
   try {
     return JSON.parse(readFileSync(path, 'utf8'));
@@ -58,7 +71,8 @@ function handoffPath(handoffDir, step) {
   return join(handoffDir, basename(step.handoffFile));
 }
 
-export function validateHandoffs({ handoffDir = DEFAULT_HANDOFF_DIR, passesConfig = {} } = {}) {
+export function validateHandoffs({ handoffDir = DEFAULT_HANDOFF_DIR, passesConfig = {}, runPlan = null } = {}) {
+  if (runPlan) passesConfig = passesConfigForRunPlan(runPlan);
   const enabled = getEnabledPipeline(passesConfig);
   const errors = [];
   const warnings = [];
@@ -138,7 +152,9 @@ export function validateHandoffs({ handoffDir = DEFAULT_HANDOFF_DIR, passesConfi
 
 function main() {
   const opts = parseArgs(process.argv.slice(2));
-  const passesConfig = loadPassesConfigFromOpts(opts.configPath);
+  const passesConfig = opts.runPlanPath
+    ? loadPassesConfigFromRunPlan(opts.runPlanPath)
+    : loadPassesConfigFromOpts(opts.configPath);
   const result = validateHandoffs({ handoffDir: opts.handoffDir, passesConfig });
 
   if (!opts.quiet) {

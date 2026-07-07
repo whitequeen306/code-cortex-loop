@@ -1,6 +1,10 @@
 {
   "$schema": "./schemas/cortexloop-config.schema.json",
   "preset": "default",
+  "budget": {
+    "defaultPreset": "auto",
+    "maxPreset": "full"
+  },
   "scope": {
     "mode": "recent"
   },

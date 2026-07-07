@@ -56,14 +56,21 @@ Trae / Qoder / OpenCode / Codex 详情：[adapters/trae/README.md](../adapters/t
 
 | 命令 | 用途 |
 |------|------|
-| `/cortexloop-lite` | 最轻量：3 pass，跳过 Playbook / cross-validation / MAP enrich |
-| `/cortexloop` | 完整流水线 |
-| `/cortexloop-quick` | 专家 1+2+4（审查 + 安全 + 错误处理） |
-| `/cortexloop-deep` | 全部 7 专家、整库扫描 |
+| `/cortexloop` | 智能入口：询问模式和范围，预检风险并推荐 Lite / Standard / Full |
+| `/cortexloop-lite` | 低成本：专家 1+2+4（审查 + 安全 + 错误处理） |
+| `/cortexloop-standard` | 标准 PR 审查：专家 1+2+3+4（审查 + 安全 + 测试 + 错误处理） |
+| `/cortexloop-full` | 完整 7 专家流水线 |
 | `/cortexloop-security` | 安全 + 错误处理 + 依赖清理 |
 | `/cortexloop-pre-pr` | PR 前门禁 |
+
+高级命令：
+
+| 命令 | 用途 |
+|------|------|
 | `/cortexloop-baseline` | 接受或对比技术债基线 |
 | `/cortexloop-reflect` | 手动反思并写入 Playbook |
+
+兼容别名：`/cortexloop-quick` → `/cortexloop-lite`，`/cortexloop-deep` → `/cortexloop-full`。
 
 ## 七专家串行协作
 
