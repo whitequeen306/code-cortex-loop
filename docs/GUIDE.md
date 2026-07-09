@@ -67,6 +67,7 @@ Trae / Qoder / OpenCode / Codex 详情：[adapters/trae/README.md](../adapters/t
 
 | 命令 | 用途 |
 |------|------|
+| `/cortexloop-architecture` | 独立架构耦合分析和解耦建议；不进入 7 专家评分流水线 |
 | `/cortexloop-baseline` | 接受或对比技术债基线 |
 | `/cortexloop-reflect` | 手动反思并写入 Playbook |
 

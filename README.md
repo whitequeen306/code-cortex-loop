@@ -215,6 +215,7 @@ Lite / Standard / Full 都从同一条顺序里裁剪：Lite 跑 1、2、4；Sta
 
 | 命令 | 用途 |
 |------|------|
+| `/cortexloop-architecture` | 独立架构耦合分析：生成解耦报告，可选交互式重构；不进入 7-pass 评分流水线 |
 | `/cortexloop-baseline` | 接受或对比技术债基线 |
 | `/cortexloop-reflect` | 手动复盘并写入 Playbook |
 
@@ -232,6 +233,7 @@ Lite / Standard / Full 都从同一条顺序里裁剪：Lite 跑 1、2、4；Sta
 | **HTML 看板** | `docs/cortexloop/report.html` | 浏览器直接打开，含分数环、类别条、问题表 |
 | 运行统计 | `docs/cortexloop/run-summary.md` | pass 数、耗时、估算 token |
 | Run Plan | `.cortexloop/run-plan.json` | 本次档位、风险分、启用/跳过 pass、成本等级 |
+| 架构解耦报告 | `docs/cortexloop/architecture-analysis.md` | 仅 `/cortexloop-architecture` 生成，记录耦合点与重构方案 |
 | Handoff | `.cortexloop/handoff/*.json` | 每 pass 结构化交接 |
 | Scope 清单 | `.cortexloop/scope-manifest.json`、`.cortexloop/scope-paths.json` | 大 scope 按需读取，不进 prompt |
 | 风险地图 | `.cortexloop/scope-map.json` | CortexScope Index 热点 + mustReview + longTailSample（>100 文件） |
@@ -475,8 +477,8 @@ jobs:
 ```
 commands/     # /cortexloop 系列 slash command
 passes/       # 七专家串行合约
-agents/       # 领域专家 persona
-skills/       # cortexloop-expert-core（公共）+ 各领域 depth skill + reflect
+agents/       # 领域专家 persona + 独立 architecture analyst
+skills/       # cortexloop-expert-core（公共）+ 各领域 depth skill + reflect + architecture-analysis
 rules/        # workflow、learning-loop、refactor-safety …
 scripts/      # ci-gate、playbook、scope-manifest、compact-context、看板、安装脚本（CI/安装零额外依赖）
 schemas/      # report、config、handoff JSON schema
