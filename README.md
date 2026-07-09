@@ -14,6 +14,7 @@
 | **Lite** | `/cortexloop-lite` | 小改动、第一次试用 | 3 pass 审查 → 打开 `docs/cortexloop/report.html` |
 | **Standard** | `/cortexloop-standard` | 普通 PR、几百行改动 | 4 pass：正确性 + 安全 + 测试 + 错误处理 |
 | **Full** | `/cortexloop-full` | 大 PR、上线前、高风险改动 | 7 pass 深审 → 可选 Direct 复验 → Playbook → CI 门禁 |
+| **Architecture** | `/cortexloop-architecture` | 模块变难测、准备重构、季度架构复盘 | 解耦专家分析循环依赖、God Object、过度耦合 → 生成 `architecture-analysis.md` |
 
 **Auto 路径：** 安装后重启 IDE → 在项目里输入 `/cortexloop` → 选择 **Report / Direct** 和范围 → 预检会根据变更文件、行数、敏感路径、测试信号推荐档位。Full 不再是默认 token 成本，除非你确认或配置指定。
 
@@ -22,6 +23,8 @@
 **Standard 路径：** 输入 `/cortexloop-standard`，直接跑普通 PR 最常用的 4 个专家：正确性、安全、测试、错误处理。
 
 **Full 路径：** `/cortexloop-full` 完整七专家，适合大 PR、上线前或安全敏感改动。Direct 模式可自动修复并复验，经验写入 Playbook；`/cortexloop-pre-pr --ci` + GitHub Action 可做 PR 门禁。大仓库（>100 文件）自动启用 MAP，[详见 GUIDE](docs/GUIDE.md#大项目上下文工程)。
+
+**解耦专家路径：** `/cortexloop-architecture` 是独立架构健康检查，不进入 7-pass 评分流水线。它会扫描依赖图，找循环依赖、God Object、Feature Envy 等耦合点，写出 `docs/cortexloop/architecture-analysis.md`，再由你决定是否进入交互式重构。
 
 ---
 
