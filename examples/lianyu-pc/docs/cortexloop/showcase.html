@@ -82,7 +82,7 @@
   <header class="hero">
     <div class="brand">CodeCortexLoop · 真实项目 · Report → Direct</div>
     <h1>LianYu-PC</h1>
-    <p class="sub">Vue 3 + Spring Boot 全栈 · github.com/whitequeen306/LianYuPC</p>
+    <p class="sub">Vue 3 + Spring Boot 全栈</p>
     <p class="meta">deep · whole · 2026-06-22</p>
   </header>
   <div class="compare">
@@ -99,14 +99,14 @@
     </defs>
     <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="12"/>
     <circle cx="80" cy="80" r="70" fill="none" stroke="url(#ringBefore)" stroke-width="12"
-      stroke-linecap="round" stroke-dasharray="140.74335088082273 439.822971502571" transform="rotate(-90 80 80)"/>
-    <text x="80" y="76" text-anchor="middle" font-size="40" font-weight="800" fill="#f8fafc">32</text>
+      stroke-linecap="round" stroke-dasharray="123.1504320207199 439.822971502571" transform="rotate(-90 80 80)"/>
+    <text x="80" y="76" text-anchor="middle" font-size="40" font-weight="800" fill="#f8fafc">28</text>
     <text x="80" y="98" text-anchor="middle" font-size="11" fill="rgba(248,250,252,.65)">健康分</text>
   </svg>
       <div class="pills"><span class="pill" style="border-color:#dc2626;color:#dc2626">Critical 9</span><span class="pill" style="border-color:#ea580c;color:#ea580c">High 32</span><span class="pill" style="border-color:#ca8a04;color:#ca8a04">Medium 31</span><span class="pill" style="border-color:#2563eb;color:#2563eb">Low 9</span></div>
       <div class="hint" style="margin-top:10px">未解决 <strong>81</strong> 项</div>
     </div>
-    <div class="mid-arrow">→<small>+52 分</small></div>
+    <div class="mid-arrow">→<small>+53 分</small></div>
     <div class="col">
       <h2>Step 2</h2>
       <div class="mode">Direct 修复 + 复验</div>
@@ -120,8 +120,8 @@
     </defs>
     <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="12"/>
     <circle cx="80" cy="80" r="70" fill="none" stroke="url(#ringAfter)" stroke-width="12"
-      stroke-linecap="round" stroke-dasharray="369.45129606215966 439.822971502571" transform="rotate(-90 80 80)"/>
-    <text x="80" y="76" text-anchor="middle" font-size="40" font-weight="800" fill="#f8fafc">84</text>
+      stroke-linecap="round" stroke-dasharray="356.25660691708254 439.822971502571" transform="rotate(-90 80 80)"/>
+    <text x="80" y="76" text-anchor="middle" font-size="40" font-weight="800" fill="#f8fafc">81</text>
     <text x="80" y="98" text-anchor="middle" font-size="11" fill="rgba(248,250,252,.65)">健康分</text>
   </svg>
       <div class="pills"><span class="pill" style="border-color:#dc2626;color:#dc2626">Critical 0</span><span class="pill" style="border-color:#ea580c;color:#ea580c">High 0</span><span class="pill" style="border-color:#ca8a04;color:#ca8a04">Medium 31</span><span class="pill" style="border-color:#2563eb;color:#2563eb">Low 9</span></div>
@@ -164,8 +164,8 @@
       <span class="cmp-name">Error Handling</span>
       <span class="cmp-before">0</span>
       <span class="cmp-arrow">→</span>
-      <span class="cmp-after" style="color:#059669">100</span>
-      <span class="cmp-delta" style="color:#34d399">+100</span>
+      <span class="cmp-after" style="color:#16a34a">80</span>
+      <span class="cmp-delta" style="color:#34d399">+80</span>
     </div><div class="cmp-row">
       <span class="cmp-name">Cleanup</span>
       <span class="cmp-before">81</span>
@@ -174,7 +174,7 @@
       <span class="cmp-delta" style="color:rgba(148,163,184,.8)">0</span>
     </div>
   </div>
-  <footer>* Direct 示意：按 reflection 修复全部 Critical+High（41 项）后重算得分；完整复验见 report.html</footer>
+  <footer>* 得分由确定性 computeScores 从 findings 计算（同主流水线口径：加权，security & correctness 1.5x）。Direct 为示意：按 reflection 修复全部 Critical+High 后重算，非完整七专家复验。</footer>
 </div>
 </body>
 </html>

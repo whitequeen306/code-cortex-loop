@@ -5,23 +5,19 @@
   "scope": "whole",
   "generatedAt": "2026-06-22T09:25:56.826Z",
   "scores": {
-    "correctness": 0,
-    "security": 55,
-    "performance": 22,
-    "simplicity": 39,
-    "tests": 0,
-    "errorHandling": 0,
-    "cleanup": 81,
-    "overall": 32,
+    "overall": 28,
     "before": {
-      "correctness": 0,
-      "security": 55,
-      "performance": 22,
-      "simplicity": 39,
-      "tests": 0,
-      "errorHandling": 0,
-      "cleanup": 81,
-      "overall": 32
+      "overall": 28,
+      "categories": {
+        "correctness": 0,
+        "security": 55,
+        "performance": 22,
+        "simplicity": 39,
+        "tests": 0,
+        "errorHandling": 0,
+        "cleanup": 81
+      },
+      "computedBy": "cortexloop-compute-scores"
     }
   },
   "counts": {

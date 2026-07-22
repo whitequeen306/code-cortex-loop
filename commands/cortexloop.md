@@ -679,8 +679,14 @@ node scripts/aggregate-findings.mjs --run-plan=.cortexloop/run-plan.json --orpha
 Reads `.cortexloop/aggregated-findings.json` — a deduplicated, severity-sorted findings array. Dedup uses the **same `findingFingerprint`** as `baseline.mjs`, so aggregation and the baseline ratchet agree on what counts as "the same finding." Each finding carries `evidence` + `confidence` (required by the finding quality gate) and a `provenance` block (`pass`, `expert`, `orphanId` when it came from Step 3.5 recycle, `sources[]` listing other passes/experts that flagged the same fingerprint).
 
 3. Apply `.cortexloopignore` suppressions to the aggregated list, then assign IDs `CL-001`… in the order the script produced (severity-first). Do **not** re-sort after numbering — CL ids must reflect urgency.
-4. Compute **health scores** (before)
-5. Write `report.json` to **run archive** (`run-meta.reports.reportJson`) and include `"generatedBy": "cortexloop"`, plus `runId`, `runDisplayTime`, `runDir` from run-meta. Every finding in `report.json` must include `evidence` and `confidence` — `ci-gate.mjs`/`validateReport` reject reports whose findings lack evidence.
+4. Write `report.json` to **run archive** (`run-meta.reports.reportJson`) with the CL-numbered, post-suppression findings, `"generatedBy": "cortexloop"`, and `runId`/`runDisplayTime`/`runDir` from run-meta. Do **not** hand-compute health scores — that is now deterministic (item 5, below). Every finding must include `evidence` and `confidence` — `ci-gate.mjs`/`validateReport` reject reports whose findings lack evidence.
+5. **Compute health scores (before) — deterministic, do NOT judge by hand:**
+
+```bash
+node scripts/compute-scores.mjs <run-meta.reports.reportJson> --as=before
+```
+
+Reads the findings array you just wrote and stamps `report.scores.before` (+ top-level `scores.overall`) via the shared `computeScores`: weighted average (security & correctness 1.5x, others 1x), category floored at 0 — spec: `rules/cortexloop-workflow.mdc`. Category names are normalized (kebab/snake → camelCase) so spelling variants from experts still count. This **replaces the old LLM-judged score** — the headline number is now reproducible and auditable.
 
 ## Step 5 — Output
 
@@ -731,9 +737,15 @@ Apply per workflow **Direct Mode Apply Order** (respecting fix floor). Findings 
 After all groups:
 
 1. **Re-verify**: re-run **Step 3 + Step 3.5** sequential expert pipeline (read-only) on same scope — mandatory delegation per pass (Task, Agent, or SOLO), not orchestrator inline analysis
-2. Write updated `report.json`
-3. Re-run post-processing (history, badge, dashboard)
-4. Output final summary with before→after scores
+2. Write updated `report.json` (findings now reflect post-fix `status:'fixed'`; do **not** hand-compute scores)
+3. **Compute health scores (after) — deterministic:**
+
+   ```bash
+   node scripts/compute-scores.mjs <run-meta.reports.reportJson> --as=after
+   ```
+
+4. Re-run post-processing (history, badge, dashboard)
+5. Output final summary with before→after scores
 
 ## Step 6 — Reflect (Direct only, if `learning.enabled`)
 

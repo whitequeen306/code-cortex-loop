@@ -176,34 +176,42 @@ Low-confidence ideas are not scored findings. Put them in recommendations only w
 
 ## Health Score (0–100 per category)
 
-After aggregation, compute scores **before** any fixes:
+**Deterministic — the orchestrator does NOT judge scores by hand.** Run the script:
 
-```
-category_score = max(0, 100 - penalty)
-
-Penalties per open finding:
-  Critical: -25
-  High:     -10
-  Medium:   -4
-  Low:      -1
-  Info:     0
-
-overall_score = weighted average (security & correctness weight 1.5x)
+```bash
+# After Step 4 aggregation + CL-numbering (before any fix):
+node scripts/compute-scores.mjs <report.json> --as=before
+# After Direct re-verify (findings reflect post-fix status):
+node scripts/compute-scores.mjs <report.json> --as=after
 ```
 
-Include in `00-summary.md` and machine-readable report:
+The script is the single canonical scorer (`scripts/lib/shared.mjs` → `computeScores`), shared with the showcase dashboard, so before/after are reproducible and auditable (supersedes the old LLM-judged score). Formula — spec reference, do **not** re-implement in prompts:
+
+```
+category_score = max(0, 100 - penalty)     # floored at 0
+
+Penalties per OPEN finding (status 'fixed'/'suppressed' skipped; missing status = open):
+  Critical: -25   High: -10   Medium: -4   Low: -1   Info: 0
+
+overall_score = weighted average (security & correctness weight 1.5x, others 1x; denominator 8)
+```
+
+Category names are normalized (kebab/snake → camelCase) so expert spelling variants still land in the right bucket. Output is written to `report.scores.before` / `.after` (+ top-level `scores.overall`), each tagged `computedBy: "cortexloop-compute-scores"`.
+
+Include the score in `00-summary.md` and the machine-readable report:
 
 ```json
 {
   "scores": {
-    "overall": 72,
-    "correctness": 80,
-    "security": 55,
-    "performance": 90,
-    "simplicity": 85,
-    "tests": 70,
-    "error-handling": 60,
-    "cleanup": 95
+    "overall": 28,
+    "before": {
+      "overall": 28,
+      "computedBy": "cortexloop-compute-scores",
+      "categories": {
+        "correctness": 0, "security": 55, "performance": 22,
+        "simplicity": 39, "tests": 0, "errorHandling": 0, "cleanup": 81
+      }
+    }
   }
 }
 ```

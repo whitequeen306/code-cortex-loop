@@ -726,7 +726,11 @@ export function getOverallScore(report) {
 
 export function getCategoryScores(report) {
   const block = report.scores?.after || report.scores?.before || {};
-  return Object.fromEntries(CATEGORIES.map((c) => [c, block[c] ?? null]));
+  // compute-scores.mjs writes the nested shape { overall, categories, computedBy };
+  // legacy reports (and the showcase snapshot) use the flat shape { correctness, … }.
+  // Read both so dashboard / pr-comment / history keep working after the switch.
+  const cats = block.categories || block;
+  return Object.fromEntries(CATEGORIES.map((c) => [c, cats[c] ?? null]));
 }
 
 export function countFindings(findings, { status = 'open' } = {}) {
@@ -747,6 +751,76 @@ export function scoreColor(score) {
   if (score >= 60) return '#ca8a04';
   if (score >= 40) return '#ea580c';
   return '#dc2626';
+}
+
+/** Per-severity health-score penalty (spec: rules/cortexloop-workflow.mdc — Health Score). */
+export const PENALTY = { Critical: 25, High: 10, Medium: 4, Low: 1, Info: 0 };
+
+/**
+ * Category weights for the overall score. Security & correctness carry 1.5x
+ * (defects there are costlier); other categories 1x. Denominator = 8
+ * (1.5 + 1.5 + 1*5) — keep aligned with CATEGORIES order.
+ */
+export const CATEGORY_WEIGHTS = {
+  correctness: 1.5,
+  security: 1.5,
+  performance: 1.0,
+  simplicity: 1.0,
+  tests: 1.0,
+  errorHandling: 1.0,
+  cleanup: 1.0,
+};
+
+/**
+ * Normalize a finding's category to a canonical CATEGORIES key.
+ * Real handoff/report JSON has been seen using kebab-case ("error-handling")
+ * and occasionally snake_case; without normalization, computeScores and the
+ * baseline ratchet would silently drop those findings from their bucket.
+ * Mirrors the alias tolerance already in resolveDeferTarget (defer pass keys).
+ * @param {unknown} raw
+ * @returns {string|null} canonical category, or null when not a pipeline domain
+ */
+export function normalizeCategory(raw) {
+  if (typeof raw !== 'string') return null;
+  if (CATEGORIES.includes(raw)) return raw;
+  const camel = raw.replace(/[-_]([a-z])/g, (_, c) => c.toUpperCase());
+  if (CATEGORIES.includes(camel)) return camel;
+  return null;
+}
+
+/**
+ * Deterministic health score from findings — the single canonical scorer
+ * (spec: rules/cortexloop-workflow.mdc → "Health Score (0–100 per category)").
+ * Supersedes LLM-judged scores in the main pipeline (Step 4) and is shared by
+ * the showcase dashboard, so before/after are reproducible and auditable.
+ *
+ * Only UNRESOLVED findings count: status 'fixed'/'suppressed' are skipped; a
+ * missing status is treated as open. Category is normalized (kebab/snake →
+ * camelCase) so spelling variants from experts still land in the right
+ * bucket. Each category starts at 100 and loses PENALTY[severity] per open
+ * finding, floored at 0. overall is the weighted average (security &
+ * correctness 1.5x, others 1x), rounded to an integer.
+ *
+ * @param {object[]} findings
+ * @returns {{ overall: number, categories: Record<string, number> }}
+ */
+export function computeScores(findings = []) {
+  const categories = Object.fromEntries(CATEGORIES.map((c) => [c, 100]));
+  for (const f of findings || []) {
+    if (f.status === 'fixed' || f.status === 'suppressed') continue;
+    const cat = normalizeCategory(f.category);
+    if (!cat) continue;
+    categories[cat] = Math.max(0, categories[cat] - (PENALTY[f.severity] ?? 0));
+  }
+  let num = 0;
+  let den = 0;
+  for (const c of CATEGORIES) {
+    const w = CATEGORY_WEIGHTS[c] ?? 1;
+    num += categories[c] * w;
+    den += w;
+  }
+  const overall = den > 0 ? Math.round(num / den) : 100;
+  return { overall, categories };
 }
 
 /** Location for baseline fingerprint — keeps line numbers to avoid same-file collisions. */

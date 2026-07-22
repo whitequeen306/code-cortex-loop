@@ -10,17 +10,14 @@ import {
   CATEGORIES,
   CATEGORY_LABELS,
   SEVERITY_COLORS,
+  computeScores,
   countFindings,
   ensureDirFor,
   escapeHtml,
-  getCategoryScores,
-  getOverallScore,
   parseArgs,
   readJson,
   scoreColor,
 } from './lib/shared.mjs';
-
-const PENALTY = { Critical: 25, High: 10, Medium: 4, Low: 1, Info: 0 };
 
 const { positional, getFlagValue } = parseArgs();
 const reportPath = positional[0] || 'docs/cortexloop/report.json';
@@ -30,17 +27,6 @@ const subtitle = getFlagValue('--subtitle', '');
 const layout = getFlagValue('--layout', 'compare');
 
 const report = readJson(reportPath);
-
-function scoresFromFindings(findings) {
-  const categories = Object.fromEntries(CATEGORIES.map((c) => [c, 100]));
-  for (const f of findings || []) {
-    if (f.status === 'fixed' || f.status === 'suppressed') continue;
-    if (!CATEGORIES.includes(f.category)) continue;
-    categories[f.category] = Math.max(0, categories[f.category] - (PENALTY[f.severity] || 0));
-  }
-  const overall = Math.round(CATEGORIES.reduce((s, c) => s + categories[c], 0) / CATEGORIES.length);
-  return { overall, categories };
-}
 
 /** Direct 修复示意：与 LianYu-PC reflection 一致，41 项 = 全部 Critical + High */
 function simulateDirectAfter(findings) {
@@ -104,14 +90,19 @@ function severityMini(counts) {
 }
 
 function buildCompareHtml() {
-  const beforeOverall = report.scores?.before?.overall ?? getOverallScore(report) ?? 0;
-  const beforeCats = report.scores?.before ?? getCategoryScores(report);
+  // Both before & after are computed deterministically from findings by the
+  // shared canonical scorer (same as the main pipeline / compute-scores.mjs):
+  // weighted average, security & correctness 1.5x. before = the raw findings;
+  // after = the same findings with all Critical+High marked fixed (simulated).
+  const before = computeScores(report.findings || []);
+  const beforeOverall = before.overall;
+  const beforeCats = before.categories;
   const beforeCounts = countFindings(report.findings || []);
 
   const afterFindings = simulateDirectAfter(report.findings);
-  const afterComputed = scoresFromFindings(afterFindings);
-  const afterOverall = afterComputed.overall;
-  const afterCats = afterComputed.categories;
+  const after = computeScores(afterFindings);
+  const afterOverall = after.overall;
+  const afterCats = after.categories;
   const afterCounts = countFindings(afterFindings);
 
   const delta = afterOverall - beforeOverall;
@@ -234,7 +225,7 @@ function buildCompareHtml() {
     <h3>七维类别 · 修复前 → 修复后</h3>
     ${categoryCompareRows(beforeCats, afterCats)}
   </div>
-  <footer>* Direct 示意：按 reflection 修复全部 Critical+High（41 项）后重算得分；完整复验见 report.html</footer>
+  <footer>* 得分由确定性 computeScores 从 findings 计算（同主流水线口径：加权，security & correctness 1.5x）。Direct 为示意：按 reflection 修复全部 Critical+High 后重算，非完整七专家复验。</footer>
 </div>
 </body>
 </html>`;

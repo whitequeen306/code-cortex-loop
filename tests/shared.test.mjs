@@ -15,6 +15,10 @@ import {
   buildReviewRunPlan,
   resolveReviewPreset,
   passesConfigForRunPlan,
+  CATEGORIES,
+  computeScores,
+  normalizeCategory,
+  getCategoryScores,
 } from '../scripts/lib/shared.mjs';
 
 test('findingFingerprint differs by line number', () => {
@@ -202,4 +206,155 @@ test('passesConfigForRunPlan disables skipped passes for post-processing scripts
     simplicity: false,
     cleanup: false,
   });
+});
+
+// ── computeScores: deterministic health score (spec: cortexloop-workflow.mdc) ──
+// 7 categories. category_score = max(0, 100 - sum(per-open-finding penalty)).
+// overall = weighted average: security & correctness weight 1.5x, others 1x.
+// Penalties: Critical -25, High -10, Medium -4, Low -1, Info 0.
+// Denominator = 1.5 + 1.5 + 1*5 = 8.
+
+test('computeScores: empty findings give 100 overall and 100 per category', () => {
+  const { overall, categories } = computeScores([]);
+  assert.equal(overall, 100);
+  for (const c of CATEGORIES) assert.equal(categories[c], 100);
+});
+
+test('computeScores: one Critical in correctness drops that category to 75', () => {
+  const { overall, categories } = computeScores([
+    { category: 'correctness', severity: 'Critical', status: 'open' },
+  ]);
+  assert.equal(categories.correctness, 75);
+  // (75*1.5 + 100*1.5 + 100*5) / 8 = 762.5/8 = 95.3 -> 95
+  assert.equal(overall, 95);
+});
+
+test('computeScores: 1.5x weighting makes security & correctness Criticals cost more than performance', () => {
+  const sec = computeScores([{ category: 'security', severity: 'Critical', status: 'open' }]);
+  const cor = computeScores([{ category: 'correctness', severity: 'Critical', status: 'open' }]);
+  const perf = computeScores([{ category: 'performance', severity: 'Critical', status: 'open' }]);
+  // security & correctness weighted 1.5x -> identical overall
+  assert.equal(sec.overall, cor.overall);
+  assert.equal(sec.overall, 95);
+  // performance weighted 1x -> penalty diluted, higher overall
+  // (100*1.5 + 100*1.5 + 75*1 + 100*4) / 8 = 775/8 = 96.9 -> 97
+  assert.equal(perf.overall, 97);
+});
+
+test('computeScores: category score is floored at 0 (never negative)', () => {
+  const five = Array.from({ length: 5 }, () => ({ category: 'correctness', severity: 'Critical', status: 'open' }));
+  const { overall, categories } = computeScores(five);
+  assert.equal(categories.correctness, 0);
+  // (0*1.5 + 100*1.5 + 100*5) / 8 = 650/8 = 81.25 -> 81
+  assert.equal(overall, 81);
+});
+
+test('computeScores: fixed and suppressed findings are not counted', () => {
+  const { overall, categories } = computeScores([
+    { category: 'correctness', severity: 'Critical', status: 'fixed' },
+    { category: 'security', severity: 'High', status: 'suppressed' },
+  ]);
+  assert.equal(overall, 100);
+  assert.equal(categories.correctness, 100);
+  assert.equal(categories.security, 100);
+});
+
+test('computeScores: findings with no status default to open (counted)', () => {
+  const { categories } = computeScores([
+    { category: 'tests', severity: 'Medium' },
+  ]);
+  assert.equal(categories.tests, 96);
+});
+
+test('computeScores: Info severity has zero penalty', () => {
+  const { categories } = computeScores([
+    { category: 'tests', severity: 'Info', status: 'open' },
+  ]);
+  assert.equal(categories.tests, 100);
+});
+
+test('computeScores: unknown category is skipped without throwing', () => {
+  const { overall } = computeScores([
+    { category: 'nope', severity: 'Critical', status: 'open' },
+  ]);
+  assert.equal(overall, 100);
+});
+
+test('computeScores: normalizes kebab-case "error-handling" to errorHandling (real LianYu findings use kebab)', () => {
+  // The LianYu-PC report.json writes category as "error-handling"; this MUST
+  // count toward the errorHandling bucket, not be silently dropped.
+  const { categories } = computeScores([
+    { category: 'error-handling', severity: 'Critical', status: 'open' },
+  ]);
+  assert.equal(categories.errorHandling, 75);
+  assert.equal(categories['error-handling'], undefined); // canonical key only
+});
+
+test('computeScores: normalizes snake_case category too', () => {
+  const { categories } = computeScores([
+    { category: 'error_handling', severity: 'High', status: 'open' },
+  ]);
+  assert.equal(categories.errorHandling, 90);
+});
+
+test('normalizeCategory: unknown returns null, canonical passes through', () => {
+  assert.equal(normalizeCategory('correctness'), 'correctness');
+  assert.equal(normalizeCategory('error-handling'), 'errorHandling');
+  assert.equal(normalizeCategory('nope'), null);
+  assert.equal(normalizeCategory(123), null);
+});
+
+// ── getCategoryScores: must read the nested shape compute-scores.mjs writes ──
+
+test('getCategoryScores reads new nested scores.before.categories shape', () => {
+  const report = {
+    scores: {
+      before: {
+        overall: 28,
+        categories: {
+          correctness: 0, security: 55, performance: 22,
+          simplicity: 39, tests: 0, errorHandling: 0, cleanup: 81,
+        },
+        computedBy: 'cortexloop-compute-scores',
+      },
+    },
+  };
+  const cats = getCategoryScores(report);
+  assert.equal(cats.security, 55);
+  assert.equal(cats.correctness, 0);
+  assert.equal(cats.cleanup, 81);
+  assert.equal(cats.errorHandling, 0);
+});
+
+test('getCategoryScores still reads legacy flat shape (backward compat)', () => {
+  const report = {
+    scores: {
+      before: {
+        overall: 50,
+        correctness: 80, security: 70, performance: 90,
+        simplicity: 85, tests: 60, errorHandling: 75, cleanup: 95,
+      },
+    },
+  };
+  const cats = getCategoryScores(report);
+  assert.equal(cats.security, 70);
+  assert.equal(cats.correctness, 80);
+  assert.equal(cats.errorHandling, 75);
+});
+
+test('getCategoryScores prefers after over before when both present', () => {
+  const report = {
+    scores: {
+      after: {
+        overall: 84,
+        categories: { correctness: 88, security: 75, performance: 72, simplicity: 79, tests: 92, errorHandling: 100, cleanup: 81 },
+      },
+      before: {
+        overall: 28,
+        categories: { correctness: 0, security: 55, performance: 22, simplicity: 39, tests: 0, errorHandling: 0, cleanup: 81 },
+      },
+    },
+  };
+  const cats = getCategoryScores(report);
+  assert.equal(cats.correctness, 88); // after wins
 });
