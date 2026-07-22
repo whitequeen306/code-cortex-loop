@@ -1,7 +1,7 @@
 # CodeCortexLoop — project self-test
 #
 # What this does: every time you push to master or open a PR, GitHub spins up
-# a clean Ubuntu VM, checks out your code, and runs `npm test` (the 57 node:test
+# a clean Ubuntu VM, checks out your code, and runs `npm test` (the node:test
 # cases). Green check = all tests passed; red X = something broke.
 #
 # This is the smallest real CI. It does NOT run the CortexLoop analysis pipeline

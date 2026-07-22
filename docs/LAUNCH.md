@@ -31,7 +31,7 @@ I built a post-coding harness for Cursor (also Claude Code / OpenCode; other too
 
 **Not for everyone** — best if you already live in Cursor Agent mode. For small diffs try `/cortexloop-lite`.
 
-Real run on **LianYu-PC** (Vue 3 + Spring Boot full stack, `/cortexloop-deep` Report): health score **32**, 81 findings.
+Real run on **LianYu-PC** (Vue 3 + Spring Boot full stack, `/cortexloop-deep` Report): health score **28**, 81 findings.
 
 Repo: https://github.com/whitequeen306/code-cortex-loop
 
@@ -63,7 +63,7 @@ Try `/cortexloop-lite` for a minimal 3-pass path.
 
 **Post 1:** GIF or LianYu showcase + one-liner + github link
 
-**Post 2:** LianYu-PC case — score 32, 81 findings, link to `examples/lianyu-pc/docs/cortexloop/report.html`
+**Post 2:** LianYu-PC case — score 28, 81 findings, link to `examples/lianyu-pc/docs/cortexloop/report.html`
 
 ---
 

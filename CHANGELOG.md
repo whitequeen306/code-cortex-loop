@@ -19,6 +19,13 @@ All notable changes to CodeCortexLoop are documented here.
 - Optional `sourceLocation` (file:line) and `sourceContext` (symbol/snippet) on `deferToLaterPasses[].defer` in `pass-handoff.schema.json`. `collectOrphanDefers` passes them through to orphan entries; `aggregate-findings.mjs` uses `sourceLocation` to stamp an `orphanId` onto the matching finding's `provenance` so Step 3.5 recycle additions stay traceable end-to-end. Backward compatible — defers without these fields still work.
 - expert-core SKILL.md + passes/README.md document the new optional fields and recommend their use
 
+### Changed (deterministic health score)
+- **Health score is now deterministic.** New `computeScores(findings)` in `shared.mjs` (weighted average: security & correctness 1.5x, others 1x; per-category floor 0) replaces the LLM-judged overall. New `scripts/compute-scores.mjs` writes `scores.before` / `.after` (tagged `computedBy`) and the orchestrator (Step 4/5 in `commands/cortexloop.md`) now runs it instead of judging; `make-showcase-dashboard.mjs` uses the same function for before & after. Supersedes the three divergent expressions (rules spec weighted / showcase plain-mean / LLM-judged) so the headline number is reproducible and auditable.
+- `normalizeCategory` (kebab/snake → camelCase) — fixes a latent bug where findings with `category: "error-handling"` were silently dropped from scoring (15 such findings in the LianYu-PC report).
+- `getCategoryScores` reads the new nested `scores.before/after.categories` shape (and legacy flat) so `make-dashboard` / `pr-comment` / `record-history` keep rendering category bars.
+- LianYu-PC Report score recomputes 32 → 28 (per-category breakdown unchanged — the LLM got the categories right, the overall aggregation wrong).
+- Tests 92 → 112 (`computeScores`, `normalizeCategory`, `getCategoryScores` nested-shape, `compute-scores` CLI subprocess).
+
 ## [2.4.0] - 2026-06-25
 
 ### Added

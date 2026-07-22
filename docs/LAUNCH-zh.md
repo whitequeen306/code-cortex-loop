@@ -32,7 +32,7 @@ python scripts/capture-showcase-screenshot.py
 4. **描述里：**
    - 拖入 `docs/assets/cortexloop-demo.gif`（若有）
    - 拖入 `docs/assets/lianyu-pc-showcase.png` 或 report.html 截图
-   - 写 2–3 句：LianYu-PC 整库 Report **32 分**，81 条 finding，典型问题含验证码泄露、SSE 静默失败
+   - 写 2–3 句：LianYu-PC 整库 Report **28 分**，81 条 finding，典型问题含验证码泄露、SSE 静默失败
 5. 发布
 
 ---
@@ -52,7 +52,7 @@ python scripts/capture-showcase-screenshot.py
 
 **不是给所有人用的** —— 适合已经习惯 Cursor Agent、想要结构化审查而不是随口「帮我 review」的人。小改动先试 `/cortexloop-lite`。
 
-在 **LianYu-PC**（Vue 3 + Spring Boot 全栈）上 `/cortexloop-deep` Report：**健康分 32**，81 条 finding。
+在 **LianYu-PC**（Vue 3 + Spring Boot 全栈）上 `/cortexloop-deep` Report：**健康分 28**，81 条 finding。
 
 - 仓库：https://github.com/whitequeen306/code-cortex-loop
 - 安装：`curl -fsSL https://raw.githubusercontent.com/whitequeen306/code-cortex-loop/master/scripts/install-remote.sh | bash -s cursor`
@@ -101,7 +101,7 @@ Case study: https://github.com/whitequeen306/code-cortex-loop/tree/main/examples
 **帖 2（case study）：**
 
 > 在 LianYu-PC（Vue + Spring Boot）上跑 `/cortexloop-deep` Report：
-> • 健康分 32，81 条 finding
+> • 健康分 28，81 条 finding
 > • 验证码泄露、SSE 静默失败、核心路径零测试
 >
 > 预生成看板：examples/lianyu-pc/docs/cortexloop/report.html

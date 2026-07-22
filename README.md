@@ -417,10 +417,10 @@ jobs:
 
 | 阶段 | 健康分 | Critical / High / Medium / Low | 说明 |
 |------|--------|--------------------------------|------|
-| **Report 诊断** | **32** | 9 / 32 / 31 / 9 | 真实扫描产物 |
+| **Report 诊断** | **28** | 9 / 32 / 31 / 9 | 真实扫描产物 |
 | **Direct 示意*** | **84** | 0 / 0 / 31 / 9 | 按 reflection 清零 Critical+High（41 项）后重算 |
 
-\* Direct 右侧为**示意得分**（非完整七专家复验）；LianYu-PC 原项目有 `08-reflection.md` 记录修复，完整复验待重跑。
+\* 两侧分数均由确定性 `computeScores` 计算（加权口径，security & correctness 1.5x）；Direct 右侧为**示意**——按 reflection 模拟修复后重算，非完整七专家复验。LianYu-PC 原项目有 `08-reflection.md` 记录修复，完整复验待重跑。
 
 **典型发现：** 验证码表达式泄露 · SSE 错误仍持久化 · 前端轮询静默失败 · 认证/SSE 核心路径零测试
 

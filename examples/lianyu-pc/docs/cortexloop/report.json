@@ -1002,5 +1002,6 @@
       "autoFixable": "yes",
       "suppressed": false
     }
-  ]
+  ],
+  "version": "2.2"
 }

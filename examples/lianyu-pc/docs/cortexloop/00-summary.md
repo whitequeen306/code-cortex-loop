@@ -9,7 +9,7 @@
 
 | Category | Score |
 |----------|-------|
-| **Overall** | **32** |
+| **Overall** | **28** |
 | Correctness | 0 |
 | Security | 55 |
 | Error handling | 0 |
